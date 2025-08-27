@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./utils";
+import { Id } from "./_generated/dataModel";
 
 export const getProfile = query({
   args: {},
@@ -244,5 +245,59 @@ export const listProfileOptions = query({
       picture: p?.picture,
       mobileNumber: p?.mobileNumber,
     }));
+  },
+});
+
+export const getProfileDetail = query({
+  args: {
+    id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await getCurrentUser(ctx);
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+    try {
+      const profile = await ctx.db.get(args.id as Id<"profile">);
+
+      if (!profile) {
+        return null;
+      }
+
+      const address = await ctx.db
+        .query("address")
+        .withIndex("by_profileId", (q) => q.eq("profileId", profile._id))
+        .collect();
+      const myRelations = await ctx.db
+        .query("relations")
+        .withIndex("by_fromProfileId", (q) =>
+          q.eq("fromProfileId", profile._id),
+        )
+        .collect();
+      const mentionedRelations = await ctx.db
+        .query("relations")
+        .withIndex("by_toProfileId", (q) => q.eq("toProfileId", profile._id))
+        .collect();
+
+      const relations = [...myRelations, ...mentionedRelations];
+
+      const relationProfiles = await Promise.all(
+        relations.map(async (relation) => {
+          const fromProfile = await ctx.db.get(relation.fromProfileId);
+          const toProfile = await ctx.db.get(relation.toProfileId);
+          return {
+            fromProfile,
+            toProfile,
+            ...relation,
+          };
+        }),
+      );
+
+      return { profile, address, relations: relationProfiles };
+    } catch (error) {
+      console.error(error);
+    }
+
+    return null;
   },
 });

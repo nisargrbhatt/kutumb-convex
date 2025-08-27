@@ -3,6 +3,7 @@ import DataGridColumnHeader from "@/components/ui/data-table-column-header";
 import { api } from "@/convex/_generated/api";
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
+import Link from "next/link";
 
 type MemberObject = (typeof api.profile.listMembers._returnType)[number];
 
@@ -17,13 +18,18 @@ export const columns: ColumnDef<MemberObject>[] = [
     cell: ({ cell, row }) => {
       const name = cell.getValue<string>();
       return (
-        <div className="flex flex-row justify-start items-center gap-2">
-          <Avatar>
-            <AvatarImage src={row?.original?.picture} />
-            <AvatarFallback>{name?.at(0)?.toUpperCase()}</AvatarFallback>
-          </Avatar>
-          {name}
-        </div>
+        <Link
+          href={`/members/${row?.original?._id}`}
+          className="hover:underline"
+        >
+          <div className="flex flex-row justify-start items-center gap-2">
+            <Avatar>
+              <AvatarImage src={row?.original?.picture} />
+              <AvatarFallback>{name?.at(0)?.toUpperCase()}</AvatarFallback>
+            </Avatar>
+            {name}
+          </div>
+        </Link>
       );
     },
   },
