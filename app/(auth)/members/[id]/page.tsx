@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileTable from "./__components/ProfileTable";
+import AddressList from "./__components/AddressList";
 
 const MemberDetailPage: NextPage = () => {
   const { id } = useParams();
@@ -46,9 +47,6 @@ const MemberDetailPage: NextPage = () => {
           <TabsTrigger value="address" disabled={!profile?.profile?._id}>
             Address
           </TabsTrigger>
-          <TabsTrigger value="relations" disabled={!profile?.profile?._id}>
-            Relations
-          </TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
           {profile?.profile ? (
@@ -57,8 +55,9 @@ const MemberDetailPage: NextPage = () => {
             <p className="text-sm text-muted-foreground">No profile data</p>
           )}
         </TabsContent>
-        <TabsContent value="address"></TabsContent>
-        <TabsContent value="relations"></TabsContent>
+        <TabsContent value="address">
+          <AddressList addresses={profile?.address ?? []} />
+        </TabsContent>
       </Tabs>
     </div>
   );

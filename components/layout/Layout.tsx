@@ -1,5 +1,7 @@
 import type { FC, ReactNode } from "react";
 import Header from "./Header";
+import { ThemeProvider } from "../ThemeProvider";
+import Footer from "./Footer";
 
 interface Props {
   children: ReactNode;
@@ -7,12 +9,20 @@ interface Props {
 
 const Layout: FC<Props> = ({ children }) => {
   return (
-    <div className="flex flex-col justify-start items-start w-full h-full gap-1">
-      <Header />
-      <main className="w-full h-full px-2">
-        <div className="container mx-auto">{children}</div>
-      </main>
-    </div>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <div className="flex flex-col justify-start items-start w-full h-full gap-2">
+        <Header />
+        <main className="w-full h-full px-2">
+          <div className="container mx-auto">{children}</div>
+        </main>
+        <Footer />
+      </div>
+    </ThemeProvider>
   );
 };
 

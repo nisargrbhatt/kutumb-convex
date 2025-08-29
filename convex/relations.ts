@@ -144,3 +144,17 @@ export const deleteMyRelation = mutation({
     await ctx.db.delete(args.id);
   },
 });
+
+export const familyTreeRelations = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await getCurrentUser(ctx);
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const relations = await ctx.db.query("relations").collect();
+
+    return relations;
+  },
+});

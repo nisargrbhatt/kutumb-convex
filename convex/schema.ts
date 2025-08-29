@@ -18,7 +18,7 @@ export default defineSchema({
     middleName: v.optional(v.string()),
     lastName: v.string(),
     nickName: v.optional(v.string()),
-    picture: v.optional(v.string()),
+    picture: v.optional(v.id("_storage")),
     email: v.optional(v.string()),
     mobileNumber: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()),

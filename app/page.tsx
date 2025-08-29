@@ -23,24 +23,12 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  Newspaper,
-  Users,
-  Share2,
-  Images,
-  ArrowRight,
-} from "lucide-react";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Newspaper, Users, Share2, Images, ArrowRight } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-dvh">
       {/* Hero Section */}
       <section className="container mx-auto px-4 pt-20 pb-16 md:pt-28 md:pb-20">
         <div className="max-w-3xl">
@@ -134,7 +122,10 @@ export default function Home() {
             <CardContent>
               <ChartContainer
                 config={{
-                  relations: { label: "Relations", color: "hsl(var(--primary))" },
+                  relations: {
+                    label: "Relations",
+                    color: "hsl(var(--primary))",
+                  },
                 }}
                 className="aspect-[16/10] w-full"
               >
@@ -149,9 +140,23 @@ export default function Home() {
                   ]}
                 >
                   <defs>
-                    <linearGradient id="fillRelations" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
+                    <linearGradient
+                      id="fillRelations"
+                      x1="0"
+                      x2="0"
+                      y1="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0.35}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0.05}
+                      />
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} strokeOpacity={0.2} />

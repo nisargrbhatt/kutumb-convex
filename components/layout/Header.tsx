@@ -81,6 +81,13 @@ const FeatureMenu: FC = () => {
           >
             Members
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              router.push("/family-tree");
+            }}
+          >
+            Family Tree
+          </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

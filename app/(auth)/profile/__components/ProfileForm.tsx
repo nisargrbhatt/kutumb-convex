@@ -40,7 +40,6 @@ const formSchema = z.object({
   middleName: z.string().optional(),
   lastName: z.string().min(1, "Last Name is required"),
   nickName: z.string().optional(),
-  picture: z.string().optional(),
   mobileNumber: z.string().optional(),
   dateOfBirth: z.date().optional(),
   gender: z.enum(["male", "female", "other"]),
@@ -73,7 +72,6 @@ const ProfileForm: FC<Props> = ({ profile }) => {
           middleName: profile.middleName,
           lastName: profile.lastName,
           nickName: profile.nickName,
-          picture: profile.picture,
           mobileNumber: profile.mobileNumber,
           dateOfBirth: profile?.dateOfBirth
             ? new Date(profile.dateOfBirth)
@@ -91,7 +89,6 @@ const ProfileForm: FC<Props> = ({ profile }) => {
           middleName: "",
           lastName: "",
           nickName: "",
-          picture: "",
           mobileNumber: "",
           dateOfBirth: undefined,
           gender: "male",

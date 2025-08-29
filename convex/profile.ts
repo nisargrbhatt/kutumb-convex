@@ -16,7 +16,13 @@ export const getProfile = query({
       .withIndex("by_userId", (q) => q.eq("userId", identity.user._id))
       .first();
 
-    return { profile, user: identity.user };
+    let picture: string | null = null;
+
+    if (profile?.picture) {
+      picture = await ctx.storage.getUrl(profile.picture);
+    }
+
+    return { profile: { ...profile, picture: picture }, user: identity.user };
   },
 });
 
@@ -26,7 +32,7 @@ export const createMyProfile = mutation({
     middleName: v.optional(v.string()),
     lastName: v.string(),
     nickName: v.optional(v.string()),
-    picture: v.optional(v.string()),
+    picture: v.optional(v.id("_storage")),
     mobileNumber: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()),
     gender: v.union(v.literal("male"), v.literal("female"), v.literal("other")),
@@ -90,7 +96,7 @@ export const updateMyProfile = mutation({
       middleName: v.optional(v.string()),
       lastName: v.string(),
       nickName: v.optional(v.string()),
-      picture: v.optional(v.string()),
+      picture: v.optional(v.id("_storage")),
       mobileNumber: v.optional(v.string()),
       dateOfBirth: v.optional(v.string()),
       gender: v.union(
@@ -166,7 +172,17 @@ export const listMembers = query({
       .withIndex("by_status", (q) => q.eq("status", "active"))
       .collect();
 
-    return profiles;
+    const profileWithPictures = await Promise.all(
+      profiles.map(async (profile) => {
+        let pictureUrl: string | null = null;
+        if (profile.picture) {
+          pictureUrl = await ctx.storage.getUrl(profile.picture);
+        }
+        return { ...profile, picture: pictureUrl };
+      }),
+    );
+
+    return profileWithPictures;
   },
 });
 
@@ -176,7 +192,7 @@ export const addMemberProfile = mutation({
     middleName: v.optional(v.string()),
     lastName: v.string(),
     nickName: v.optional(v.string()),
-    picture: v.optional(v.string()),
+    picture: v.optional(v.id("_storage")),
     email: v.optional(v.string()),
     mobileNumber: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()),
@@ -264,6 +280,11 @@ export const getProfileDetail = query({
         return null;
       }
 
+      let pictureUrl: string | null = null;
+      if (profile.picture) {
+        pictureUrl = await ctx.storage.getUrl(profile.picture);
+      }
+
       const address = await ctx.db
         .query("address")
         .withIndex("by_profileId", (q) => q.eq("profileId", profile._id))
@@ -293,11 +314,75 @@ export const getProfileDetail = query({
         }),
       );
 
-      return { profile, address, relations: relationProfiles };
+      return {
+        profile: { ...profile, picture: pictureUrl },
+        address,
+        relations: relationProfiles,
+      };
     } catch (error) {
       console.error(error);
     }
 
     return null;
+  },
+});
+
+export const generateProfileUploadUrl = mutation({
+  handler: async (ctx) => {
+    const identity = await getCurrentUser(ctx);
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const changeMyProfilePicture = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const identity = await getCurrentUser(ctx);
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const profile = await ctx.db
+      .query("profile")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.user._id))
+      .first();
+
+    if (!profile) {
+      throw new Error("No profile found");
+    }
+
+    await ctx.db.patch(profile._id, {
+      picture: args.storageId,
+    });
+  },
+});
+
+export const familyTreeProfileList = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await getCurrentUser(ctx);
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const profiles = await ctx.db
+      .query("profile")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+
+    const profileWithPictures = await Promise.all(
+      profiles.map(async (profile) => {
+        let pictureUrl: string | null = null;
+        if (profile.picture) {
+          pictureUrl = await ctx.storage.getUrl(profile.picture);
+        }
+        return { ...profile, picture: pictureUrl };
+      }),
+    );
+
+    return profileWithPictures;
   },
 });

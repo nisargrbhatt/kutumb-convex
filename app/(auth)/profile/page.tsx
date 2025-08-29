@@ -6,6 +6,7 @@ import ProfileForm from "./__components/ProfileForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AddressList from "./__components/AddressList";
 import RelationshipList from "./__components/RelationshipList";
+import ProfilePictureForm from "./__components/ProfilePictureForm";
 
 const ProfilePage: NextPage = () => {
   const profile = useQuery(api.profile.getProfile);
@@ -33,7 +34,12 @@ const ProfilePage: NextPage = () => {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
-          <ProfileForm profile={profile?.profile} />
+          <div className="flex flex-col items-center justify-start w-full gap-2">
+            {profile?.profile?._id ? (
+              <ProfilePictureForm picture={profile?.profile?.picture} />
+            ) : null}
+            <ProfileForm profile={profile?.profile} />
+          </div>
         </TabsContent>
         <TabsContent value="address">
           {profile?.profile?._id ? <AddressList /> : null}

@@ -42,6 +42,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-table": "^8.21.3",
+    "@xyflow/react": "^12.8.4",
     "better-auth": "1.3.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -81,8 +82,10 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
       "esbuild",
-      "@tailwindcss/oxide"
+      "sharp",
+      "unrs-resolver"
     ]
   }
 }
