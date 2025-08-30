@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileTable from "./__components/ProfileTable";
 import AddressList from "./__components/AddressList";
+import RelationshipList from "./__components/RelationshipList";
 
 const MemberDetailPage: NextPage = () => {
   const { id } = useParams();
@@ -47,6 +48,9 @@ const MemberDetailPage: NextPage = () => {
           <TabsTrigger value="address" disabled={!profile?.profile?._id}>
             Address
           </TabsTrigger>
+          <TabsTrigger value="relations" disabled={!profile?.profile?._id}>
+            Relations
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
           {profile?.profile ? (
@@ -57,6 +61,9 @@ const MemberDetailPage: NextPage = () => {
         </TabsContent>
         <TabsContent value="address">
           <AddressList addresses={profile?.address ?? []} />
+        </TabsContent>
+        <TabsContent value="relations">
+          <RelationshipList relations={profile?.relations ?? []} />
         </TabsContent>
       </Tabs>
     </div>

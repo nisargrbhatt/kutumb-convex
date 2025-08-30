@@ -28,7 +28,7 @@ import {
 import { api } from "@/convex/_generated/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
-import { Edit, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState, type FC } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
