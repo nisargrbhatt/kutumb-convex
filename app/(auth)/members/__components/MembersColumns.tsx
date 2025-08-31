@@ -24,7 +24,7 @@ export const columns: ColumnDef<MemberObject>[] = [
         >
           <div className="flex flex-row justify-start items-center gap-2">
             <Avatar>
-              <AvatarImage src={row?.original?.picture} />
+              <AvatarImage src={row?.original?.picture ?? undefined} />
               <AvatarFallback>{name?.at(0)?.toUpperCase()}</AvatarFallback>
             </Avatar>
             {name}

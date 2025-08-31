@@ -23,17 +23,19 @@ const RelationshipList: FC<Props> = ({ profileId }) => {
   return (
     <div className="w-full flex flex-col justify-start items-start gap-2">
       <div className="flex flex-col items-start justify-start">
-        <RelationshipForm profileId={profileId} />
+        {profileId ? <RelationshipForm profileId={profileId} /> : null}
       </div>
       {relations?.length > 0 ? (
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2">
-          {relations?.map((relation) => (
-            <RelationshipCard
-              relation={relation}
-              key={relation._id}
-              profileId={profileId}
-            />
-          ))}
+          {relations?.map((relation) =>
+            profileId ? (
+              <RelationshipCard
+                relation={relation}
+                key={relation._id}
+                profileId={profileId}
+              />
+            ) : null,
+          )}
         </div>
       ) : null}
 
