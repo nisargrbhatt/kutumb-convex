@@ -4,7 +4,6 @@ import { requireEnv } from "@convex-dev/better-auth/utils";
 import { betterAuth, BetterAuthOptions } from "better-auth";
 import { betterAuthComponent } from "../convex/auth";
 import { type GenericCtx } from "../convex/_generated/server";
-import { magicLink } from "better-auth/plugins";
 
 const siteUrl = requireEnv("SITE_URL");
 
@@ -18,14 +17,15 @@ const createOptions = (ctx: GenericCtx) =>
         allowDifferentEmails: true,
       },
     },
-
-    plugins: [
-      magicLink({
-        sendMagicLink: async (params) => {
-          console.log("url", params.url);
-        },
-      }),
-    ],
+    plugins: [],
+    socialProviders: {
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID as string,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+        accessType: "offline",
+        prompt: "select_account+consent",
+      },
+    },
   }) satisfies BetterAuthOptions;
 
 export const createAuth = (ctx: GenericCtx) => {

@@ -14,17 +14,12 @@ export default function Footer() {
 
         <nav className="flex items-center gap-4">
           <Link
-            href="/"
+            href="/about-us"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             About
           </Link>
-          <Link
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Guidelines
-          </Link>
+
           <Link
             href="/"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"

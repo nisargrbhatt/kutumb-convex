@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Newspaper, Users, Share2, Images, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -45,10 +46,12 @@ export default function Home() {
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" className="group">
-              Join the Community
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Button>
+            <Link href="/profile">
+              <Button size="lg" className="group">
+                Join the Community
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Button>
+            </Link>
             <Button size="lg" variant="outline">
               Explore Blogs
             </Button>

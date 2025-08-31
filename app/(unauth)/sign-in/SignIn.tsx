@@ -1,51 +1,21 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { GalleryVerticalEnd } from "lucide-react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { toast } from "sonner";
-
-const formSchema = z.object({
-  email: z.email("Please enter a valid email"),
-});
+import Link from "next/link";
 
 export default function SignIn() {
-  const magicLinkForm = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-    },
-  });
-
-  const onSubmit = magicLinkForm.handleSubmit(async (values) => {
-    const { error } = await authClient.signIn.magicLink({
-      email: values.email,
+  const googleSignIn = async () => {
+    const { error } = await authClient.signIn.social({
+      provider: "google",
     });
-
     if (error) {
       console.log(error);
       toast.error(error.message);
-    } else {
-      toast.success(
-        "Magic link sent to your email. Please check email and click on the magic link",
-        {
-          duration: 10 * 1000,
-        },
-      );
     }
-  });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -59,47 +29,26 @@ export default function SignIn() {
           </a>
           <h1 className="text-xl font-bold">Welcome to Kutumb App.</h1>
         </div>
-        <Form {...magicLinkForm}>
-          <form onSubmit={onSubmit}>
-            <div className="flex flex-col gap-6">
-              <FormField
-                control={magicLinkForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="me@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full">
-                Login
-              </Button>
-            </div>
-          </form>
-        </Form>
-        <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-          <span className="bg-background text-muted-foreground relative z-10 px-2">
-            Or
-          </span>
-        </div>
 
-        <Button variant="outline" type="button" className="w-full">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path
-              d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-              fill="currentColor"
-            />
-          </svg>
+        <Button
+          variant="outline"
+          type="button"
+          className="w-full"
+          onClick={googleSignIn}
+        >
+          <img
+            className="w-6 h-6 object-contain"
+            loading="lazy"
+            src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIj8+PHN2ZyBpZD0iQ2FwYV8xIiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAxNTAgMTUwOyIgdmVyc2lvbj0iMS4xIiB2aWV3Qm94PSIwIDAgMTUwIDE1MCIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHN0eWxlIHR5cGU9InRleHQvY3NzIj4KCS5zdDB7ZmlsbDojMUE3M0U4O30KCS5zdDF7ZmlsbDojRUE0MzM1O30KCS5zdDJ7ZmlsbDojNDI4NUY0O30KCS5zdDN7ZmlsbDojRkJCQzA0O30KCS5zdDR7ZmlsbDojMzRBODUzO30KCS5zdDV7ZmlsbDojNENBRjUwO30KCS5zdDZ7ZmlsbDojMUU4OEU1O30KCS5zdDd7ZmlsbDojRTUzOTM1O30KCS5zdDh7ZmlsbDojQzYyODI4O30KCS5zdDl7ZmlsbDojRkJDMDJEO30KCS5zdDEwe2ZpbGw6IzE1NjVDMDt9Cgkuc3QxMXtmaWxsOiMyRTdEMzI7fQoJLnN0MTJ7ZmlsbDojRjZCNzA0O30KCS5zdDEze2ZpbGw6I0U1NDMzNTt9Cgkuc3QxNHtmaWxsOiM0MjgwRUY7fQoJLnN0MTV7ZmlsbDojMzRBMzUzO30KCS5zdDE2e2NsaXAtcGF0aDp1cmwoI1NWR0lEXzJfKTt9Cgkuc3QxN3tmaWxsOiMxODgwMzg7fQoJLnN0MTh7b3BhY2l0eTowLjI7ZmlsbDojRkZGRkZGO2VuYWJsZS1iYWNrZ3JvdW5kOm5ldyAgICA7fQoJLnN0MTl7b3BhY2l0eTowLjM7ZmlsbDojMEQ2NTJEO2VuYWJsZS1iYWNrZ3JvdW5kOm5ldyAgICA7fQoJLnN0MjB7Y2xpcC1wYXRoOnVybCgjU1ZHSURfNF8pO30KCS5zdDIxe29wYWNpdHk6MC4zO2ZpbGw6dXJsKCNfNDVfc2hhZG93XzFfKTtlbmFibGUtYmFja2dyb3VuZDpuZXcgICAgO30KCS5zdDIye2NsaXAtcGF0aDp1cmwoI1NWR0lEXzZfKTt9Cgkuc3QyM3tmaWxsOiNGQTdCMTc7fQoJLnN0MjR7b3BhY2l0eTowLjM7ZmlsbDojMTc0RUE2O2VuYWJsZS1iYWNrZ3JvdW5kOm5ldyAgICA7fQoJLnN0MjV7b3BhY2l0eTowLjM7ZmlsbDojQTUwRTBFO2VuYWJsZS1iYWNrZ3JvdW5kOm5ldyAgICA7fQoJLnN0MjZ7b3BhY2l0eTowLjM7ZmlsbDojRTM3NDAwO2VuYWJsZS1iYWNrZ3JvdW5kOm5ldyAgICA7fQoJLnN0Mjd7ZmlsbDp1cmwoI0ZpbmlzaF9tYXNrXzFfKTt9Cgkuc3QyOHtmaWxsOiNGRkZGRkY7fQoJLnN0Mjl7ZmlsbDojMEM5RDU4O30KCS5zdDMwe29wYWNpdHk6MC4yO2ZpbGw6IzAwNEQ0MDtlbmFibGUtYmFja2dyb3VuZDpuZXcgICAgO30KCS5zdDMxe29wYWNpdHk6MC4yO2ZpbGw6IzNFMjcyMztlbmFibGUtYmFja2dyb3VuZDpuZXcgICAgO30KCS5zdDMye2ZpbGw6I0ZGQzEwNzt9Cgkuc3QzM3tvcGFjaXR5OjAuMjtmaWxsOiMxQTIzN0U7ZW5hYmxlLWJhY2tncm91bmQ6bmV3ICAgIDt9Cgkuc3QzNHtvcGFjaXR5OjAuMjt9Cgkuc3QzNXtmaWxsOiMxQTIzN0U7fQoJLnN0MzZ7ZmlsbDp1cmwoI1NWR0lEXzdfKTt9Cgkuc3QzN3tmaWxsOiNGQkJDMDU7fQoJLnN0Mzh7Y2xpcC1wYXRoOnVybCgjU1ZHSURfOV8pO2ZpbGw6I0U1MzkzNTt9Cgkuc3QzOXtjbGlwLXBhdGg6dXJsKCNTVkdJRF8xMV8pO2ZpbGw6I0ZCQzAyRDt9Cgkuc3Q0MHtjbGlwLXBhdGg6dXJsKCNTVkdJRF8xM18pO2ZpbGw6I0U1MzkzNTt9Cgkuc3Q0MXtjbGlwLXBhdGg6dXJsKCNTVkdJRF8xNV8pO2ZpbGw6I0ZCQzAyRDt9Cjwvc3R5bGU+PGc+PHBhdGggY2xhc3M9InN0MTQiIGQ9Ik0xMjAsNzYuMWMwLTMuMS0wLjMtNi4zLTAuOC05LjNINzUuOXYxNy43aDI0LjhjLTEsNS43LTQuMywxMC43LTkuMiwxMy45bDE0LjgsMTEuNSAgIEMxMTUsMTAxLjgsMTIwLDkwLDEyMCw3Ni4xTDEyMCw3Ni4xeiIvPjxwYXRoIGNsYXNzPSJzdDE1IiBkPSJNNzUuOSwxMjAuOWMxMi40LDAsMjIuOC00LjEsMzAuNC0xMS4xTDkxLjUsOTguNGMtNC4xLDIuOC05LjQsNC40LTE1LjYsNC40Yy0xMiwwLTIyLjEtOC4xLTI1LjgtMTguOSAgIEwzNC45LDk1LjZDNDIuNywxMTEuMSw1OC41LDEyMC45LDc1LjksMTIwLjl6Ii8+PHBhdGggY2xhc3M9InN0MTIiIGQ9Ik01MC4xLDgzLjhjLTEuOS01LjctMS45LTExLjksMC0xNy42TDM0LjksNTQuNGMtNi41LDEzLTYuNSwyOC4zLDAsNDEuMkw1MC4xLDgzLjh6Ii8+PHBhdGggY2xhc3M9InN0MTMiIGQ9Ik03NS45LDQ3LjNjNi41LTAuMSwxMi45LDIuNCwxNy42LDYuOUwxMDYuNiw0MUM5OC4zLDMzLjIsODcuMywyOSw3NS45LDI5LjFjLTE3LjQsMC0zMy4yLDkuOC00MSwyNS4zICAgbDE1LjIsMTEuOEM1My44LDU1LjMsNjMuOSw0Ny4zLDc1LjksNDcuM3oiLz48L2c+PC9zdmc+"
+            alt="Google logo"
+          />
           Continue with Google
         </Button>
       </div>
       <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
+        By clicking continue, you agree to our{" "}
+        <Link href="#">Terms of Service</Link> and{" "}
+        <Link href="#">Privacy Policy</Link>.
       </div>
     </div>
   );
