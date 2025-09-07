@@ -14,14 +14,14 @@ export default function DataGridColumnHeader<TData, TValue>({
   showSort = true,
 }: DataGridColumnHeaderProps<TData, TValue>) {
   return (
-    <div className="flex flex-row justify-start items-center gap-1">
+    <div className="flex flex-row justify-start items-center gap-1 group">
       {title}
 
       {showSort ? (
         <Button
           variant="ghost"
           size="icon"
-          className="p-1 w-6 h-6"
+          className="p-1 w-6 h-6 group-hover:visible invisible"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           {column.getIsSorted() === "asc" ? (

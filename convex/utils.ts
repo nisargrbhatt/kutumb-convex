@@ -20,3 +20,8 @@ export async function getCurrentUser(ctx: QueryCtx | MutationCtx) {
     metadata: userMetadata,
   };
 }
+
+export function makeTitleCase(str: string) {
+  if (str.length === 0) return str;
+  return str.trim().charAt(0).toUpperCase() + str.trim().slice(1).toLowerCase();
+}

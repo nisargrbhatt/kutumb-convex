@@ -9,10 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileTable from "./__components/ProfileTable";
 import AddressList from "./__components/AddressList";
 import RelationshipList from "./__components/RelationshipList";
+import { Badge } from "@/components/ui/badge";
+import ProfileReviewDialog from "./__components/ProfileReviewDialog";
 
 const MemberDetailPage: NextPage = () => {
   const { id } = useParams();
   const router = useRouter();
+  const me = useQuery(api.auth.getCurrentUser);
   const profile = useQuery(api.profile.getProfileDetail, {
     id: id as string,
   });
@@ -31,16 +34,25 @@ const MemberDetailPage: NextPage = () => {
   return (
     <div className="w-full flex flex-col justify-start items-start gap-2">
       <div className="flex flex-col items-start justify-start">
-        <h2 className="font-bold text-2xl">
-          {[
-            profile?.profile?.firstName,
-            profile?.profile?.middleName,
-            profile?.profile?.lastName,
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        </h2>
+        <div className="flex flex-row justify-start items-center gap-2">
+          <h2 className="font-bold text-2xl">
+            {[
+              profile?.profile?.firstName,
+              profile?.profile?.middleName,
+              profile?.profile?.lastName,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          </h2>
+          <Badge variant="outline" className="capitalize">
+            {profile?.profile?.status}
+          </Badge>
+        </div>
         <p className="text-muted-foreground">{profile?.profile?.email}</p>
+        {(me?.role === "admin" || me?.role === "superadmin") &&
+        profile?.profile?.status === "draft" ? (
+          <ProfileReviewDialog id={profile?.profile?._id} />
+        ) : null}
       </div>
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="w-full">

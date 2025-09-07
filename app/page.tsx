@@ -33,7 +33,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 pt-20 pb-16 md:pt-28 md:pb-20">
         <div className="max-w-3xl">
-          <Badge className="mb-4" variant="secondary">
+          <Badge className="mb-4" variant="outline">
             Hindu Community
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">

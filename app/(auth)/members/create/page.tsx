@@ -1,5 +1,10 @@
-import { NextPage } from "next";
+import { Metadata, NextPage } from "next";
 import MemberForm from "./__components/MemberForm";
+
+export const metadata: Metadata = {
+  title: "Create New Member",
+  description: "Add a new member profile to Kutumb App",
+};
 
 const MemberCreatePage: NextPage = () => {
   return (

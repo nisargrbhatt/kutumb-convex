@@ -101,4 +101,10 @@ export const columns: ColumnDef<MemberObject>[] = [
       <DataGridColumnHeader column={column} title="Relationship" />
     ),
   },
+  {
+    accessorKey: "status",
+    header: ({ column }) => (
+      <DataGridColumnHeader column={column} title="Status" />
+    ),
+  },
 ];

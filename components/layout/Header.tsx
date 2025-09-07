@@ -37,7 +37,7 @@ const AuthMenu: FC = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Avatar>
+        <Avatar className="cursor-pointer">
           <AvatarFallback>{user?.email?.at(0)?.toUpperCase()}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
@@ -48,13 +48,9 @@ const AuthMenu: FC = () => {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem
-            onClick={() => {
-              router.push("/profile");
-            }}
-          >
-            Profile
-          </DropdownMenuItem>
+          <Link href="/profile" className="cursor-pointer">
+            <DropdownMenuItem>Profile</DropdownMenuItem>
+          </Link>
           <DropdownMenuItem onClick={onLogout}>Logout</DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
@@ -63,8 +59,6 @@ const AuthMenu: FC = () => {
 };
 
 const FeatureMenu: FC = () => {
-  const router = useRouter();
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -74,20 +68,12 @@ const FeatureMenu: FC = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end">
         <DropdownMenuGroup>
-          <DropdownMenuItem
-            onClick={() => {
-              router.push("/members");
-            }}
-          >
-            Members
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              router.push("/family-tree");
-            }}
-          >
-            Family Tree
-          </DropdownMenuItem>
+          <Link href="/members" className="cursor-pointer">
+            <DropdownMenuItem>Members</DropdownMenuItem>
+          </Link>
+          <Link href="/family-tree" className="cursor-pointer">
+            <DropdownMenuItem>Family Tree</DropdownMenuItem>
+          </Link>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -100,7 +86,9 @@ const Header: FC<Props> = () => {
   return (
     <header className="py-3 px-4 border-b w-full shadow-xs">
       <nav className="flex w-full flex-row justify-between items-center gap-1">
-        <Link href="/">Kutumb</Link>
+        <Link href="/" className="font-medium">
+          Kutumb
+        </Link>
 
         <Unauthenticated>
           <Link href="/sign-in">

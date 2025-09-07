@@ -1,6 +1,6 @@
 import Link from "next/link";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
-import { Github, Instagram, Mail } from "lucide-react";
+import { Github, Mail } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -19,19 +19,17 @@ export default function Footer() {
           >
             About
           </Link>
-
           <Link
-            href="/"
+            href="/privacy-policy"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Contact
+            Privacy
           </Link>
 
           <div className="mx-1 h-4 w-px bg-border" />
-
           <div className="flex items-center gap-3">
             <Link
-              href="https://github.com/"
+              href="https://github.com/nisargrbhatt/kutumb-convex"
               aria-label="GitHub"
               className="text-muted-foreground hover:text-foreground transition-colors"
               target="_blank"
@@ -40,16 +38,7 @@ export default function Footer() {
               <Github className="h-4 w-4" />
             </Link>
             <Link
-              href="https://instagram.com/"
-              aria-label="Instagram"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Instagram className="h-4 w-4" />
-            </Link>
-            <Link
-              href="mailto:hello@kutumb.app"
+              href="mailto:nisargrbhatt@gmail.com"
               aria-label="Email"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >

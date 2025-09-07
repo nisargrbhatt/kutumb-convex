@@ -35,13 +35,13 @@ import { api } from "@/convex/_generated/api";
 import { useMutation } from "convex/react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Id } from "@/convex/_generated/dataModel";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First Name is required"),
   middleName: z.string().optional(),
   lastName: z.string().min(1, "Last Name is required"),
   nickName: z.string().optional(),
-  picture: z.string().optional(),
   email: z.email().optional(),
   mobileNumber: z.string().optional(),
   dateOfBirth: z.date().optional(),
@@ -57,6 +57,13 @@ const formSchema = z.object({
   relationship: z
     .enum(["single", "married", "divorced", "widowed", "rather not say"])
     .optional(),
+  picture: z
+    .file()
+    .refine(
+      (file) => file.size < 5 * 1024 * 1024,
+      "File size must be less than 5MB",
+    )
+    .optional(),
 });
 
 interface Props {}
@@ -66,6 +73,7 @@ const MemberForm: FC<Props> = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const router = useRouter();
 
+  const generateUploadUrl = useMutation(api.profile.generateProfileUploadUrl);
   const addMemberAction = useMutation(api.profile.addMemberProfile);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -75,7 +83,7 @@ const MemberForm: FC<Props> = () => {
       middleName: "",
       lastName: "",
       nickName: "",
-      picture: "",
+      picture: undefined,
       mobileNumber: "",
       dateOfBirth: undefined,
       dateOfDeath: undefined,
@@ -91,37 +99,58 @@ const MemberForm: FC<Props> = () => {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setIsLoading(() => true);
+    try {
+      let storageId: Id<"_storage"> | undefined;
+      if (values.picture) {
+        const uploadUrl = await generateUploadUrl();
+        const response = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": values.picture!.type },
+          body: values.picture,
+        });
+        if (!response.ok) {
+          throw new Error("Failed to upload profile picture");
+        }
+        const resBody = await response.json();
+        storageId = resBody.storageId;
+      }
 
-    const payload = {
-      firstName: values.firstName,
-      gender: values?.gender,
-      lastName: values?.lastName,
-      middleName: values?.middleName ? values?.middleName : undefined,
-      birthPlace: values?.birthPlace ? values?.birthPlace : undefined,
-      bloodGroup: values?.bloodGroup ? values?.bloodGroup : undefined,
-      dateOfBirth: values?.dateOfBirth
-        ? values?.dateOfBirth?.toJSON()
-        : undefined,
-      dateOfDeath: values?.dateOfDeath
-        ? values?.dateOfDeath?.toJSON()
-        : undefined,
-      gotra: values?.gotra ? values?.gotra : undefined,
-      native: values?.native ? values?.native : undefined,
-      maternal: values?.maternal ? values?.maternal : undefined,
-      relationship: values?.relationship ? values?.relationship : undefined,
-      nickName: values?.nickName ? values?.nickName : undefined,
-      mobileNumber: values?.mobileNumber ? values?.mobileNumber : undefined,
-      email: values?.email ? values?.email : undefined,
-    };
+      const payload = {
+        firstName: values.firstName,
+        gender: values?.gender,
+        lastName: values?.lastName,
+        middleName: values?.middleName ? values?.middleName : undefined,
+        birthPlace: values?.birthPlace ? values?.birthPlace : undefined,
+        bloodGroup: values?.bloodGroup ? values?.bloodGroup : undefined,
+        dateOfBirth: values?.dateOfBirth
+          ? values?.dateOfBirth?.toJSON()
+          : undefined,
+        dateOfDeath: values?.dateOfDeath
+          ? values?.dateOfDeath?.toJSON()
+          : undefined,
+        gotra: values?.gotra ? values?.gotra : undefined,
+        native: values?.native ? values?.native : undefined,
+        maternal: values?.maternal ? values?.maternal : undefined,
+        relationship: values?.relationship ? values?.relationship : undefined,
+        nickName: values?.nickName ? values?.nickName : undefined,
+        mobileNumber: values?.mobileNumber ? values?.mobileNumber : undefined,
+        email: values?.email ? values?.email : undefined,
+        ...(storageId ? { picture: storageId } : {}),
+      };
 
-    await addMemberAction(payload);
-    toast.success("Member profile added successfully", {
-      description:
-        "Thank you for support. It will be evaluated by admin to make it visible to public.",
-    });
+      await addMemberAction(payload);
+      toast.success("Member profile added successfully", {
+        description:
+          "Thank you for support. It will be evaluated by admin to make it visible to public.",
+      });
 
-    router.push("/members");
-    setIsLoading(() => false);
+      router.push("/members");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to add member");
+    } finally {
+      setIsLoading(() => false);
+    }
   });
 
   return (
@@ -129,6 +158,46 @@ const MemberForm: FC<Props> = () => {
       <Form {...form}>
         <form onSubmit={onSubmit} className="w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <FormField
+                control={form.control}
+                name="picture"
+                render={({ field }) => {
+                  if (field.value) {
+                    return (
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <img
+                          loading="lazy"
+                          src={URL.createObjectURL(field.value)}
+                          alt="profile-picture"
+                          className="max-w-[150px] max-h-[150px] object-cover mx-auto"
+                        />
+                        <Button
+                          type="button"
+                          variant={"destructive"}
+                          onClick={() => form.resetField("picture")}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    );
+                  }
+                  return (
+                    <FormItem>
+                      <FormLabel>Picture</FormLabel>
+                      <FormControl>
+                        <Input
+                          onChange={(e) => field.onChange(e.target.files?.[0])}
+                          type="file"
+                          accept="image/*"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            </div>
             <FormField
               control={form.control}
               name="firstName"

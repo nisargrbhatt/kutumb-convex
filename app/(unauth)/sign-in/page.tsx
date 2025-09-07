@@ -1,6 +1,10 @@
-"use client";
-
 import SignIn from "@/app/(unauth)/sign-in/SignIn";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Sign In to Kutumb",
+  description: "Sign In to Kutumb App",
+};
 
 export default function SignInPage() {
   return (

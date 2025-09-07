@@ -23,14 +23,14 @@ const AboutUsPage = () => {
             <p className="text-lg text-muted-foreground mb-4">
               Gandhinagar Yuvak Mandal is dedicated to fostering a strong,
               connected, and vibrant community for all members of the Shree
-              Sorthiya ShreeGaud Brahmin Samaj. Our primary goal is to unite
-              our community members, preserve our rich cultural heritage, and
+              Sorthiya ShreeGaud Brahmin Samaj. Our primary goal is to unite our
+              community members, preserve our rich cultural heritage, and
               provide a platform for social, cultural, and spiritual growth.
             </p>
             <p className="text-lg text-muted-foreground">
               This application is a key part of our initiative, created by the
-              Gandhinagar Yuvak Mandal to serve our community&apos;s needs in the
-              digital age.
+              Gandhinagar Yuvak Mandal to serve our community&apos;s needs in
+              the digital age.
             </p>
           </div>
           <div className="flex justify-center">

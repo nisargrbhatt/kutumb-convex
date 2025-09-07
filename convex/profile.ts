@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getCurrentUser } from "./utils";
+import { getCurrentUser, makeTitleCase } from "./utils";
 import { Id } from "./_generated/dataModel";
 
 export const getProfile = query({
@@ -78,7 +78,20 @@ export const createMyProfile = mutation({
     }
 
     const profileId = await ctx.db.insert("profile", {
-      ...args,
+      firstName: makeTitleCase(args.firstName),
+      middleName: args.middleName ? makeTitleCase(args.middleName) : undefined,
+      lastName: makeTitleCase(args.lastName),
+      nickName: args.nickName ? makeTitleCase(args.nickName) : undefined,
+      bloodGroup: args.bloodGroup ? args.bloodGroup : undefined,
+      relationship: args.relationship ? args.relationship : undefined,
+      birthPlace: args.birthPlace ? makeTitleCase(args.birthPlace) : undefined,
+      gotra: args.gotra ? makeTitleCase(args.gotra) : undefined,
+      native: args.native ? makeTitleCase(args.native) : undefined,
+      maternal: args.maternal ? makeTitleCase(args.maternal) : undefined,
+      dateOfBirth: args.dateOfBirth ? args.dateOfBirth : undefined,
+      mobileNumber: args.mobileNumber ? args.mobileNumber : undefined,
+      picture: args.picture ? args.picture : undefined,
+      gender: args.gender,
       email: identity?.user?.email,
       userId: identity.user._id,
       status: "active",
@@ -152,7 +165,40 @@ export const updateMyProfile = mutation({
     }
 
     await ctx.db.patch(args.profileId, {
-      ...args.payload,
+      firstName: makeTitleCase(args.payload?.firstName),
+      middleName: args.payload?.middleName
+        ? makeTitleCase(args.payload?.middleName)
+        : undefined,
+      lastName: makeTitleCase(args.payload?.lastName),
+      nickName: args.payload?.nickName
+        ? makeTitleCase(args.payload?.nickName)
+        : undefined,
+      bloodGroup: args.payload?.bloodGroup
+        ? args.payload?.bloodGroup
+        : undefined,
+      relationship: args.payload?.relationship
+        ? args.payload?.relationship
+        : undefined,
+      birthPlace: args.payload?.birthPlace
+        ? makeTitleCase(args.payload?.birthPlace)
+        : undefined,
+      gotra: args.payload?.gotra
+        ? makeTitleCase(args.payload?.gotra)
+        : undefined,
+      native: args.payload?.native
+        ? makeTitleCase(args.payload?.native)
+        : undefined,
+      maternal: args.payload?.maternal
+        ? makeTitleCase(args.payload?.maternal)
+        : undefined,
+      dateOfBirth: args.payload?.dateOfBirth
+        ? args.payload?.dateOfBirth
+        : undefined,
+      mobileNumber: args.payload?.mobileNumber
+        ? args.payload?.mobileNumber
+        : undefined,
+      picture: args.payload?.picture ? args.payload?.picture : undefined,
+      gender: args.payload?.gender,
     });
 
     return;
@@ -167,10 +213,15 @@ export const listMembers = query({
       throw new Error("Unauthorized");
     }
 
-    const profiles = await ctx.db
-      .query("profile")
-      .withIndex("by_status", (q) => q.eq("status", "active"))
-      .collect();
+    const isAdmin =
+      identity?.user?.role === "admin" || identity?.user?.role === "superadmin";
+
+    const profiles = isAdmin
+      ? await ctx.db.query("profile").collect()
+      : await ctx.db
+          .query("profile")
+          .withIndex("by_status", (q) => q.eq("status", "active"))
+          .collect();
 
     const profileWithPictures = await Promise.all(
       profiles.map(async (profile) => {
@@ -231,7 +282,22 @@ export const addMemberProfile = mutation({
     }
 
     const profileId = await ctx.db.insert("profile", {
-      ...args,
+      firstName: makeTitleCase(args.firstName),
+      middleName: args.middleName ? makeTitleCase(args.middleName) : undefined,
+      lastName: makeTitleCase(args.lastName),
+      nickName: args.nickName ? makeTitleCase(args.nickName) : undefined,
+      bloodGroup: args.bloodGroup ? args.bloodGroup : undefined,
+      relationship: args.relationship ? args.relationship : undefined,
+      birthPlace: args.birthPlace ? makeTitleCase(args.birthPlace) : undefined,
+      gotra: args.gotra ? makeTitleCase(args.gotra) : undefined,
+      native: args.native ? makeTitleCase(args.native) : undefined,
+      maternal: args.maternal ? makeTitleCase(args.maternal) : undefined,
+      dateOfBirth: args.dateOfBirth ? args.dateOfBirth : undefined,
+      mobileNumber: args.mobileNumber ? args.mobileNumber : undefined,
+      picture: args.picture ? args.picture : undefined,
+      gender: args.gender,
+      email: args.email ? args.email : undefined,
+      dateOfDeath: args.dateOfDeath ? args.dateOfDeath : undefined,
       status: "draft",
       comment: `Record added by ${identity.user?.email ?? identity?.metadata?.email}`,
       userId: null,
@@ -273,10 +339,17 @@ export const getProfileDetail = query({
     if (!identity) {
       throw new Error("Unauthorized");
     }
+
+    const isAdmin =
+      identity?.user?.role === "admin" || identity?.user?.role === "superadmin";
     try {
       const profile = await ctx.db.get(args.id as Id<"profile">);
 
       if (!profile) {
+        return null;
+      }
+
+      if (profile.status !== "active" && !isAdmin) {
         return null;
       }
 
@@ -384,5 +457,40 @@ export const familyTreeProfileList = query({
     );
 
     return profileWithPictures;
+  },
+});
+
+export const reviewProfile = mutation({
+  args: {
+    id: v.id("profile"),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+    comment: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await getCurrentUser(ctx);
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    if (identity.user.role === "member") {
+      throw new Error("Members can't review profile");
+    }
+
+    const profile = await ctx.db.get(args.id as Id<"profile">);
+
+    if (!profile) {
+      throw new Error("No profile found");
+    }
+
+    if (profile.status !== "draft") {
+      throw new Error("Profile already reviewed");
+    }
+
+    await ctx.db.patch(args.id, {
+      status: args.status,
+      comment: args.comment,
+    });
+
+    return;
   },
 });
