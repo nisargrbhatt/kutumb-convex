@@ -74,6 +74,9 @@ const FeatureMenu: FC = () => {
           <Link href="/family-tree" className="cursor-pointer">
             <DropdownMenuItem>Family Tree</DropdownMenuItem>
           </Link>
+          <Link href="/memories" className="cursor-pointer">
+            <DropdownMenuItem>Memories</DropdownMenuItem>
+          </Link>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

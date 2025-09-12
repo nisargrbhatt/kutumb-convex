@@ -100,11 +100,19 @@ export const columns: ColumnDef<MemberObject>[] = [
     header: ({ column }) => (
       <DataGridColumnHeader column={column} title="Relationship" />
     ),
+    cell: ({ cell }) => {
+      const value = cell.getValue<string>();
+      return <p className="text-sm capitalize">{value}</p>;
+    },
   },
   {
     accessorKey: "status",
     header: ({ column }) => (
       <DataGridColumnHeader column={column} title="Status" />
     ),
+    cell: ({ cell }) => {
+      const value = cell.getValue<string>();
+      return <p className="text-sm capitalize">{value}</p>;
+    },
   },
 ];

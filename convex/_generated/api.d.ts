@@ -11,6 +11,7 @@
 import type * as address from "../address.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as memories from "../memories.js";
 import type * as profile from "../profile.js";
 import type * as relations from "../relations.js";
 import type * as utils from "../utils.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   address: typeof address;
   auth: typeof auth;
   http: typeof http;
+  memories: typeof memories;
   profile: typeof profile;
   relations: typeof relations;
   utils: typeof utils;

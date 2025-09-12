@@ -94,4 +94,10 @@ export default defineSchema({
   })
     .index("by_fromProfileId", ["fromProfileId"])
     .index("by_toProfileId", ["toProfileId"]),
+  memories: defineTable({
+    title: v.string(),
+    images: v.array(v.id("_storage")),
+    content: v.string(),
+    createdBy: v.id("profile"),
+  }).index("by_createdBy", ["createdBy"]),
 });

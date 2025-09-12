@@ -61,10 +61,12 @@ export default function RootLayout({
 }>) {
   return (
     <ConvexAuthNextjsServerProvider>
-      <html lang="en" suppressHydrationWarning>
-        <body
-          className={`${roboto.variable} ${merriweather.variable} ${geistMono.variable} antialiased h-full`}
-        >
+      <html
+        lang="en"
+        suppressHydrationWarning
+        className={`${roboto.variable} ${merriweather.variable} ${geistMono.variable}`}
+      >
+        <body className={`antialiased h-full`}>
           <ConvexClientProvider>
             <Layout>{children}</Layout>
           </ConvexClientProvider>

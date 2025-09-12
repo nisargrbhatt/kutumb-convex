@@ -123,6 +123,7 @@ const ProfilePictureForm: FC<Props> = ({ picture }) => {
                         loading="lazy"
                         src={URL.createObjectURL(field.value)}
                         alt="profile-picture"
+                        className="h-[200px] w-[200px] object-contain mx-auto"
                       />
                       <Button
                         type="button"
