@@ -108,6 +108,33 @@ export const listMemories = query({
   },
 });
 
+export const getMemory = query({
+  args: {
+    id: v.id("memories"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await getCurrentUser(ctx);
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const memory = await ctx.db.get(args.id);
+
+    if (!memory) {
+      return null;
+    }
+
+    const images = await Promise.all(
+      memory.images?.map((imageId) => ctx.storage.getUrl(imageId)),
+    );
+
+    return {
+      ...memory,
+      images: images,
+    };
+  },
+});
+
 export const generateMemoryUploadUrl = mutation({
   handler: async (ctx) => {
     const identity = await getCurrentUser(ctx);

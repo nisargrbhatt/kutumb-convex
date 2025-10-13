@@ -62,17 +62,15 @@ const MemoriesPage: FC<Props> = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Carousel className="w-full max-w-xs">
+                    <Carousel className="w-full ">
                       {memory?.images?.map((i, index) => (
-                        <CarouselItem key={index}>
-                          <AspectRatio ratio={16 / 9} className="rounded-lg">
-                            <img
-                              loading="lazy"
-                              src={i ?? ""}
-                              alt={`${memory?.title} - ${index}`}
-                              className="rounded-lg object-cover h-full w-full max-h-[250px]"
-                            />
-                          </AspectRatio>
+                        <CarouselItem className="p-0" key={index}>
+                          <img
+                            loading="lazy"
+                            src={i ?? ""}
+                            alt={`${memory?.title} - ${index}`}
+                            className="rounded-lg object-contain h-full w-full max-h-[250px]"
+                          />
                         </CarouselItem>
                       ))}
                     </Carousel>
