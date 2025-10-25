@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Roboto, Merriweather, Geist_Mono } from "next/font/google";
-import "./globals.css";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { Toaster } from "@/components/ui/sonner";
 import Layout from "@/components/layout/Layout";
+import "./globals.css";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],

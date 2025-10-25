@@ -67,7 +67,7 @@ export default function Home() {
           {/* Blogs */}
           <Card>
             <CardHeader className="space-y-1">
-              <div className="flex items-center gap-2 text-primary">
+              <div className="flex items-center gap-2">
                 <Newspaper className="h-5 w-5" />
                 <CardTitle>Blogs</CardTitle>
               </div>
@@ -88,7 +88,7 @@ export default function Home() {
           {/* Members */}
           <Card>
             <CardHeader className="space-y-1">
-              <div className="flex items-center gap-2 text-primary">
+              <div className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
                 <CardTitle>Members</CardTitle>
               </div>
@@ -114,7 +114,7 @@ export default function Home() {
           {/* Relationship Graphs */}
           <Card>
             <CardHeader className="space-y-1">
-              <div className="flex items-center gap-2 text-primary">
+              <div className="flex items-center gap-2">
                 <Share2 className="h-5 w-5" />
                 <CardTitle>Relationship Graphs</CardTitle>
               </div>
@@ -180,7 +180,7 @@ export default function Home() {
           {/* Photo Gallery */}
           <Card>
             <CardHeader className="space-y-1">
-              <div className="flex items-center gap-2 text-primary">
+              <div className="flex items-center gap-2">
                 <Images className="h-5 w-5" />
                 <CardTitle>Photo Gallery</CardTitle>
               </div>

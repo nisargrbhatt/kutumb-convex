@@ -1,9 +1,9 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
-const signInRoutes = ["/sign-in", "/", "/about-us","/privacy-policy"];
+const signInRoutes = ["/sign-in", "/", "/about-us", "/privacy-policy"];
 
-export default async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const sessionCookie = getSessionCookie(request);
 
   const isSignInRoute = signInRoutes.includes(request.nextUrl.pathname);

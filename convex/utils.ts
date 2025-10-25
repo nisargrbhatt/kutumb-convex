@@ -1,15 +1,16 @@
-import { Id } from "./_generated/dataModel";
 import { MutationCtx, QueryCtx } from "./_generated/server";
-import { betterAuthComponent } from "./auth";
+import { authComponent } from "./auth";
 
 export async function getCurrentUser(ctx: QueryCtx | MutationCtx) {
-  const userMetadata = await betterAuthComponent.getAuthUser(ctx);
+  const userMetadata = await authComponent.getAuthUser(ctx);
 
   if (!userMetadata) {
     return null;
   }
-
-  const user = await ctx.db.get(userMetadata.userId as Id<"users">);
+  const user = await ctx.db
+    .query("users")
+    .withIndex("email", (q) => q.eq("email", userMetadata.email))
+    .first();
 
   if (!user) {
     return null;

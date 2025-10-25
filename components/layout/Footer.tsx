@@ -1,5 +1,4 @@
 import Link from "next/link";
-import ThemeModeToggle from "@/components/ThemeModeToggle";
 import { Github, Mail } from "lucide-react";
 
 export default function Footer() {
@@ -44,7 +43,6 @@ export default function Footer() {
             >
               <Mail className="h-4 w-4" />
             </Link>
-            <ThemeModeToggle />
           </div>
         </nav>
       </div>
