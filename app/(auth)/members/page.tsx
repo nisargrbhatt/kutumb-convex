@@ -1,18 +1,20 @@
-"use client";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
-import { NextPage } from "next";
+import { Metadata, NextPage } from "next";
 import { DataTable } from "./__components/MembersDataTable";
 import { columns } from "./__components/MembersColumns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { getServerSession, getToken } from "@/lib/auth-server";
+import { fetchQuery } from "convex/nextjs";
 
-const MembersPage: NextPage = () => {
-  const members = useQuery(api.profile.listMembers);
+export const metadata: Metadata = {
+  title: "Members List",
+};
 
-  if (typeof members === "undefined") {
-    return <p>Loading...</p>;
-  }
+const MembersPage: NextPage = async () => {
+  await getServerSession({ redirectUrl: "/members" });
+  const token = await getToken();
+  const members = await fetchQuery(api.profile.listMembers, {}, { token });
 
   return (
     <div className="w-full flex flex-col justify-start items-start gap-2">

@@ -1,34 +1,31 @@
-"use client";
 import { NextPage } from "next";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { toast } from "sonner";
+import { notFound } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileTable from "./__components/ProfileTable";
 import AddressList from "./__components/AddressList";
 import RelationshipList from "./__components/RelationshipList";
 import { Badge } from "@/components/ui/badge";
 import ProfileReviewDialog from "./__components/ProfileReviewDialog";
+import { getServerSession, getToken } from "@/lib/auth-server";
+import { fetchQuery } from "convex/nextjs";
 
-const MemberDetailPage: NextPage = () => {
-  const { id } = useParams();
-  const router = useRouter();
-  const me = useQuery(api.auth.getCurrentUser);
-  const profile = useQuery(api.profile.getProfileDetail, {
-    id: id as string,
-  });
+const MemberDetailPage: NextPage<PageProps<"/members/[id]">> = async (
+  props,
+) => {
+  const { id } = await props.params;
+  const session = await getServerSession({ redirectUrl: `/members/${id}` });
+  const token = await getToken();
+  const profile = await fetchQuery(
+    api.profile.getProfileDetail,
+    {
+      id: id as string,
+    },
+    { token },
+  );
 
-  useEffect(() => {
-    if (profile === null) {
-      toast.error("No member found");
-      router.push("/members");
-    }
-  }, [profile, router]);
-
-  if (profile === undefined) {
-    return <p>Loading...</p>;
+  if (!profile) {
+    return notFound();
   }
 
   return (
@@ -49,7 +46,7 @@ const MemberDetailPage: NextPage = () => {
           </Badge>
         </div>
         <p className="text-muted-foreground">{profile?.profile?.email}</p>
-        {(me?.role === "admin" || me?.role === "superadmin") &&
+        {(session?.role === "admin" || session?.role === "superadmin") &&
         profile?.profile?.status === "draft" ? (
           <ProfileReviewDialog id={profile?.profile?._id} />
         ) : null}

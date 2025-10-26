@@ -97,8 +97,8 @@ const FamilyTreeFlow: FC<Props> = ({ profiles, relations }) => {
     );
   }, [profiles, relations]);
 
-  const [nodes, _setNodes, onNodesChange] = useNodesState(layoutedNodes);
-  const [edges, _setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
+  const [nodes, _setNodes] = useNodesState(layoutedNodes);
+  const [edges, _setEdges] = useEdgesState(layoutedEdges);
 
   return (
     <div className="w-full h-[60vh]">
@@ -107,12 +107,9 @@ const FamilyTreeFlow: FC<Props> = ({ profiles, relations }) => {
         edgeTypes={edgeTypes}
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         fitView
         colorMode={theme as any}
       >
-        <MiniMap pannable zoomable />
         <Background variant={BackgroundVariant.Dots} />
         <Controls />
       </ReactFlow>

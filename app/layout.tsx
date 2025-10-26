@@ -46,7 +46,10 @@ const merriweather = Merriweather({
 });
 
 export const metadata: Metadata = {
-  title: "Kutumb App",
+  title: {
+    default: "Kutumb App",
+    template: "%s | Kutumb App",
+  },
   description:
     "Kutumb Community App by Gandhinagar Yuvak Mandal for Shree Sorthiya Shree Gaud Brahmin Samaj",
   icons: {

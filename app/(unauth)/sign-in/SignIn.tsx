@@ -5,11 +5,15 @@ import { authClient } from "@/lib/auth-client";
 import { GalleryVerticalEnd } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export default function SignIn() {
+  const searchParams = useSearchParams();
+
   const googleSignIn = async () => {
     const { error } = await authClient.signIn.social({
       provider: "google",
+      callbackURL: searchParams.get("redirectUrl") ?? "/",
     });
     if (error) {
       console.log(error);
@@ -47,8 +51,7 @@ export default function SignIn() {
       </div>
       <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">
         By clicking continue, you agree to our{" "}
-        <Link href="#">Terms of Service</Link> and{" "}
-        <Link href="#">Privacy Policy</Link>.
+        <Link href="/privacy-policy">Privacy Policy</Link>.
       </div>
     </div>
   );

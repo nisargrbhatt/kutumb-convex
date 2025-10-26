@@ -1,3 +1,4 @@
+"use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import DataGridColumnHeader from "@/components/ui/data-table-column-header";
 import { api } from "@/convex/_generated/api";

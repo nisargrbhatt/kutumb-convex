@@ -1,4 +1,3 @@
-"use client";
 import { api } from "@/convex/_generated/api";
 import type { FC } from "react";
 import RelationshipCard from "./RelationshipCard";

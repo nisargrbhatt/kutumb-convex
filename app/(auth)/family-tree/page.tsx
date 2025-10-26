@@ -1,19 +1,30 @@
-"use client";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
-import type { FC } from "react";
 import FamilyTreeFlow from "./__components/FamilyTreeFlow";
 import { ReactFlowProvider } from "@xyflow/react";
+import { Metadata, NextPage } from "next";
+import { getServerSession, getToken } from "@/lib/auth-server";
+import { fetchQuery } from "convex/nextjs";
+
+export const metadata: Metadata = {
+  title: "Family Tree",
+};
 
 interface Props {}
 
-const FamilyTress: FC<Props> = () => {
-  const profiles = useQuery(api.profile.familyTreeProfileList);
-  const relations = useQuery(api.relations.familyTreeRelations);
+const FamilyTress: NextPage<Props> = async () => {
+  await getServerSession({ redirectUrl: "/family-tree" });
+  const token = await getToken();
 
-  if (profiles === undefined || relations === undefined) {
-    return <p>Loading...</p>;
-  }
+  const profiles = await fetchQuery(
+    api.profile.familyTreeProfileList,
+    {},
+    { token },
+  );
+  const relations = await fetchQuery(
+    api.relations.familyTreeRelations,
+    {},
+    { token },
+  );
 
   return (
     <div className="w-full flex flex-col justify-start items-start gap-2">

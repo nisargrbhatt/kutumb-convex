@@ -132,3 +132,23 @@
     @apply bg-background text-foreground;
   }
 }
+
+@utility font-h1 {
+  @apply scroll-m-20 text-center text-4xl font-extrabold tracking-tight text-balance;
+}
+@utility font-h2 {
+  @apply scroll-m-20 text-3xl font-semibold tracking-tight;
+}
+@utility font-h3 {
+  @apply scroll-m-20 text-2xl font-semibold tracking-tight;
+}
+@utility font-h4 {
+  @apply scroll-m-20 text-xl font-semibold tracking-tight;
+}
+@utility font-p {
+  @apply leading-7 text-gray-500 dark:text-gray-400;
+}
+
+@utility link {
+  @apply cursor-pointer border-b border-dotted border-black no-underline;
+}

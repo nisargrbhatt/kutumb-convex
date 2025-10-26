@@ -106,8 +106,8 @@ export const getCurrentUser = query({
       .first();
 
     return {
-      ...user,
       ...userMetadata,
+      ...user,
     };
   },
 });
