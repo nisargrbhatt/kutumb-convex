@@ -1,19 +1,18 @@
-"use client";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
 import { NextPage } from "next";
 import ProfileForm from "./__components/ProfileForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AddressList from "./__components/AddressList";
 import RelationshipList from "./__components/RelationshipList";
 import ProfilePictureForm from "./__components/ProfilePictureForm";
+import { getServerSession, getToken } from "@/lib/auth-server";
+import { fetchQuery } from "convex/nextjs";
 
-const ProfilePage: NextPage = () => {
-  const profile = useQuery(api.profile.getProfile);
+const ProfilePage: NextPage<PageProps<"/profile">> = async () => {
+  await getServerSession({ redirectUrl: "/profile" });
+  const token = await getToken();
 
-  if (profile === undefined) {
-    return <p>Loading...</p>;
-  }
+  const profile = await fetchQuery(api.profile.getProfile, {}, { token });
 
   return (
     <div className="w-full flex flex-col justify-start items-start gap-2">

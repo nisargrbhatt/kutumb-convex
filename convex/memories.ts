@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./utils";
+import { Id } from "./_generated/dataModel";
 
 export const createMemory = mutation({
   args: {
@@ -61,11 +62,6 @@ export const getMyMemories = query({
 
 export const listMemories = query({
   handler: async (ctx) => {
-    const identity = await getCurrentUser(ctx);
-    if (!identity) {
-      throw new Error("Unauthorized");
-    }
-
     const memories = await ctx.db
       .query("memories")
       .withIndex("by_creation_time")
@@ -110,28 +106,45 @@ export const listMemories = query({
 
 export const getMemory = query({
   args: {
-    id: v.id("memories"),
+    id: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await getCurrentUser(ctx);
-    if (!identity) {
-      throw new Error("Unauthorized");
+    try {
+      const memory = await ctx.db.get(args.id as Id<"memories">);
+
+      if (!memory) {
+        return null;
+      }
+
+      const images = await Promise.all(
+        memory.images?.map((imageId) => ctx.storage.getUrl(imageId)),
+      );
+
+      const createdBy = await ctx.db.get(memory.createdBy);
+
+      if (!createdBy) {
+        return null;
+      }
+
+      return {
+        ...memory,
+        images: images,
+        createdBy: {
+          id: createdBy._id,
+          name: [
+            createdBy?.firstName,
+            createdBy?.middleName,
+            createdBy?.lastName,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        },
+      };
+    } catch (error) {
+      console.error(error);
     }
 
-    const memory = await ctx.db.get(args.id);
-
-    if (!memory) {
-      return null;
-    }
-
-    const images = await Promise.all(
-      memory.images?.map((imageId) => ctx.storage.getUrl(imageId)),
-    );
-
-    return {
-      ...memory,
-      images: images,
-    };
+    return null;
   },
 });
 

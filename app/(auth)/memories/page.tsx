@@ -1,5 +1,3 @@
-"use client";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,14 +9,12 @@ import {
 } from "@/components/ui/card";
 import { Carousel, CarouselItem } from "@/components/ui/carousel";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
+import { fetchQuery } from "convex/nextjs";
+import { NextPage } from "next";
 import Link from "next/link";
-import type { FC } from "react";
 
-interface Props {}
-
-const MemoriesPage: FC<Props> = () => {
-  const memories = useQuery(api.memories.listMemories);
+const MemoriesPage: NextPage = async () => {
+  const memories = await fetchQuery(api.memories.listMemories, {});
 
   return (
     <div className="w-full flex flex-col justify-start items-start gap-2">

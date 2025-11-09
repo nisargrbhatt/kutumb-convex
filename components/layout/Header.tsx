@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
-import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Skeleton } from "../ui/skeleton";
 
 const AuthMenu: FC = () => {
@@ -38,6 +38,7 @@ const AuthMenu: FC = () => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar className="cursor-pointer">
+          <AvatarImage src={user?.image ?? ""} />
           <AvatarFallback>{user?.email?.at(0)?.toUpperCase()}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
