@@ -1,6 +1,13 @@
 {
-  "semi": true,
-  "endOfLine": "lf",
-  "arrowParens": "always",
-  "tabWidth": 2
+	"plugins": ["prettier-plugin-tailwindcss"],
+	"tailwindFunctions": ["clsx", "tw", "cn"],
+	"tailwindStylesheet": "./src/styles.css",
+	"arrowParens": "always",
+	"endOfLine": "lf",
+	"tabWidth": 2,
+	"semi": true,
+	"proseWrap": "always",
+	"printWidth": 100,
+	"trailingComma": "es5",
+	"useTabs": true
 }

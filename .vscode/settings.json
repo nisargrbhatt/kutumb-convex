@@ -1,0 +1,19 @@
+{
+  "files.watcherExclude": {
+    "**/routeTree.gen.ts": true
+  },
+  "search.exclude": {
+    "**/routeTree.gen.ts": true
+  },
+  "files.readonlyInclude": {
+    "**/routeTree.gen.ts": true
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "editor.defaultFormatter": "prettier.prettier-vscode",
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "prettier.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "prettier.prettier-vscode"
+  }
+}
