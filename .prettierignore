@@ -1,4 +1,6 @@
-node_modules
-.next
-.cursor
-.vscode
+**/node_modules
+**/routeTree.gen.ts
+**/.vscode
+**/.wrangler
+**/dist
+**/.tanstack
