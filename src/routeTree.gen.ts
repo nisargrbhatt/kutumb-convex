@@ -9,17 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedTestRouteImport } from './routes/_authed/test'
+import { Route as onboardingLoginRouteImport } from './routes/(onboarding)/login'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthedCommunityPickRouteRouteImport } from './routes/_authed/community/pick/route'
+import { Route as onboardingOnboardProfileRouteRouteImport } from './routes/(onboarding)/onboard/profile/route'
+import { Route as onboardingOnboardOrganizationRouteRouteImport } from './routes/(onboarding)/onboard/organization/route'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
@@ -34,56 +32,106 @@ const AuthedTestRoute = AuthedTestRouteImport.update({
   path: '/test',
   getParentRoute: () => AuthedRoute,
 } as any)
+const onboardingLoginRoute = onboardingLoginRouteImport.update({
+  id: '/(onboarding)/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedCommunityPickRouteRoute =
+  AuthedCommunityPickRouteRouteImport.update({
+    id: '/community/pick',
+    path: '/community/pick',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const onboardingOnboardProfileRouteRoute =
+  onboardingOnboardProfileRouteRouteImport.update({
+    id: '/(onboarding)/onboard/profile',
+    path: '/onboard/profile',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const onboardingOnboardOrganizationRouteRoute =
+  onboardingOnboardOrganizationRouteRouteImport.update({
+    id: '/(onboarding)/onboard/organization',
+    path: '/onboard/organization',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
+  '/login': typeof onboardingLoginRoute
   '/test': typeof AuthedTestRoute
+  '/onboard/organization': typeof onboardingOnboardOrganizationRouteRoute
+  '/onboard/profile': typeof onboardingOnboardProfileRouteRoute
+  '/community/pick': typeof AuthedCommunityPickRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
+  '/login': typeof onboardingLoginRoute
   '/test': typeof AuthedTestRoute
+  '/onboard/organization': typeof onboardingOnboardOrganizationRouteRoute
+  '/onboard/profile': typeof onboardingOnboardProfileRouteRoute
+  '/community/pick': typeof AuthedCommunityPickRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
-  '/login': typeof LoginRoute
+  '/(onboarding)/login': typeof onboardingLoginRoute
   '/_authed/test': typeof AuthedTestRoute
+  '/(onboarding)/onboard/organization': typeof onboardingOnboardOrganizationRouteRoute
+  '/(onboarding)/onboard/profile': typeof onboardingOnboardProfileRouteRoute
+  '/_authed/community/pick': typeof AuthedCommunityPickRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/test' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/test'
+    | '/onboard/organization'
+    | '/onboard/profile'
+    | '/community/pick'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/test' | '/api/auth/$'
-  id: '__root__' | '/' | '/_authed' | '/login' | '/_authed/test' | '/api/auth/$'
+  to:
+    | '/'
+    | '/login'
+    | '/test'
+    | '/onboard/organization'
+    | '/onboard/profile'
+    | '/community/pick'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/(onboarding)/login'
+    | '/_authed/test'
+    | '/(onboarding)/onboard/organization'
+    | '/(onboarding)/onboard/profile'
+    | '/_authed/community/pick'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
-  LoginRoute: typeof LoginRoute
+  onboardingLoginRoute: typeof onboardingLoginRoute
+  onboardingOnboardOrganizationRouteRoute: typeof onboardingOnboardOrganizationRouteRoute
+  onboardingOnboardProfileRouteRoute: typeof onboardingOnboardProfileRouteRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authed': {
       id: '/_authed'
       path: ''
@@ -105,6 +153,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedTestRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/(onboarding)/login': {
+      id: '/(onboarding)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof onboardingLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -112,15 +167,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/community/pick': {
+      id: '/_authed/community/pick'
+      path: '/community/pick'
+      fullPath: '/community/pick'
+      preLoaderRoute: typeof AuthedCommunityPickRouteRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/(onboarding)/onboard/profile': {
+      id: '/(onboarding)/onboard/profile'
+      path: '/onboard/profile'
+      fullPath: '/onboard/profile'
+      preLoaderRoute: typeof onboardingOnboardProfileRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(onboarding)/onboard/organization': {
+      id: '/(onboarding)/onboard/organization'
+      path: '/onboard/organization'
+      fullPath: '/onboard/organization'
+      preLoaderRoute: typeof onboardingOnboardOrganizationRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthedRouteChildren {
   AuthedTestRoute: typeof AuthedTestRoute
+  AuthedCommunityPickRouteRoute: typeof AuthedCommunityPickRouteRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedTestRoute: AuthedTestRoute,
+  AuthedCommunityPickRouteRoute: AuthedCommunityPickRouteRoute,
 }
 
 const AuthedRouteWithChildren =
@@ -129,7 +207,10 @@ const AuthedRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
-  LoginRoute: LoginRoute,
+  onboardingLoginRoute: onboardingLoginRoute,
+  onboardingOnboardOrganizationRouteRoute:
+    onboardingOnboardOrganizationRouteRoute,
+  onboardingOnboardProfileRouteRoute: onboardingOnboardProfileRouteRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

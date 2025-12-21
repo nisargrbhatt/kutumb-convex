@@ -6,5 +6,7 @@ export const authStateFn = createServerFn({ method: "GET" }).handler(async () =>
 	const headers = getRequestHeaders();
 	const session = await auth.api.getSession({ headers });
 
-	return { userId: session?.user?.id };
+	const userId = session?.user?.id;
+
+	return { userId: userId };
 });
