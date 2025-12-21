@@ -12,8 +12,10 @@ import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
 export * from "./auth-schema";
 
+type PrimaryKey<T extends string> = string & { __brand: T };
+
 export const profile = sqliteTable("profile", {
-	id: text("id").primaryKey(),
+	id: text("id").primaryKey().$type<PrimaryKey<"profile">>(),
 	displayName: text("displayName").notNull(),
 	email: text("email").notNull(),
 	userId: text("userId")
@@ -32,7 +34,7 @@ export const profileRelations = relations(profile, ({ many, one }) => ({
 }));
 
 export const organization = sqliteTable("organization", {
-	id: text("id").primaryKey(),
+	id: text("id").primaryKey().$type<PrimaryKey<"organization">>(),
 	name: text("name").notNull(),
 	description: text("description").notNull(),
 	slug: text("slug").notNull().unique(),
@@ -45,13 +47,17 @@ export const organizationRelations = relations(organization, ({ many }) => ({
 }));
 
 export const organizationMember = sqliteTable("organizationMember", {
-	id: text("id").primaryKey(),
-	organizationId: text("organizationId").references(() => organization.id, {
-		onDelete: "cascade",
-	}),
-	memberId: text("memberId").references(() => profile.id, {
-		onDelete: "cascade",
-	}),
+	id: text("id").primaryKey().$type<PrimaryKey<"organizationMember">>(),
+	organizationId: text("organizationId")
+		.$type<PrimaryKey<"organization">>()
+		.references(() => organization.id, {
+			onDelete: "cascade",
+		}),
+	memberId: text("memberId")
+		.$type<PrimaryKey<"profile">>()
+		.references(() => profile.id, {
+			onDelete: "cascade",
+		}),
 	role: text("role", {
 		mode: "text",
 		enum: [ORGANIZATION_ROLES.owner, ORGANIZATION_ROLES.manager, ORGANIZATION_ROLES.member],
@@ -72,7 +78,7 @@ export const organizationMemberRelations = relations(organizationMember, ({ one 
 }));
 
 export const communityProfile = sqliteTable("communityProfile", {
-	id: text("id").primaryKey(),
+	id: text("id").primaryKey().$type<PrimaryKey<"communityProfile">>(),
 	firstName: text("firstName").notNull(),
 	middleName: text("middleName"),
 	lastName: text("lastName").notNull(),
@@ -121,10 +127,13 @@ export const communityProfile = sqliteTable("communityProfile", {
 		],
 	}),
 	comment: text("comment"),
-	profileId: text("profileId").references(() => profile.id, {
-		onDelete: "cascade",
-	}),
+	profileId: text("profileId")
+		.$type<PrimaryKey<"profile">>()
+		.references(() => profile.id, {
+			onDelete: "cascade",
+		}),
 	organizationId: text("organizationId")
+		.$type<PrimaryKey<"organization">>()
 		.references(() => organization.id, {
 			onDelete: "cascade",
 		})
@@ -144,7 +153,7 @@ export const communityProfileRelations = relations(communityProfile, ({ one, man
 }));
 
 export const communityAddress = sqliteTable("communityAddress", {
-	id: text("id").primaryKey(),
+	id: text("id").primaryKey().$type<PrimaryKey<"communityAddress">>(),
 	line1: text("line1").notNull(),
 	line2: text("line2"),
 	country: text("country").notNull(),
@@ -157,9 +166,11 @@ export const communityAddress = sqliteTable("communityAddress", {
 	}),
 	note: text("note"),
 	digipin: text("digipin"),
-	communityProfileId: text("communityProfileId").references(() => communityProfile.id, {
-		onDelete: "cascade",
-	}),
+	communityProfileId: text("communityProfileId")
+		.$type<PrimaryKey<"communityProfile">>()
+		.references(() => communityProfile.id, {
+			onDelete: "cascade",
+		}),
 });
 
 export const communityAddressRelations = relations(communityAddress, ({ one }) => ({
@@ -170,16 +181,22 @@ export const communityAddressRelations = relations(communityAddress, ({ one }) =
 }));
 
 export const communityRelation = sqliteTable("communityRelation", {
-	id: text("id").primaryKey(),
-	fromId: text("fromId").references(() => communityProfile.id, {
-		onDelete: "cascade",
-	}),
-	toId: text("toId").references(() => communityProfile.id, {
-		onDelete: "cascade",
-	}),
-	organizationId: text("organizationId").references(() => organization.id, {
-		onDelete: "cascade",
-	}),
+	id: text("id").primaryKey().$type<PrimaryKey<"communityRelation">>(),
+	fromId: text("fromId")
+		.$type<PrimaryKey<"communityProfile">>()
+		.references(() => communityProfile.id, {
+			onDelete: "cascade",
+		}),
+	toId: text("toId")
+		.$type<PrimaryKey<"communityProfile">>()
+		.references(() => communityProfile.id, {
+			onDelete: "cascade",
+		}),
+	organizationId: text("organizationId")
+		.$type<PrimaryKey<"organization">>()
+		.references(() => organization.id, {
+			onDelete: "cascade",
+		}),
 	type: text("type", {
 		mode: "text",
 		enum: [
@@ -218,13 +235,17 @@ export const communityRelationRelations = relations(communityRelation, ({ one })
 }));
 
 export const communityMemory = sqliteTable("communityMemory", {
-	id: text("id").primaryKey(),
-	createdBy: text("createdBy").references(() => communityProfile.id, {
-		onDelete: "cascade",
-	}),
-	organizationId: text("organizationId").references(() => organization.id, {
-		onDelete: "cascade",
-	}),
+	id: text("id").primaryKey().$type<PrimaryKey<"communityMemory">>(),
+	createdBy: text("createdBy")
+		.$type<PrimaryKey<"communityProfile">>()
+		.references(() => communityProfile.id, {
+			onDelete: "cascade",
+		}),
+	organizationId: text("organizationId")
+		.$type<PrimaryKey<"organization">>()
+		.references(() => organization.id, {
+			onDelete: "cascade",
+		}),
 	content: text("content").notNull(),
 });
 
