@@ -4,6 +4,7 @@ import { authMiddleware } from "@/middleware/auth";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
+import * as z from "zod";
 
 const checkOrganizationExists = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -29,7 +30,12 @@ const checkOrganizationExists = createServerFn({ method: "GET" })
 		});
 
 		if (organizationMemberResult?.id) {
-			throw redirect({ to: "/community/pick" });
+			throw redirect({
+				to: "/community/pick",
+				search: (prev) => ({
+					redirectTo: prev?.redirectTo,
+				}),
+			});
 		}
 	});
 
@@ -37,6 +43,9 @@ export const Route = createFileRoute("/(onboarding)/onboard/organization")({
 	beforeLoad: async () => {
 		await checkOrganizationExists();
 	},
+	validateSearch: z.object({
+		redirectTo: z.string().trim().optional(),
+	}),
 	component: RouteComponent,
 });
 
