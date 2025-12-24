@@ -4,16 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import * as z from "zod";
 
 export const Route = createFileRoute("/(onboarding)/login")({
 	component: RouteComponent,
+	validateSearch: z.object({
+		redirectTo: z.string().trim().optional(),
+	}),
 });
 
 function RouteComponent() {
+	const { redirectTo } = Route.useSearch();
+
 	const [loading, setLoading] = useState(false);
 
 	return (
-		<div className="flex h-full min-h-dvh w-full items-center justify-center">
+		<div className="flex h-full w-full items-center justify-center py-10">
 			<Card className="w-full max-w-md">
 				<CardHeader>
 					<CardTitle className="text-lg md:text-xl">Sign In</CardTitle>
@@ -32,8 +38,9 @@ function RouteComponent() {
 									await authClient.signIn.social(
 										{
 											provider: "google",
-											callbackURL: "/onboard/profile",
-											newUserCallbackURL: "/onboard/profile",
+											callbackURL: `/onboard/profile?${new URLSearchParams({
+												redirectTo: redirectTo || "/",
+											}).toString()}`,
 										},
 										{
 											onRequest: () => {

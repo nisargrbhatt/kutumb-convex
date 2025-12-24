@@ -15,7 +15,7 @@ export * from "./auth-schema";
 type PrimaryKey<T extends string> = string & { __brand: T };
 
 export const profile = sqliteTable("profile", {
-	id: text("id").primaryKey().$type<PrimaryKey<"profile">>(),
+	id: text("id").primaryKey().$type<PrimaryKey<"profile">>().primaryKey(),
 	displayName: text("displayName").notNull(),
 	email: text("email").notNull(),
 	userId: text("userId")
@@ -52,12 +52,14 @@ export const organizationMember = sqliteTable("organizationMember", {
 		.$type<PrimaryKey<"organization">>()
 		.references(() => organization.id, {
 			onDelete: "cascade",
-		}),
+		})
+		.notNull(),
 	memberId: text("memberId")
 		.$type<PrimaryKey<"profile">>()
 		.references(() => profile.id, {
 			onDelete: "cascade",
-		}),
+		})
+		.notNull(),
 	role: text("role", {
 		mode: "text",
 		enum: [ORGANIZATION_ROLES.owner, ORGANIZATION_ROLES.manager, ORGANIZATION_ROLES.member],

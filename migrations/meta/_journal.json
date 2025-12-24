@@ -15,6 +15,13 @@
       "when": 1766252089452,
       "tag": "0001_careless_luckman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1766598524131,
+      "tag": "0002_luxuriant_the_twelve",
+      "breakpoints": true
     }
   ]
 }
