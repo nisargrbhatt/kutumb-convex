@@ -16,5 +16,10 @@
 			"database_name": "D1",
 			"database_id": "80fc87df-ca34-469d-9ea8-9897e2596575"
 		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+		}
 	]
 }
