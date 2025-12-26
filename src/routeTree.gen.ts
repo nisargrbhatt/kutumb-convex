@@ -13,6 +13,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedTestRouteImport } from './routes/_authed/test'
 import { Route as onboardingLoginRouteImport } from './routes/(onboarding)/login'
+import { Route as ApiWebhookPolarRouteImport } from './routes/api/webhook/polar'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunityPickRouteRouteImport } from './routes/_authed/community/pick/route'
 import { Route as onboardingOnboardProfileRouteRouteImport } from './routes/(onboarding)/onboard/profile/route'
@@ -35,6 +36,11 @@ const AuthedTestRoute = AuthedTestRouteImport.update({
 const onboardingLoginRoute = onboardingLoginRouteImport.update({
   id: '/(onboarding)/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhookPolarRoute = ApiWebhookPolarRouteImport.update({
+  id: '/api/webhook/polar',
+  path: '/api/webhook/polar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/onboard/profile': typeof onboardingOnboardProfileRouteRoute
   '/community/pick': typeof AuthedCommunityPickRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/webhook/polar': typeof ApiWebhookPolarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/onboard/profile': typeof onboardingOnboardProfileRouteRoute
   '/community/pick': typeof AuthedCommunityPickRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/webhook/polar': typeof ApiWebhookPolarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/(onboarding)/onboard/profile': typeof onboardingOnboardProfileRouteRoute
   '/_authed/community/pick': typeof AuthedCommunityPickRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/webhook/polar': typeof ApiWebhookPolarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/onboard/profile'
     | '/community/pick'
     | '/api/auth/$'
+    | '/api/webhook/polar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/onboard/profile'
     | '/community/pick'
     | '/api/auth/$'
+    | '/api/webhook/polar'
   id:
     | '__root__'
     | '/'
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/(onboarding)/onboard/profile'
     | '/_authed/community/pick'
     | '/api/auth/$'
+    | '/api/webhook/polar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   onboardingOnboardOrganizationRouteRoute: typeof onboardingOnboardOrganizationRouteRoute
   onboardingOnboardProfileRouteRoute: typeof onboardingOnboardProfileRouteRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiWebhookPolarRoute: typeof ApiWebhookPolarRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof onboardingLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhook/polar': {
+      id: '/api/webhook/polar'
+      path: '/api/webhook/polar'
+      fullPath: '/api/webhook/polar'
+      preLoaderRoute: typeof ApiWebhookPolarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -212,6 +232,7 @@ const rootRouteChildren: RootRouteChildren = {
     onboardingOnboardOrganizationRouteRoute,
   onboardingOnboardProfileRouteRoute: onboardingOnboardProfileRouteRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiWebhookPolarRoute: ApiWebhookPolarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -14,3 +14,12 @@ export const generatePrimaryKey = <T extends keyof typeof schema>(collection: T)
 	}
 	return primaryKey;
 };
+
+export const generateOrgSlug = (name: string) => {
+	const twoRandomNumber = [Math.random(), Math.random()]
+		.map((num) => Math.floor(num * 10))
+		.join("");
+	const sluggedName = name.toLowerCase().replaceAll(" ", "-");
+
+	return [sluggedName, twoRandomNumber].join("");
+};

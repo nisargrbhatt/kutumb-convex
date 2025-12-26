@@ -38,6 +38,8 @@ export const organization = sqliteTable("organization", {
 	name: text("name").notNull(),
 	description: text("description").notNull(),
 	slug: text("slug").notNull().unique(),
+	subscriptionId: text("subscriptionId").notNull(),
+	customerId: text("customerId").notNull(),
 });
 
 export const organizationRelations = relations(organization, ({ many }) => ({
@@ -141,6 +143,8 @@ export const communityProfile = sqliteTable("communityProfile", {
 		})
 		.notNull(),
 });
+
+// [TODO] Add Organization Profile Custom Field schema
 
 export const communityProfileRelations = relations(communityProfile, ({ one, many }) => ({
 	profile: one(profile, {
