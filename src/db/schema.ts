@@ -12,7 +12,7 @@ import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
 export * from "./auth-schema";
 
-type PrimaryKey<T extends string> = string & { __brand: T };
+export type PrimaryKey<T extends string> = string & { __brand: T };
 
 export const profile = sqliteTable("profile", {
 	id: text("id").primaryKey().$type<PrimaryKey<"profile">>().primaryKey(),

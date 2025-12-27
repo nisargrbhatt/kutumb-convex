@@ -7,3 +7,7 @@
 - Org page form boilerplate added
 - Organization checkout link added
 - Organization webhook handler half added
+- Organization webhook updated
+- Organization pick page updated
+- Organization community guard added
+- Organization dashboard boilerplate added

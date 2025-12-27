@@ -34,7 +34,10 @@ export const createUserContextCache = createServerOnlyFn(async (userId: string) 
 				getUserProfileCacheKey(userId),
 				JSON.stringify({
 					profile: profile,
-				})
+				}),
+				{
+					expirationTtl: 60 * 5,
+				}
 			)
 		);
 		return {
@@ -64,7 +67,10 @@ export const createUserContextCache = createServerOnlyFn(async (userId: string) 
 				getUserProfileCacheKey(userId),
 				JSON.stringify({
 					profile: profile,
-				})
+				}),
+				{
+					expirationTtl: 60 * 5,
+				}
 			)
 		);
 		return {
@@ -88,7 +94,10 @@ export const createUserContextCache = createServerOnlyFn(async (userId: string) 
 			JSON.stringify({
 				profile: profile,
 				organization: mappedOrganizations,
-			})
+			}),
+			{
+				expirationTtl: 60 * 5,
+			}
 		)
 	);
 	return {
@@ -105,7 +114,7 @@ export const getFullUserContextCached = createServerOnlyFn(async (userId: string
 		)
 	);
 
-	if (cachedContextResult.success) {
+	if (cachedContextResult.success && cachedContextResult.data) {
 		return cachedContextResult.data;
 	}
 

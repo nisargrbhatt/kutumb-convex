@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { db } from "@/db";
 import { authMiddleware } from "@/middleware/auth";
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -61,7 +64,10 @@ export const fetchOrganizations = createServerFn({
 			throw redirect({
 				// [TODO] Redirect to proper community page
 				// @ts-ignore
-				to: `/community/${firstOrg.slug}`,
+				to: `/community/$slug/dashboard`,
+				params: {
+					slug: firstOrg?.slug,
+				},
 			});
 		}
 
@@ -69,19 +75,52 @@ export const fetchOrganizations = createServerFn({
 	});
 
 export const Route = createFileRoute("/_authed/community/pick")({
-	beforeLoad: async () => {
-		const result = await fetchOrganizations();
-		return result;
-	},
 	validateSearch: z.object({
 		redirectTo: z.string().optional(),
 	}),
-	loader: async ({ context }) => ({ organizations: context }),
+	loader: async () => {
+		const result = await fetchOrganizations();
+
+		return { organizations: result };
+	},
 	component: RouteComponent,
 });
 
 function RouteComponent() {
 	const { organizations } = Route.useLoaderData();
 	console.log(organizations);
-	return <div>Pick a Community </div>;
+	return (
+		<div className="flex h-full w-full items-center justify-center">
+			<Card className="w-full max-w-md">
+				<CardHeader>
+					<CardTitle>Select a Community</CardTitle>
+					<CardDescription>Select a community to join</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="flex w-full flex-col items-start justify-start gap-2">
+						{organizations?.map((org) => (
+							<Item variant="outline" key={org.slug} className="w-full">
+								<ItemContent>
+									<ItemTitle>{org.name}</ItemTitle>
+									<ItemDescription>{org.slug}</ItemDescription>
+								</ItemContent>
+								<ItemActions>
+									<Route.Link
+										to={"/community/$slug/dashboard"}
+										params={{
+											slug: org.slug,
+										}}
+									>
+										<Button variant="outline" size="sm">
+											Open
+										</Button>
+									</Route.Link>
+								</ItemActions>
+							</Item>
+						))}
+					</div>
+				</CardContent>
+			</Card>
+		</div>
+	);
 }
