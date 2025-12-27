@@ -18,6 +18,9 @@ const config = defineConfig({
 		tanstackStart(),
 		viteReact(),
 	],
+	server: {
+		allowedHosts: [".trycloudflare.com"],
+	},
 });
 
 export default config;

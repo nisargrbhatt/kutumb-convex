@@ -11,6 +11,13 @@ export const Route = createFileRoute("/(onboarding)/login")({
 	validateSearch: z.object({
 		redirectTo: z.string().trim().optional(),
 	}),
+	head: () => ({
+		meta: [
+			{
+				title: "Login | Kutumb App",
+			},
+		],
+	}),
 });
 
 function RouteComponent() {

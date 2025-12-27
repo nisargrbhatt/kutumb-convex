@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Webhooks } from "@polar-sh/tanstack-start";
 import { env } from "cloudflare:workers";
-import { createOrganization } from "@/api/organization";
+import { createOrganization, deleteOrganization } from "@/api/organization";
 
 export const Route = createFileRoute("/api/webhook/polar")({
 	server: {
@@ -16,7 +16,12 @@ export const Route = createFileRoute("/api/webhook/polar")({
 						userId: data.customer.metadata?.ownerUserId?.toString() ?? "",
 					});
 				},
-				onSubscriptionCanceled: async (payload) => {},
+				onSubscriptionCanceled: async ({ data }) => {
+					await deleteOrganization({
+						customerId: data.customerId,
+						subscriptionId: data.id,
+					});
+				},
 			}),
 		},
 	},

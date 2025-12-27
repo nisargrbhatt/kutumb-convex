@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { safeAsync } from "@/lib/safe";
-import { createProfile } from "./actions";
+import { createProfile } from "@/api/profile";
 
 const formSchema = z.object({
 	displayName: z.string().trim().min(1, "Display name is required"),
