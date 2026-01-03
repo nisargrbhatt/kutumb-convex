@@ -169,9 +169,5 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
 
 		const org = userContext.organization.find((i) => i.slug === data.slug);
 
-		if (!org) {
-			throw new Error("Organization not found");
-		}
-
-		return org;
+		return { org: org, profile: userContext.profile, allOrg: userContext.organization ?? [] };
 	});

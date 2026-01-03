@@ -4,7 +4,6 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 
 import appCss from "../styles.css?url";
 import { authStateFn } from "@/handler/auth";
-import Header from "@/components/Header";
 
 export const Route = createRootRoute({
 	beforeLoad: async () => await authStateFn(),
@@ -42,8 +41,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				<Header />
-				<main className="h-full w-full px-1">{children}</main>
+				{children}
 				<TanStackDevtools
 					config={{
 						position: "bottom-right",

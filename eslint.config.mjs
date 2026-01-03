@@ -13,7 +13,7 @@ export default defineConfig([
 		"**/routeTree.gen.ts",
 		"**/node_modules/**",
 		"**/*.d.ts",
-
+		"**/.localflare/**"
 	]),
 	{
 		files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],

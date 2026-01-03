@@ -13,6 +13,7 @@ export const createUserContextCache = createServerOnlyFn(async (userId: string) 
 		columns: {
 			id: true,
 			email: true,
+			displayName: true,
 		},
 	});
 

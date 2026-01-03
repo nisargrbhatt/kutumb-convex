@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthedTestRouteImport } from './routes/_authed/test'
 import { Route as onboardingLoginRouteImport } from './routes/(onboarding)/login'
 import { Route as ApiWebhookPolarRouteImport } from './routes/api/webhook/polar'
 import { Route as ApiPolarPortalRouteImport } from './routes/api/polar/portal'
@@ -20,7 +19,13 @@ import { Route as AuthedCommunityPickRouteRouteImport } from './routes/_authed/c
 import { Route as onboardingOnboardProfileRouteRouteImport } from './routes/(onboarding)/onboard/profile/route'
 import { Route as onboardingOnboardOrganizationRouteRouteImport } from './routes/(onboarding)/onboard/organization/route'
 import { Route as AuthedCommunitySlugCommunityRouteImport } from './routes/_authed/community/$slug/_community'
+import { Route as AuthedCommunitySlugCommunityMemoriesRouteRouteImport } from './routes/_authed/community/$slug/_community/memories/route'
+import { Route as AuthedCommunitySlugCommunityMembersRouteRouteImport } from './routes/_authed/community/$slug/_community/members/route'
 import { Route as AuthedCommunitySlugCommunityDashboardRouteRouteImport } from './routes/_authed/community/$slug/_community/dashboard/route'
+import { Route as AuthedCommunitySlugCommunityCommunityTreeRouteRouteImport } from './routes/_authed/community/$slug/_community/community-tree/route'
+import { Route as AuthedCommunitySlugCommunityProfileRelationshipsRouteRouteImport } from './routes/_authed/community/$slug/_community/profile/relationships/route'
+import { Route as AuthedCommunitySlugCommunityProfileInfoRouteRouteImport } from './routes/_authed/community/$slug/_community/profile/info/route'
+import { Route as AuthedCommunitySlugCommunityProfileAddressesRouteRouteImport } from './routes/_authed/community/$slug/_community/profile/addresses/route'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -30,11 +35,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthedTestRoute = AuthedTestRouteImport.update({
-  id: '/test',
-  path: '/test',
-  getParentRoute: () => AuthedRoute,
 } as any)
 const onboardingLoginRoute = onboardingLoginRouteImport.update({
   id: '/(onboarding)/login',
@@ -80,17 +80,52 @@ const AuthedCommunitySlugCommunityRoute =
     path: '/community/$slug',
     getParentRoute: () => AuthedRoute,
   } as any)
+const AuthedCommunitySlugCommunityMemoriesRouteRoute =
+  AuthedCommunitySlugCommunityMemoriesRouteRouteImport.update({
+    id: '/memories',
+    path: '/memories',
+    getParentRoute: () => AuthedCommunitySlugCommunityRoute,
+  } as any)
+const AuthedCommunitySlugCommunityMembersRouteRoute =
+  AuthedCommunitySlugCommunityMembersRouteRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthedCommunitySlugCommunityRoute,
+  } as any)
 const AuthedCommunitySlugCommunityDashboardRouteRoute =
   AuthedCommunitySlugCommunityDashboardRouteRouteImport.update({
     id: '/dashboard',
     path: '/dashboard',
     getParentRoute: () => AuthedCommunitySlugCommunityRoute,
   } as any)
+const AuthedCommunitySlugCommunityCommunityTreeRouteRoute =
+  AuthedCommunitySlugCommunityCommunityTreeRouteRouteImport.update({
+    id: '/community-tree',
+    path: '/community-tree',
+    getParentRoute: () => AuthedCommunitySlugCommunityRoute,
+  } as any)
+const AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute =
+  AuthedCommunitySlugCommunityProfileRelationshipsRouteRouteImport.update({
+    id: '/profile/relationships',
+    path: '/profile/relationships',
+    getParentRoute: () => AuthedCommunitySlugCommunityRoute,
+  } as any)
+const AuthedCommunitySlugCommunityProfileInfoRouteRoute =
+  AuthedCommunitySlugCommunityProfileInfoRouteRouteImport.update({
+    id: '/profile/info',
+    path: '/profile/info',
+    getParentRoute: () => AuthedCommunitySlugCommunityRoute,
+  } as any)
+const AuthedCommunitySlugCommunityProfileAddressesRouteRoute =
+  AuthedCommunitySlugCommunityProfileAddressesRouteRouteImport.update({
+    id: '/profile/addresses',
+    path: '/profile/addresses',
+    getParentRoute: () => AuthedCommunitySlugCommunityRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof onboardingLoginRoute
-  '/test': typeof AuthedTestRoute
   '/onboard/organization': typeof onboardingOnboardOrganizationRouteRoute
   '/onboard/profile': typeof onboardingOnboardProfileRouteRoute
   '/community/pick': typeof AuthedCommunityPickRouteRoute
@@ -98,12 +133,17 @@ export interface FileRoutesByFullPath {
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/webhook/polar': typeof ApiWebhookPolarRoute
   '/community/$slug': typeof AuthedCommunitySlugCommunityRouteWithChildren
+  '/community/$slug/community-tree': typeof AuthedCommunitySlugCommunityCommunityTreeRouteRoute
   '/community/$slug/dashboard': typeof AuthedCommunitySlugCommunityDashboardRouteRoute
+  '/community/$slug/members': typeof AuthedCommunitySlugCommunityMembersRouteRoute
+  '/community/$slug/memories': typeof AuthedCommunitySlugCommunityMemoriesRouteRoute
+  '/community/$slug/profile/addresses': typeof AuthedCommunitySlugCommunityProfileAddressesRouteRoute
+  '/community/$slug/profile/info': typeof AuthedCommunitySlugCommunityProfileInfoRouteRoute
+  '/community/$slug/profile/relationships': typeof AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof onboardingLoginRoute
-  '/test': typeof AuthedTestRoute
   '/onboard/organization': typeof onboardingOnboardOrganizationRouteRoute
   '/onboard/profile': typeof onboardingOnboardProfileRouteRoute
   '/community/pick': typeof AuthedCommunityPickRouteRoute
@@ -111,14 +151,19 @@ export interface FileRoutesByTo {
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/webhook/polar': typeof ApiWebhookPolarRoute
   '/community/$slug': typeof AuthedCommunitySlugCommunityRouteWithChildren
+  '/community/$slug/community-tree': typeof AuthedCommunitySlugCommunityCommunityTreeRouteRoute
   '/community/$slug/dashboard': typeof AuthedCommunitySlugCommunityDashboardRouteRoute
+  '/community/$slug/members': typeof AuthedCommunitySlugCommunityMembersRouteRoute
+  '/community/$slug/memories': typeof AuthedCommunitySlugCommunityMemoriesRouteRoute
+  '/community/$slug/profile/addresses': typeof AuthedCommunitySlugCommunityProfileAddressesRouteRoute
+  '/community/$slug/profile/info': typeof AuthedCommunitySlugCommunityProfileInfoRouteRoute
+  '/community/$slug/profile/relationships': typeof AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/(onboarding)/login': typeof onboardingLoginRoute
-  '/_authed/test': typeof AuthedTestRoute
   '/(onboarding)/onboard/organization': typeof onboardingOnboardOrganizationRouteRoute
   '/(onboarding)/onboard/profile': typeof onboardingOnboardProfileRouteRoute
   '/_authed/community/pick': typeof AuthedCommunityPickRouteRoute
@@ -126,14 +171,19 @@ export interface FileRoutesById {
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/webhook/polar': typeof ApiWebhookPolarRoute
   '/_authed/community/$slug/_community': typeof AuthedCommunitySlugCommunityRouteWithChildren
+  '/_authed/community/$slug/_community/community-tree': typeof AuthedCommunitySlugCommunityCommunityTreeRouteRoute
   '/_authed/community/$slug/_community/dashboard': typeof AuthedCommunitySlugCommunityDashboardRouteRoute
+  '/_authed/community/$slug/_community/members': typeof AuthedCommunitySlugCommunityMembersRouteRoute
+  '/_authed/community/$slug/_community/memories': typeof AuthedCommunitySlugCommunityMemoriesRouteRoute
+  '/_authed/community/$slug/_community/profile/addresses': typeof AuthedCommunitySlugCommunityProfileAddressesRouteRoute
+  '/_authed/community/$slug/_community/profile/info': typeof AuthedCommunitySlugCommunityProfileInfoRouteRoute
+  '/_authed/community/$slug/_community/profile/relationships': typeof AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
-    | '/test'
     | '/onboard/organization'
     | '/onboard/profile'
     | '/community/pick'
@@ -141,12 +191,17 @@ export interface FileRouteTypes {
     | '/api/polar/portal'
     | '/api/webhook/polar'
     | '/community/$slug'
+    | '/community/$slug/community-tree'
     | '/community/$slug/dashboard'
+    | '/community/$slug/members'
+    | '/community/$slug/memories'
+    | '/community/$slug/profile/addresses'
+    | '/community/$slug/profile/info'
+    | '/community/$slug/profile/relationships'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
-    | '/test'
     | '/onboard/organization'
     | '/onboard/profile'
     | '/community/pick'
@@ -154,13 +209,18 @@ export interface FileRouteTypes {
     | '/api/polar/portal'
     | '/api/webhook/polar'
     | '/community/$slug'
+    | '/community/$slug/community-tree'
     | '/community/$slug/dashboard'
+    | '/community/$slug/members'
+    | '/community/$slug/memories'
+    | '/community/$slug/profile/addresses'
+    | '/community/$slug/profile/info'
+    | '/community/$slug/profile/relationships'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/(onboarding)/login'
-    | '/_authed/test'
     | '/(onboarding)/onboard/organization'
     | '/(onboarding)/onboard/profile'
     | '/_authed/community/pick'
@@ -168,7 +228,13 @@ export interface FileRouteTypes {
     | '/api/polar/portal'
     | '/api/webhook/polar'
     | '/_authed/community/$slug/_community'
+    | '/_authed/community/$slug/_community/community-tree'
     | '/_authed/community/$slug/_community/dashboard'
+    | '/_authed/community/$slug/_community/members'
+    | '/_authed/community/$slug/_community/memories'
+    | '/_authed/community/$slug/_community/profile/addresses'
+    | '/_authed/community/$slug/_community/profile/info'
+    | '/_authed/community/$slug/_community/profile/relationships'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,13 +263,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authed/test': {
-      id: '/_authed/test'
-      path: '/test'
-      fullPath: '/test'
-      preLoaderRoute: typeof AuthedTestRouteImport
-      parentRoute: typeof AuthedRoute
     }
     '/(onboarding)/login': {
       id: '/(onboarding)/login'
@@ -261,6 +320,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunitySlugCommunityRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/community/$slug/_community/memories': {
+      id: '/_authed/community/$slug/_community/memories'
+      path: '/memories'
+      fullPath: '/community/$slug/memories'
+      preLoaderRoute: typeof AuthedCommunitySlugCommunityMemoriesRouteRouteImport
+      parentRoute: typeof AuthedCommunitySlugCommunityRoute
+    }
+    '/_authed/community/$slug/_community/members': {
+      id: '/_authed/community/$slug/_community/members'
+      path: '/members'
+      fullPath: '/community/$slug/members'
+      preLoaderRoute: typeof AuthedCommunitySlugCommunityMembersRouteRouteImport
+      parentRoute: typeof AuthedCommunitySlugCommunityRoute
+    }
     '/_authed/community/$slug/_community/dashboard': {
       id: '/_authed/community/$slug/_community/dashboard'
       path: '/dashboard'
@@ -268,17 +341,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunitySlugCommunityDashboardRouteRouteImport
       parentRoute: typeof AuthedCommunitySlugCommunityRoute
     }
+    '/_authed/community/$slug/_community/community-tree': {
+      id: '/_authed/community/$slug/_community/community-tree'
+      path: '/community-tree'
+      fullPath: '/community/$slug/community-tree'
+      preLoaderRoute: typeof AuthedCommunitySlugCommunityCommunityTreeRouteRouteImport
+      parentRoute: typeof AuthedCommunitySlugCommunityRoute
+    }
+    '/_authed/community/$slug/_community/profile/relationships': {
+      id: '/_authed/community/$slug/_community/profile/relationships'
+      path: '/profile/relationships'
+      fullPath: '/community/$slug/profile/relationships'
+      preLoaderRoute: typeof AuthedCommunitySlugCommunityProfileRelationshipsRouteRouteImport
+      parentRoute: typeof AuthedCommunitySlugCommunityRoute
+    }
+    '/_authed/community/$slug/_community/profile/info': {
+      id: '/_authed/community/$slug/_community/profile/info'
+      path: '/profile/info'
+      fullPath: '/community/$slug/profile/info'
+      preLoaderRoute: typeof AuthedCommunitySlugCommunityProfileInfoRouteRouteImport
+      parentRoute: typeof AuthedCommunitySlugCommunityRoute
+    }
+    '/_authed/community/$slug/_community/profile/addresses': {
+      id: '/_authed/community/$slug/_community/profile/addresses'
+      path: '/profile/addresses'
+      fullPath: '/community/$slug/profile/addresses'
+      preLoaderRoute: typeof AuthedCommunitySlugCommunityProfileAddressesRouteRouteImport
+      parentRoute: typeof AuthedCommunitySlugCommunityRoute
+    }
   }
 }
 
 interface AuthedCommunitySlugCommunityRouteChildren {
+  AuthedCommunitySlugCommunityCommunityTreeRouteRoute: typeof AuthedCommunitySlugCommunityCommunityTreeRouteRoute
   AuthedCommunitySlugCommunityDashboardRouteRoute: typeof AuthedCommunitySlugCommunityDashboardRouteRoute
+  AuthedCommunitySlugCommunityMembersRouteRoute: typeof AuthedCommunitySlugCommunityMembersRouteRoute
+  AuthedCommunitySlugCommunityMemoriesRouteRoute: typeof AuthedCommunitySlugCommunityMemoriesRouteRoute
+  AuthedCommunitySlugCommunityProfileAddressesRouteRoute: typeof AuthedCommunitySlugCommunityProfileAddressesRouteRoute
+  AuthedCommunitySlugCommunityProfileInfoRouteRoute: typeof AuthedCommunitySlugCommunityProfileInfoRouteRoute
+  AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute: typeof AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute
 }
 
 const AuthedCommunitySlugCommunityRouteChildren: AuthedCommunitySlugCommunityRouteChildren =
   {
+    AuthedCommunitySlugCommunityCommunityTreeRouteRoute:
+      AuthedCommunitySlugCommunityCommunityTreeRouteRoute,
     AuthedCommunitySlugCommunityDashboardRouteRoute:
       AuthedCommunitySlugCommunityDashboardRouteRoute,
+    AuthedCommunitySlugCommunityMembersRouteRoute:
+      AuthedCommunitySlugCommunityMembersRouteRoute,
+    AuthedCommunitySlugCommunityMemoriesRouteRoute:
+      AuthedCommunitySlugCommunityMemoriesRouteRoute,
+    AuthedCommunitySlugCommunityProfileAddressesRouteRoute:
+      AuthedCommunitySlugCommunityProfileAddressesRouteRoute,
+    AuthedCommunitySlugCommunityProfileInfoRouteRoute:
+      AuthedCommunitySlugCommunityProfileInfoRouteRoute,
+    AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute:
+      AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute,
   }
 
 const AuthedCommunitySlugCommunityRouteWithChildren =
@@ -287,13 +406,11 @@ const AuthedCommunitySlugCommunityRouteWithChildren =
   )
 
 interface AuthedRouteChildren {
-  AuthedTestRoute: typeof AuthedTestRoute
   AuthedCommunityPickRouteRoute: typeof AuthedCommunityPickRouteRoute
   AuthedCommunitySlugCommunityRoute: typeof AuthedCommunitySlugCommunityRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedTestRoute: AuthedTestRoute,
   AuthedCommunityPickRouteRoute: AuthedCommunityPickRouteRoute,
   AuthedCommunitySlugCommunityRoute:
     AuthedCommunitySlugCommunityRouteWithChildren,
