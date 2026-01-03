@@ -1,3 +1,4 @@
+import { RootLayout } from "@/components/RootLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
@@ -58,19 +59,6 @@ export const fetchOrganizations = createServerFn({
 			});
 		}
 
-		const firstOrg = organizations?.at(0);
-
-		if (organizations.length === 1 && firstOrg) {
-			throw redirect({
-				// [TODO] Redirect to proper community page
-				// @ts-ignore
-				to: `/community/$slug/dashboard`,
-				params: {
-					slug: firstOrg?.slug,
-				},
-			});
-		}
-
 		return organizations;
 	});
 
@@ -81,6 +69,17 @@ export const Route = createFileRoute("/_authed/community/pick")({
 	loader: async () => {
 		const result = await fetchOrganizations();
 
+		const firstOrg = result?.at(0);
+
+		if (result.length === 1 && firstOrg) {
+			throw redirect({
+				to: `/community/$slug/dashboard`,
+				params: {
+					slug: firstOrg?.slug,
+				},
+			});
+		}
+
 		return { organizations: result };
 	},
 	component: RouteComponent,
@@ -88,39 +87,41 @@ export const Route = createFileRoute("/_authed/community/pick")({
 
 function RouteComponent() {
 	const { organizations } = Route.useLoaderData();
-	console.log(organizations);
+
 	return (
-		<div className="flex h-full w-full items-center justify-center">
-			<Card className="w-full max-w-md">
-				<CardHeader>
-					<CardTitle>Select a Community</CardTitle>
-					<CardDescription>Select a community to join</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="flex w-full flex-col items-start justify-start gap-2">
-						{organizations?.map((org) => (
-							<Item variant="outline" key={org.slug} className="w-full">
-								<ItemContent>
-									<ItemTitle>{org.name}</ItemTitle>
-									<ItemDescription>{org.slug}</ItemDescription>
-								</ItemContent>
-								<ItemActions>
-									<Route.Link
-										to={"/community/$slug/dashboard"}
-										params={{
-											slug: org.slug,
-										}}
-									>
-										<Button variant="outline" size="sm">
-											Open
-										</Button>
-									</Route.Link>
-								</ItemActions>
-							</Item>
-						))}
-					</div>
-				</CardContent>
-			</Card>
-		</div>
+		<RootLayout>
+			<div className="flex h-full w-full items-center justify-center">
+				<Card className="w-full max-w-md">
+					<CardHeader>
+						<CardTitle>Select a Community</CardTitle>
+						<CardDescription>Select a community to join</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="flex w-full flex-col items-start justify-start gap-2">
+							{organizations?.map((org) => (
+								<Item variant="outline" key={org.slug} className="w-full">
+									<ItemContent>
+										<ItemTitle>{org.name}</ItemTitle>
+										<ItemDescription>{org.slug}</ItemDescription>
+									</ItemContent>
+									<ItemActions>
+										<Route.Link
+											to={"/community/$slug/dashboard"}
+											params={{
+												slug: org.slug,
+											}}
+										>
+											<Button variant="outline" size="sm">
+												Open
+											</Button>
+										</Route.Link>
+									</ItemActions>
+								</Item>
+							))}
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		</RootLayout>
 	);
 }

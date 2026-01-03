@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import * as z from "zod";
 import { authClient } from "@/lib/auth-client";
 import { CreateProfileForm } from "./-components/CreateProfileForm";
+import { RootLayout } from "@/components/RootLayout";
 
 const checkProfileExists = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -57,10 +58,12 @@ function RouteComponent() {
 	};
 
 	return (
-		<div className="flex h-full w-full flex-col items-center justify-center">
-			{data?.user?.email ? (
-				<CreateProfileForm defaultEmail={data?.user?.email} handleSuccess={handleSuccess} />
-			) : null}
-		</div>
+		<RootLayout>
+			<div className="flex h-full w-full flex-col items-center justify-center">
+				{data?.user?.email ? (
+					<CreateProfileForm defaultEmail={data?.user?.email} handleSuccess={handleSuccess} />
+				) : null}
+			</div>
+		</RootLayout>
 	);
 }

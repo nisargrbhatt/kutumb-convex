@@ -121,3 +121,7 @@
 		@apply bg-background text-foreground;
 	}
 }
+
+@utility link {
+	@apply cursor-pointer border-b border-dotted border-black no-underline;
+}

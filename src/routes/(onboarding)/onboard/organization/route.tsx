@@ -6,6 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import * as z from "zod";
 import { CreateOrganizationForm } from "./-components/CreateOrganizationForm";
+import { RootLayout } from "@/components/RootLayout";
 
 const checkOrganizationExists = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -52,8 +53,10 @@ export const Route = createFileRoute("/(onboarding)/onboard/organization")({
 
 function RouteComponent() {
 	return (
-		<div className="flex h-full w-full flex-col items-center justify-center">
-			<CreateOrganizationForm />
-		</div>
+		<RootLayout>
+			<div className="flex h-full w-full flex-col items-center justify-center">
+				<CreateOrganizationForm />
+			</div>
+		</RootLayout>
 	);
 }
