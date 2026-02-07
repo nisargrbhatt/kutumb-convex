@@ -1,15 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute(
-  '/_authed/community/$slug/_community/profile/relationships',
-)({
-  component: RouteComponent,
-})
+export const Route = createFileRoute("/_authed/community/$slug/_community/profile/relationships")({
+	component: RouteComponent,
+});
 
 function RouteComponent() {
-  return (
-    <div>
-      Hello "/_authed/community/$slug/_community/profile/relationships"!
-    </div>
-  )
+	return <div>Hello "/_authed/community/$slug/_community/profile/relationships"!</div>;
 }
