@@ -80,8 +80,7 @@ function App() {
 					features={[
 						{
 							title: "Directory",
-							description:
-								"Manage your community directory, see and manage who are in your community",
+							description: "Manage your community directory, see and manage who are in your community",
 							icon: <ClipboardList />,
 						},
 						{

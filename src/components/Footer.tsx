@@ -39,12 +39,7 @@ const FooterComponent = ({
 					<div className="col-span-2 mb-8 lg:mb-0">
 						<div className="flex items-center gap-2 lg:justify-start">
 							<Link to={"/"} className="flex items-center justify-start gap-1">
-								<img
-									src={logo.src}
-									alt={logo.alt}
-									className="h-8 w-auto rounded-full"
-									loading="lazy"
-								/>
+								<img src={logo.src} alt={logo.alt} className="h-8 w-auto rounded-full" loading="lazy" />
 								<span className="font-medium">{logo.title}</span>
 							</Link>
 						</div>

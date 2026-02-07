@@ -2,24 +2,21 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "kutumb-convex",
 	"compatibility_date": "2025-09-24",
-	"compatibility_flags": [
-		"nodejs_compat",
-		"global_fetch_strictly_public"
-	],
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 	"main": "@tanstack/react-start/server-entry",
 	"observability": {
-		"enabled": true
+		"enabled": true,
 	},
 	"d1_databases": [
 		{
 			"binding": "D1",
 			"database_name": "D1",
-			"database_id": "80fc87df-ca34-469d-9ea8-9897e2596575"
-		}
+			"database_id": "80fc87df-ca34-469d-9ea8-9897e2596575",
+		},
 	],
 	"kv_namespaces": [
 		{
 			"binding": "KV",
-		}
-	]
+		},
+	],
 }
