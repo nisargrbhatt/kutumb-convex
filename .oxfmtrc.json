@@ -1,0 +1,25 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"experimentalTailwindcss": {
+		"stylesheet": "./src/styles.css",
+		"functions": ["clsx", "tw", "cn"]
+	},
+	"arrowParens": "always",
+	"endOfLine": "lf",
+	"tabWidth": 1,
+	"semi": true,
+	"proseWrap": "always",
+	"printWidth": 100,
+	"trailingComma": "es5",
+	"useTabs": true,
+	"experimentalSortPackageJson": false,
+	"ignorePatterns": [
+		"**/node_modules",
+		"**/routeTree.gen.ts",
+		"**/.vscode",
+		"**/.wrangler",
+		"**/dist",
+		"**/.tanstack",
+		"worker-configuration.d.ts"
+	]
+}
