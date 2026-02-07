@@ -15,7 +15,7 @@ export function CommunityLayout({ ...orgContext }: Props) {
 	return (
 		<SidebarProvider>
 			<AppSidebar {...orgContext} />
-			<main>
+			<main className="w-full">
 				<Outlet />
 			</main>
 		</SidebarProvider>

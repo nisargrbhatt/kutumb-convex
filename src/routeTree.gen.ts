@@ -23,6 +23,9 @@ import { Route as AuthedCommunitySlugCommunityMemoriesRouteRouteImport } from '.
 import { Route as AuthedCommunitySlugCommunityMembersRouteRouteImport } from './routes/_authed/community/$slug/_community/members/route'
 import { Route as AuthedCommunitySlugCommunityDashboardRouteRouteImport } from './routes/_authed/community/$slug/_community/dashboard/route'
 import { Route as AuthedCommunitySlugCommunityCommunityTreeRouteRouteImport } from './routes/_authed/community/$slug/_community/community-tree/route'
+import { Route as AuthedCommunitySlugCommunitySettingsOverviewRouteRouteImport } from './routes/_authed/community/$slug/_community/settings/overview/route'
+import { Route as AuthedCommunitySlugCommunitySettingsMembersRouteRouteImport } from './routes/_authed/community/$slug/_community/settings/members/route'
+import { Route as AuthedCommunitySlugCommunitySettingsFieldsRouteRouteImport } from './routes/_authed/community/$slug/_community/settings/fields/route'
 import { Route as AuthedCommunitySlugCommunityProfileRelationshipsRouteRouteImport } from './routes/_authed/community/$slug/_community/profile/relationships/route'
 import { Route as AuthedCommunitySlugCommunityProfileInfoRouteRouteImport } from './routes/_authed/community/$slug/_community/profile/info/route'
 import { Route as AuthedCommunitySlugCommunityProfileAddressesRouteRouteImport } from './routes/_authed/community/$slug/_community/profile/addresses/route'
@@ -104,6 +107,24 @@ const AuthedCommunitySlugCommunityCommunityTreeRouteRoute =
     path: '/community-tree',
     getParentRoute: () => AuthedCommunitySlugCommunityRoute,
   } as any)
+const AuthedCommunitySlugCommunitySettingsOverviewRouteRoute =
+  AuthedCommunitySlugCommunitySettingsOverviewRouteRouteImport.update({
+    id: '/settings/overview',
+    path: '/settings/overview',
+    getParentRoute: () => AuthedCommunitySlugCommunityRoute,
+  } as any)
+const AuthedCommunitySlugCommunitySettingsMembersRouteRoute =
+  AuthedCommunitySlugCommunitySettingsMembersRouteRouteImport.update({
+    id: '/settings/members',
+    path: '/settings/members',
+    getParentRoute: () => AuthedCommunitySlugCommunityRoute,
+  } as any)
+const AuthedCommunitySlugCommunitySettingsFieldsRouteRoute =
+  AuthedCommunitySlugCommunitySettingsFieldsRouteRouteImport.update({
+    id: '/settings/fields',
+    path: '/settings/fields',
+    getParentRoute: () => AuthedCommunitySlugCommunityRoute,
+  } as any)
 const AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute =
   AuthedCommunitySlugCommunityProfileRelationshipsRouteRouteImport.update({
     id: '/profile/relationships',
@@ -140,6 +161,9 @@ export interface FileRoutesByFullPath {
   '/community/$slug/profile/addresses': typeof AuthedCommunitySlugCommunityProfileAddressesRouteRoute
   '/community/$slug/profile/info': typeof AuthedCommunitySlugCommunityProfileInfoRouteRoute
   '/community/$slug/profile/relationships': typeof AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute
+  '/community/$slug/settings/fields': typeof AuthedCommunitySlugCommunitySettingsFieldsRouteRoute
+  '/community/$slug/settings/members': typeof AuthedCommunitySlugCommunitySettingsMembersRouteRoute
+  '/community/$slug/settings/overview': typeof AuthedCommunitySlugCommunitySettingsOverviewRouteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -158,6 +182,9 @@ export interface FileRoutesByTo {
   '/community/$slug/profile/addresses': typeof AuthedCommunitySlugCommunityProfileAddressesRouteRoute
   '/community/$slug/profile/info': typeof AuthedCommunitySlugCommunityProfileInfoRouteRoute
   '/community/$slug/profile/relationships': typeof AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute
+  '/community/$slug/settings/fields': typeof AuthedCommunitySlugCommunitySettingsFieldsRouteRoute
+  '/community/$slug/settings/members': typeof AuthedCommunitySlugCommunitySettingsMembersRouteRoute
+  '/community/$slug/settings/overview': typeof AuthedCommunitySlugCommunitySettingsOverviewRouteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -178,6 +205,9 @@ export interface FileRoutesById {
   '/_authed/community/$slug/_community/profile/addresses': typeof AuthedCommunitySlugCommunityProfileAddressesRouteRoute
   '/_authed/community/$slug/_community/profile/info': typeof AuthedCommunitySlugCommunityProfileInfoRouteRoute
   '/_authed/community/$slug/_community/profile/relationships': typeof AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute
+  '/_authed/community/$slug/_community/settings/fields': typeof AuthedCommunitySlugCommunitySettingsFieldsRouteRoute
+  '/_authed/community/$slug/_community/settings/members': typeof AuthedCommunitySlugCommunitySettingsMembersRouteRoute
+  '/_authed/community/$slug/_community/settings/overview': typeof AuthedCommunitySlugCommunitySettingsOverviewRouteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -198,6 +228,9 @@ export interface FileRouteTypes {
     | '/community/$slug/profile/addresses'
     | '/community/$slug/profile/info'
     | '/community/$slug/profile/relationships'
+    | '/community/$slug/settings/fields'
+    | '/community/$slug/settings/members'
+    | '/community/$slug/settings/overview'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -216,6 +249,9 @@ export interface FileRouteTypes {
     | '/community/$slug/profile/addresses'
     | '/community/$slug/profile/info'
     | '/community/$slug/profile/relationships'
+    | '/community/$slug/settings/fields'
+    | '/community/$slug/settings/members'
+    | '/community/$slug/settings/overview'
   id:
     | '__root__'
     | '/'
@@ -235,6 +271,9 @@ export interface FileRouteTypes {
     | '/_authed/community/$slug/_community/profile/addresses'
     | '/_authed/community/$slug/_community/profile/info'
     | '/_authed/community/$slug/_community/profile/relationships'
+    | '/_authed/community/$slug/_community/settings/fields'
+    | '/_authed/community/$slug/_community/settings/members'
+    | '/_authed/community/$slug/_community/settings/overview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -348,6 +387,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunitySlugCommunityCommunityTreeRouteRouteImport
       parentRoute: typeof AuthedCommunitySlugCommunityRoute
     }
+    '/_authed/community/$slug/_community/settings/overview': {
+      id: '/_authed/community/$slug/_community/settings/overview'
+      path: '/settings/overview'
+      fullPath: '/community/$slug/settings/overview'
+      preLoaderRoute: typeof AuthedCommunitySlugCommunitySettingsOverviewRouteRouteImport
+      parentRoute: typeof AuthedCommunitySlugCommunityRoute
+    }
+    '/_authed/community/$slug/_community/settings/members': {
+      id: '/_authed/community/$slug/_community/settings/members'
+      path: '/settings/members'
+      fullPath: '/community/$slug/settings/members'
+      preLoaderRoute: typeof AuthedCommunitySlugCommunitySettingsMembersRouteRouteImport
+      parentRoute: typeof AuthedCommunitySlugCommunityRoute
+    }
+    '/_authed/community/$slug/_community/settings/fields': {
+      id: '/_authed/community/$slug/_community/settings/fields'
+      path: '/settings/fields'
+      fullPath: '/community/$slug/settings/fields'
+      preLoaderRoute: typeof AuthedCommunitySlugCommunitySettingsFieldsRouteRouteImport
+      parentRoute: typeof AuthedCommunitySlugCommunityRoute
+    }
     '/_authed/community/$slug/_community/profile/relationships': {
       id: '/_authed/community/$slug/_community/profile/relationships'
       path: '/profile/relationships'
@@ -380,6 +440,9 @@ interface AuthedCommunitySlugCommunityRouteChildren {
   AuthedCommunitySlugCommunityProfileAddressesRouteRoute: typeof AuthedCommunitySlugCommunityProfileAddressesRouteRoute
   AuthedCommunitySlugCommunityProfileInfoRouteRoute: typeof AuthedCommunitySlugCommunityProfileInfoRouteRoute
   AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute: typeof AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute
+  AuthedCommunitySlugCommunitySettingsFieldsRouteRoute: typeof AuthedCommunitySlugCommunitySettingsFieldsRouteRoute
+  AuthedCommunitySlugCommunitySettingsMembersRouteRoute: typeof AuthedCommunitySlugCommunitySettingsMembersRouteRoute
+  AuthedCommunitySlugCommunitySettingsOverviewRouteRoute: typeof AuthedCommunitySlugCommunitySettingsOverviewRouteRoute
 }
 
 const AuthedCommunitySlugCommunityRouteChildren: AuthedCommunitySlugCommunityRouteChildren =
@@ -398,6 +461,12 @@ const AuthedCommunitySlugCommunityRouteChildren: AuthedCommunitySlugCommunityRou
       AuthedCommunitySlugCommunityProfileInfoRouteRoute,
     AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute:
       AuthedCommunitySlugCommunityProfileRelationshipsRouteRoute,
+    AuthedCommunitySlugCommunitySettingsFieldsRouteRoute:
+      AuthedCommunitySlugCommunitySettingsFieldsRouteRoute,
+    AuthedCommunitySlugCommunitySettingsMembersRouteRoute:
+      AuthedCommunitySlugCommunitySettingsMembersRouteRoute,
+    AuthedCommunitySlugCommunitySettingsOverviewRouteRoute:
+      AuthedCommunitySlugCommunitySettingsOverviewRouteRoute,
   }
 
 const AuthedCommunitySlugCommunityRouteWithChildren =

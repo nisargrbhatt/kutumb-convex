@@ -56,3 +56,10 @@ export const COMMUNITY_RELATION_TYPE = {
 	uncle: "uncle",
 	aunt: "aunt",
 } as const;
+
+export const CUSTOM_FIELD_TYPE = {
+	text: "text",
+	number: "number",
+	date: "date",
+	boolean: "boolean",
+} as const;

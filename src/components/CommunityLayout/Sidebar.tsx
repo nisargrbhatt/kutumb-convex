@@ -10,6 +10,7 @@ import { AuthUser } from "./AuthUser";
 import type { getOrganizationContext } from "@/api/organization";
 import { CommunityNav } from "./CommunityNav";
 import { ProfileNav } from "./ProfileNav";
+import { SettingNav } from "./SettingNav";
 
 type OrgContext = Awaited<ReturnType<typeof getOrganizationContext>>;
 
@@ -28,6 +29,7 @@ export function AppSidebar({ allOrg, org, profile }: Props) {
 			<SidebarContent>
 				<CommunityNav slug={org.slug} />
 				<ProfileNav slug={org.slug} />
+				<SettingNav slug={org.slug} />
 			</SidebarContent>
 			<SidebarFooter>
 				<AuthUser org={org} profile={profile} />

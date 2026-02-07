@@ -5,6 +5,7 @@ import {
 	COMMUNITY_PROFILE_RELATIONSHIP,
 	COMMUNITY_PROFILE_STATUS,
 	COMMUNITY_RELATION_TYPE,
+	CUSTOM_FIELD_TYPE,
 	GENDERS,
 	ORGANIZATION_ROLES,
 } from "./constants";
@@ -46,6 +47,7 @@ export const organizationRelations = relations(organization, ({ many }) => ({
 	members: many(organizationMember),
 	relations: many(communityRelation),
 	memories: many(communityMemory),
+	customFields: many(communityProfileCustomField),
 }));
 
 export const organizationMember = sqliteTable("organizationMember", {
@@ -80,6 +82,28 @@ export const organizationMemberRelations = relations(organizationMember, ({ one 
 		references: [profile.id],
 	}),
 }));
+
+export const communityProfileCustomField = sqliteTable("communityProfileCustomField", {
+	id: text("id").primaryKey().$type<PrimaryKey<"communityProfileCustomField">>(),
+	label: text("label").notNull(),
+	type: text("type", {
+		mode: "text",
+		enum: [
+			CUSTOM_FIELD_TYPE.text,
+			CUSTOM_FIELD_TYPE.number,
+			CUSTOM_FIELD_TYPE.date,
+			CUSTOM_FIELD_TYPE.boolean,
+		],
+	})
+		.notNull()
+		.default(CUSTOM_FIELD_TYPE.text),
+	organizationId: text("organizationId")
+		.$type<PrimaryKey<"organization">>()
+		.references(() => organization.id, {
+			onDelete: "cascade",
+		})
+		.notNull(),
+});
 
 export const communityProfile = sqliteTable("communityProfile", {
 	id: text("id").primaryKey().$type<PrimaryKey<"communityProfile">>(),
@@ -143,8 +167,6 @@ export const communityProfile = sqliteTable("communityProfile", {
 		})
 		.notNull(),
 });
-
-// [TODO] Add Organization Profile Custom Field schema
 
 export const communityProfileRelations = relations(communityProfile, ({ one, many }) => ({
 	profile: one(profile, {
