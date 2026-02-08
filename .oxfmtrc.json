@@ -6,7 +6,7 @@
 	},
 	"arrowParens": "always",
 	"endOfLine": "lf",
-	"tabWidth": 1,
+	"tabWidth": 2,
 	"semi": true,
 	"proseWrap": "always",
 	"printWidth": 100,

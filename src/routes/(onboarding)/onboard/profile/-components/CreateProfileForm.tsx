@@ -100,7 +100,12 @@ export function CreateProfileForm({ defaultEmail, handleSuccess }: Props) {
 			</CardContent>
 			<CardFooter>
 				<CardAction>
-					<Button form={formId} type="submit" onSubmit={onSubmit} disabled={form.formState.isSubmitting}>
+					<Button
+						form={formId}
+						type="submit"
+						onSubmit={onSubmit}
+						disabled={form.formState.isSubmitting}
+					>
 						Submit
 					</Button>
 				</CardAction>
