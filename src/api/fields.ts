@@ -1,6 +1,8 @@
 import { db } from "@/db";
-import type { PrimaryKey } from "@/db/schema";
+import { CUSTOM_FIELD_TYPE } from "@/db/constants";
+import { communityProfileCustomField, type PrimaryKey } from "@/db/schema";
 import { checkOrgRoleResult } from "@/handler/organization";
+import { generatePrimaryKey } from "@/lib/generate";
 import { authMiddleware } from "@/middleware/auth";
 import { createServerFn } from "@tanstack/react-start";
 import * as z from "zod";
@@ -36,5 +38,42 @@ export const getOrganizationCustomFields = createServerFn({ method: "GET" })
 		return {
 			message: "Custom fields retrieved successfully",
 			data: customFields,
+		};
+	});
+
+export const addOrganizationCustomField = createServerFn({ method: "POST" })
+	.middleware([authMiddleware])
+	.inputValidator(
+		z.object({
+			organizationId: z.string().min(1, "organizationId is required"),
+			label: z.string().min(1, "Label is required"),
+			type: z.enum([
+				CUSTOM_FIELD_TYPE.text,
+				CUSTOM_FIELD_TYPE.number,
+				CUSTOM_FIELD_TYPE.date,
+				CUSTOM_FIELD_TYPE.boolean,
+			]),
+		})
+	)
+	.handler(async ({ context, data }) => {
+		const orgRoleCheck = await checkOrgRoleResult({
+			userId: context.userId,
+			organizationId: data.organizationId,
+			requiredRoles: ["owner"],
+		});
+
+		if (!orgRoleCheck) {
+			throw new Error("You do not have permission to add this resource");
+		}
+
+		await db.insert(communityProfileCustomField).values({
+			organizationId: data.organizationId as PrimaryKey<"organization">,
+			label: data.label,
+			type: data.type,
+			id: generatePrimaryKey("communityProfileCustomField"),
+		});
+
+		return {
+			message: "Custom field added successfully",
 		};
 	});

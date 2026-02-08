@@ -60,7 +60,11 @@ export function CommunityPicker({ allOrg, org }: Props) {
 					>
 						<DropdownMenuLabel className="text-xs text-muted-foreground">Teams</DropdownMenuLabel>
 						{allOrg.map((team) => (
-							<DropdownMenuItem key={team.slug} onClick={() => setActiveTeam(team)} className="gap-2 p-2">
+							<DropdownMenuItem
+								key={team.slug}
+								onClick={() => setActiveTeam(team)}
+								className="gap-2 p-2"
+							>
 								<div className="flex size-6 items-center justify-center rounded-md border">
 									<Building className="size-3.5 shrink-0" />
 								</div>
