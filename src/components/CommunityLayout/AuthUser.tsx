@@ -15,16 +15,15 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-import type { getOrganizationContext } from "@/api/organization";
-
-type OrgContext = Awaited<ReturnType<typeof getOrganizationContext>>;
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { getOrganizationContextQuery } from "@/query/organization";
 
 interface Props {
-	org: NonNullable<OrgContext["org"]>;
-	profile: OrgContext["profile"];
+	slug: string;
 }
 
-export function AuthUser({ org, profile }: Props) {
+export function AuthUser({ slug }: Props) {
+	const { data } = useSuspenseQuery(getOrganizationContextQuery({ slug }));
 	const { isMobile } = useSidebar();
 
 	return (
@@ -38,12 +37,12 @@ export function AuthUser({ org, profile }: Props) {
 						>
 							<Avatar className="h-8 w-8 rounded-lg">
 								<AvatarFallback className="rounded-lg">
-									{profile?.displayName?.at(0)?.toUpperCase()}
+									{data?.profile?.displayName?.at(0)?.toUpperCase()}
 								</AvatarFallback>
 							</Avatar>
 							<div className="grid flex-1 text-left text-sm leading-tight">
-								<span className="truncate font-medium">{profile.displayName}</span>
-								<span className="truncate text-xs">{profile.email}</span>
+								<span className="truncate font-medium">{data?.profile.displayName}</span>
+								<span className="truncate text-xs">{data?.profile.email}</span>
 							</div>
 							<ChevronsUpDown className="ml-auto size-4" />
 						</SidebarMenuButton>
@@ -58,12 +57,12 @@ export function AuthUser({ org, profile }: Props) {
 							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
 								<Avatar className="h-8 w-8 rounded-lg">
 									<AvatarFallback className="rounded-lg">
-										{profile?.displayName?.at(0)?.toUpperCase()}
+										{data?.profile?.displayName?.at(0)?.toUpperCase()}
 									</AvatarFallback>
 								</Avatar>
 								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-medium">{profile.displayName}</span>
-									<span className="truncate text-xs">{profile.email}</span>
+									<span className="truncate font-medium">{data?.profile.displayName}</span>
+									<span className="truncate text-xs">{data?.profile.email}</span>
 								</div>
 							</div>
 						</DropdownMenuLabel>
@@ -80,16 +79,18 @@ export function AuthUser({ org, profile }: Props) {
 								<BadgeCheck />
 								Account
 							</DropdownMenuItem>
-							<a
-								href={`/api/polar/portal?${new URLSearchParams({
-									organizationId: org.id,
-								}).toString()}`}
-							>
-								<DropdownMenuItem>
-									<CreditCard />
-									Billing
-								</DropdownMenuItem>
-							</a>
+							{data?.org?.id ? (
+								<a
+									href={`/api/polar/portal?${new URLSearchParams({
+										organizationId: data?.org?.id,
+									}).toString()}`}
+								>
+									<DropdownMenuItem>
+										<CreditCard />
+										Billing
+									</DropdownMenuItem>
+								</a>
+							) : null}
 							<DropdownMenuItem>
 								<Bell />
 								Notifications

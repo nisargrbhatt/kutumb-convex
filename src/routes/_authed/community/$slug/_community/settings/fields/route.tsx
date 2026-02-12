@@ -1,8 +1,4 @@
-import {
-	addOrganizationCustomField,
-	deleteOrganizationCustomField,
-	getOrganizationCustomFields,
-} from "@/api/fields";
+import { addOrganizationCustomField, deleteOrganizationCustomField } from "@/api/fields";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -31,26 +27,22 @@ import {
 } from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
+import { getOrganizationCustomFieldsQuery } from "@/query/fields";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 export const Route = createFileRoute("/_authed/community/$slug/_community/settings/fields")({
 	component: RouteComponent,
-	loader: async ({ context, abortController }) => {
-		const customFields = await getOrganizationCustomFields({
-			data: {
-				organizationId: context.organization.id,
-			},
-			signal: abortController.signal,
-		});
-
-		return {
-			customFields: customFields.data,
-			organizationId: context.organization.id,
-		};
+	loader: async ({ context, params }) => {
+		await context.queryClient.ensureQueryData(
+			getOrganizationCustomFieldsQuery({
+				orgSlug: params.slug,
+			})
+		);
 	},
 });
 
@@ -93,7 +85,7 @@ const addFieldSchema = z.object({
 
 function AddFieldForm() {
 	const { slug } = Route.useParams();
-	const router = useRouter();
+	const { refetch } = useSuspenseQuery(getOrganizationCustomFieldsQuery({ orgSlug: slug }));
 
 	const form = useForm<z.infer<typeof addFieldSchema>>({
 		resolver: zodResolver(addFieldSchema),
@@ -113,9 +105,7 @@ function AddFieldForm() {
 
 		form.reset();
 
-		router.invalidate({
-			filter: (d) => d.id === Route.id,
-		});
+		refetch();
 	});
 
 	return (
@@ -168,9 +158,8 @@ function AddFieldForm() {
 }
 
 function FieldsList() {
-	const router = useRouter();
-	const { customFields } = Route.useLoaderData();
 	const { slug } = Route.useParams();
+	const { data, refetch } = useSuspenseQuery(getOrganizationCustomFieldsQuery({ orgSlug: slug }));
 
 	const onDeleteField = async (id: string) => {
 		await deleteOrganizationCustomField({
@@ -180,14 +169,12 @@ function FieldsList() {
 			},
 		});
 
-		router.invalidate({
-			filter: (d) => d.id === Route.id,
-		});
+		refetch();
 	};
 
 	return (
 		<div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
-			{customFields.map((field) => (
+			{data?.data.map((field) => (
 				<Item key={field.id} className="w-full" variant="outline">
 					<ItemContent>
 						<ItemTitle aria-label="Field Label">{field.label}</ItemTitle>

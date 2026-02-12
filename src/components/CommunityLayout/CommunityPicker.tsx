@@ -15,19 +15,18 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-
-import type { getOrganizationContext } from "@/api/organization";
-
-type OrgContext = Awaited<ReturnType<typeof getOrganizationContext>>;
+import { getOrganizationContextQuery } from "@/query/organization";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
 interface Props {
-	org: NonNullable<OrgContext["org"]>;
-	allOrg: OrgContext["allOrg"];
+	slug: string;
 }
 
-export function CommunityPicker({ allOrg, org }: Props) {
+export function CommunityPicker({ slug }: Props) {
+	const { data } = useSuspenseQuery(getOrganizationContextQuery({ slug }));
+
 	const { isMobile } = useSidebar();
-	const [activeTeam, setActiveTeam] = React.useState(allOrg?.find((i) => org.slug === i.slug));
+	const [activeTeam, setActiveTeam] = React.useState(data?.allOrg?.find((i) => slug === i.slug));
 
 	if (!activeTeam) {
 		return null;
@@ -59,7 +58,7 @@ export function CommunityPicker({ allOrg, org }: Props) {
 						sideOffset={4}
 					>
 						<DropdownMenuLabel className="text-xs text-muted-foreground">Teams</DropdownMenuLabel>
-						{allOrg.map((team) => (
+						{data?.allOrg.map((team) => (
 							<DropdownMenuItem
 								key={team.slug}
 								onClick={() => setActiveTeam(team)}

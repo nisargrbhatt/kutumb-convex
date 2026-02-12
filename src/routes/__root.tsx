@@ -1,11 +1,18 @@
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import appCss from "../styles.css?url";
 import { authStateFn } from "@/handler/auth";
+import type { QueryClient } from "@tanstack/react-query";
 
-export const Route = createRootRoute({
-	beforeLoad: async () => await authStateFn(),
+export const Route = createRootRouteWithContext<{
+	queryClient: QueryClient;
+}>()({
+	beforeLoad: async () => {
+		const result = await authStateFn();
+		return result;
+	},
 	head: () => ({
 		meta: [
 			{
@@ -49,6 +56,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						{
 							name: "Tanstack Router",
 							render: <TanStackRouterDevtoolsPanel />,
+						},
+						{
+							name: "Tanstack Query",
+							render: <ReactQueryDevtoolsPanel />,
 						},
 					]}
 				/>
