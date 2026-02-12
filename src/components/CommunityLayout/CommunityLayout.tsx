@@ -1,20 +1,15 @@
 import { SidebarProvider } from "../ui/sidebar";
 import { AppSidebar } from "./Sidebar";
-import type { getOrganizationContext } from "@/api/organization";
 import { Outlet } from "@tanstack/react-router";
 
-type OrgContext = Awaited<ReturnType<typeof getOrganizationContext>>;
-
 interface Props {
-	org: NonNullable<OrgContext["org"]>;
-	allOrg: OrgContext["allOrg"];
-	profile: OrgContext["profile"];
+	slug: string;
 }
 
-export function CommunityLayout({ ...orgContext }: Props) {
+export function CommunityLayout({ slug }: Props) {
 	return (
 		<SidebarProvider>
-			<AppSidebar {...orgContext} />
+			<AppSidebar slug={slug} />
 			<main className="w-full">
 				<Outlet />
 			</main>

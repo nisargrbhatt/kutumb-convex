@@ -2,7 +2,10 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "kutumb-convex",
 	"compatibility_date": "2025-09-24",
-	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
 	"main": "@tanstack/react-start/server-entry",
 	"observability": {
 		"enabled": true,
@@ -17,6 +20,7 @@
 	"kv_namespaces": [
 		{
 			"binding": "KV",
+			"id": "d41d4475a3204f30b08cd46a2e5dcb4f",
 		},
-	],
+	]
 }

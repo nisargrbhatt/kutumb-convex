@@ -15,24 +15,22 @@ import { SettingNav } from "./SettingNav";
 type OrgContext = Awaited<ReturnType<typeof getOrganizationContext>>;
 
 interface Props {
-	org: NonNullable<OrgContext["org"]>;
-	allOrg: OrgContext["allOrg"];
-	profile: OrgContext["profile"];
+	slug: string;
 }
 
-export function AppSidebar({ allOrg, org, profile }: Props) {
+export function AppSidebar({ slug }: Props) {
 	return (
 		<Sidebar collapsible="icon">
 			<SidebarHeader>
-				<CommunityPicker allOrg={allOrg} org={org} />
+				<CommunityPicker slug={slug} />
 			</SidebarHeader>
 			<SidebarContent>
-				<CommunityNav slug={org.slug} />
-				<ProfileNav slug={org.slug} />
-				<SettingNav slug={org.slug} />
+				<CommunityNav slug={slug} />
+				<ProfileNav slug={slug} />
+				<SettingNav slug={slug} />
 			</SidebarContent>
 			<SidebarFooter>
-				<AuthUser org={org} profile={profile} />
+				<AuthUser slug={slug} />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>
