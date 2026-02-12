@@ -1,4 +1,8 @@
-import { addOrganizationCustomField, getOrganizationCustomFields } from "@/api/fields";
+import {
+	addOrganizationCustomField,
+	deleteOrganizationCustomField,
+	getOrganizationCustomFields,
+} from "@/api/fields";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -28,7 +32,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -88,7 +92,8 @@ const addFieldSchema = z.object({
 });
 
 function AddFieldForm() {
-	const { organizationId } = Route.useLoaderData();
+	const { slug } = Route.useParams();
+	const router = useRouter();
 
 	const form = useForm<z.infer<typeof addFieldSchema>>({
 		resolver: zodResolver(addFieldSchema),
@@ -101,9 +106,15 @@ function AddFieldForm() {
 	const onSubmit = form.handleSubmit(async (values) => {
 		await addOrganizationCustomField({
 			data: {
-				organizationId: organizationId,
+				organizationSlug: slug,
 				...values,
 			},
+		});
+
+		form.reset();
+
+		router.invalidate({
+			filter: (d) => d.id === Route.id,
 		});
 	});
 
@@ -157,7 +168,22 @@ function AddFieldForm() {
 }
 
 function FieldsList() {
+	const router = useRouter();
 	const { customFields } = Route.useLoaderData();
+	const { slug } = Route.useParams();
+
+	const onDeleteField = async (id: string) => {
+		await deleteOrganizationCustomField({
+			data: {
+				organizationSlug: slug,
+				fieldId: id,
+			},
+		});
+
+		router.invalidate({
+			filter: (d) => d.id === Route.id,
+		});
+	};
 
 	return (
 		<div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
@@ -170,7 +196,7 @@ function FieldsList() {
 						</ItemDescription>
 					</ItemContent>
 					<ItemActions>
-						<Button variant="outline" size="sm">
+						<Button variant="outline" size="sm" onClick={() => onDeleteField(field.id)}>
 							<Trash2 />
 							Delete
 						</Button>

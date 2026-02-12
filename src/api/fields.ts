@@ -5,6 +5,7 @@ import { checkOrgRoleResult } from "@/handler/organization";
 import { generatePrimaryKey } from "@/lib/generate";
 import { authMiddleware } from "@/middleware/auth";
 import { createServerFn } from "@tanstack/react-start";
+import { and, eq } from "drizzle-orm";
 import * as z from "zod";
 
 export const getOrganizationCustomFields = createServerFn({ method: "GET" })
@@ -45,7 +46,7 @@ export const addOrganizationCustomField = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
 	.inputValidator(
 		z.object({
-			organizationId: z.string().min(1, "organizationId is required"),
+			organizationSlug: z.string().min(1, "organizationSlug is required"),
 			label: z.string().min(1, "Label is required"),
 			type: z.enum([
 				CUSTOM_FIELD_TYPE.text,
@@ -58,7 +59,7 @@ export const addOrganizationCustomField = createServerFn({ method: "POST" })
 	.handler(async ({ context, data }) => {
 		const orgRoleCheck = await checkOrgRoleResult({
 			userId: context.userId,
-			organizationId: data.organizationId,
+			organizationSlug: data?.organizationSlug,
 			requiredRoles: ["owner"],
 		});
 
@@ -67,7 +68,7 @@ export const addOrganizationCustomField = createServerFn({ method: "POST" })
 		}
 
 		await db.insert(communityProfileCustomField).values({
-			organizationId: data.organizationId as PrimaryKey<"organization">,
+			organizationId: orgRoleCheck?.id,
 			label: data.label,
 			type: data.type,
 			id: generatePrimaryKey("communityProfileCustomField"),
@@ -75,5 +76,42 @@ export const addOrganizationCustomField = createServerFn({ method: "POST" })
 
 		return {
 			message: "Custom field added successfully",
+		};
+	});
+
+export const deleteOrganizationCustomField = createServerFn({ method: "POST" })
+	.middleware([authMiddleware])
+	.inputValidator(
+		z.object({
+			organizationSlug: z.string().min(1, "organizationSlug is required"),
+			fieldId: z.string().min(1, "fieldId is required"),
+		})
+	)
+	.handler(async ({ context, data }) => {
+		const orgRoleCheck = await checkOrgRoleResult({
+			userId: context.userId,
+			organizationSlug: data?.organizationSlug,
+			requiredRoles: ["owner"],
+		});
+
+		if (!orgRoleCheck) {
+			throw new Error("You do not have permission to add this resource");
+		}
+
+		await db
+			.delete(communityProfileCustomField)
+			.where(
+				and(
+					eq(
+						communityProfileCustomField.id,
+						data.fieldId as PrimaryKey<"communityProfileCustomField">
+					),
+					eq(communityProfileCustomField.organizationId, orgRoleCheck.id)
+				)
+			)
+			.limit(1);
+
+		return {
+			message: "Custom field deleted successfully",
 		};
 	});
