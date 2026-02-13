@@ -4,6 +4,7 @@ import { communityProfileCustomField, type PrimaryKey } from "@/db/schema";
 import { checkOrgRoleResult } from "@/handler/organization";
 import { generatePrimaryKey } from "@/lib/generate";
 import { authMiddleware } from "@/middleware/auth";
+import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import * as z from "zod";
@@ -113,4 +114,16 @@ export const deleteOrganizationCustomField = createServerFn({ method: "POST" })
 		return {
 			message: "Custom field deleted successfully",
 		};
+	});
+
+export const getOrganizationCustomFieldsQuery = (props: { orgSlug: string }) =>
+	queryOptions({
+		queryKey: ["get-organization-custom-fields", props.orgSlug],
+		queryFn: async ({ signal }) =>
+			await getOrganizationCustomFields({
+				data: {
+					organizationSlug: props.orgSlug,
+				},
+				signal,
+			}),
 	});

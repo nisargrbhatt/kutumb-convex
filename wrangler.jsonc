@@ -4,7 +4,8 @@
 	"compatibility_date": "2025-09-24",
 	"compatibility_flags": [
 		"nodejs_compat",
-		"global_fetch_strictly_public"
+		"global_fetch_strictly_public",
+		"no_handle_cross_request_promise_resolution",
 	],
 	"main": "@tanstack/react-start/server-entry",
 	"observability": {
@@ -22,5 +23,5 @@
 			"binding": "KV",
 			"id": "d41d4475a3204f30b08cd46a2e5dcb4f",
 		},
-	]
+	],
 }

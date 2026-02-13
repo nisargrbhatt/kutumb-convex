@@ -1,5 +1,5 @@
+import { getOrganizationContextQuery } from "@/api/organization";
 import { CommunityLayout } from "@/components/CommunityLayout/CommunityLayout";
-import { getOrganizationContextQuery } from "@/query/organization";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authed/community/$slug/_community")({

@@ -1,4 +1,8 @@
-import { addOrganizationCustomField, deleteOrganizationCustomField } from "@/api/fields";
+import {
+	addOrganizationCustomField,
+	deleteOrganizationCustomField,
+	getOrganizationCustomFieldsQuery,
+} from "@/api/fields";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -27,7 +31,6 @@ import {
 } from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
-import { getOrganizationCustomFieldsQuery } from "@/query/fields";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
