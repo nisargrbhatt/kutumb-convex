@@ -5,6 +5,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import appCss from "../styles.css?url";
 import { authStateFn } from "@/handler/auth";
 import type { QueryClient } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient;
@@ -47,6 +48,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
+				<Toaster />
 				{children}
 				<TanStackDevtools
 					config={{

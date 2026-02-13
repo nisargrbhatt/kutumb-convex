@@ -1,6 +1,8 @@
 import { db } from "@/db";
+import { authStateFn } from "@/handler/auth";
 import { getUserProfileCacheKey } from "@/lib/cache";
 import { safeAsync } from "@/lib/safe";
+import { queryOptions } from "@tanstack/react-query";
 import { createServerOnlyFn } from "@tanstack/react-start";
 import { env } from "cloudflare:workers";
 
@@ -185,3 +187,14 @@ export const getUserOrganizationContext = createServerOnlyFn(async (userId: stri
 		organizations: mappedOrganizations,
 	};
 });
+
+export const authUserIdQuery = () =>
+	queryOptions({
+		queryKey: ["auth-user-id"],
+		queryFn: async ({ signal }) => {
+			const result = await authStateFn({
+				signal: signal,
+			});
+			return result.userId;
+		},
+	});

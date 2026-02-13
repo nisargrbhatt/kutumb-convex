@@ -15,8 +15,8 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-import { getOrganizationContextQuery } from "@/query/organization";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { getOrganizationContextQuery } from "@/api/organization";
 
 interface Props {
 	slug: string;

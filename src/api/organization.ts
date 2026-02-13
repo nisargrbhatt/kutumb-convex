@@ -9,6 +9,7 @@ import type { PrimaryKey } from "@/db/schema";
 import { organization, organizationMember } from "@/db/schema";
 import { generateOrgSlug, generatePrimaryKey } from "@/lib/generate";
 import { eq } from "drizzle-orm";
+import { queryOptions } from "@tanstack/react-query";
 
 export const createOrganizationCheckoutLink = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
@@ -170,4 +171,16 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
 		const org = userContext.organization.find((i) => i.slug === data.slug);
 
 		return { org: org, profile: userContext.profile, allOrg: userContext.organization ?? [] };
+	});
+
+export const getOrganizationContextQuery = (props: { slug: string }) =>
+	queryOptions({
+		queryKey: ["get-organization-context", props.slug],
+		queryFn: async ({ signal }) =>
+			getOrganizationContext({
+				data: {
+					slug: props.slug,
+				},
+				signal,
+			}),
 	});
