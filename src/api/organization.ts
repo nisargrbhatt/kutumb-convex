@@ -10,6 +10,7 @@ import { organization, organizationMember } from "@/db/schema";
 import { generateOrgSlug, generatePrimaryKey } from "@/lib/generate";
 import { eq } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
+import { checkOrgRoleResult } from "@/handler/organization";
 
 export const createOrganizationCheckoutLink = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
@@ -183,4 +184,84 @@ export const getOrganizationContextQuery = (props: { slug: string }) =>
 				},
 				signal,
 			}),
+	});
+
+export const getOrganizationInfo = createServerFn({ method: "GET" })
+	.inputValidator(
+		z.object({
+			slug: z.string().min(1, "Organization slug is required"),
+		})
+	)
+	.middleware([authMiddleware])
+	.handler(async ({ context, data }) => {
+		const checkRoleResult = await checkOrgRoleResult({
+			userId: context.userId,
+			organizationSlug: data.slug,
+			requiredRoles: ["owner"],
+		});
+
+		if (!checkRoleResult) {
+			throw new Error("You do not have permission to add this resource");
+		}
+
+		const organization = await db.query.organization.findFirst({
+			where: (fields, ops) => ops.eq(fields.id, checkRoleResult.id),
+			columns: {
+				id: true,
+				name: true,
+				slug: true,
+				description: true,
+			},
+		});
+
+		if (!organization) {
+			throw new Error("Organization not found");
+		}
+
+		return organization;
+	});
+
+export const getOrganizationInfoQuery = (props: { slug: string }) =>
+	queryOptions({
+		queryKey: ["get-organization-info", props.slug],
+		queryFn: async ({ signal }) =>
+			getOrganizationInfo({
+				data: {
+					slug: props.slug,
+				},
+				signal,
+			}),
+	});
+
+export const updateOrganizationInfo = createServerFn({ method: "POST" })
+	.middleware([authMiddleware])
+	.inputValidator(
+		z.object({
+			slug: z.string(),
+			organization: z.object({
+				description: z.string(),
+			}),
+		})
+	)
+	.handler(async ({ context, data }) => {
+		const checkRoleResult = await checkOrgRoleResult({
+			userId: context.userId,
+			organizationSlug: data.slug,
+			requiredRoles: ["owner"],
+		});
+
+		if (!checkRoleResult) {
+			throw new Error("You do not have permission to update this organization");
+		}
+
+		await db
+			.update(organization)
+			.set({
+				description: data.organization.description,
+			})
+			.where(eq(organization.id, checkRoleResult.id));
+
+		return {
+			message: "Organization updated successfully",
+		};
 	});

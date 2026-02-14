@@ -119,8 +119,8 @@ export const deleteOrganizationCustomField = createServerFn({ method: "POST" })
 export const getOrganizationCustomFieldsQuery = (props: { orgSlug: string }) =>
 	queryOptions({
 		queryKey: ["get-organization-custom-fields", props.orgSlug],
-		queryFn: async ({ signal }) =>
-			await getOrganizationCustomFields({
+		queryFn: ({ signal }) =>
+			getOrganizationCustomFields({
 				data: {
 					organizationSlug: props.orgSlug,
 				},

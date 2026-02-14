@@ -7,18 +7,22 @@ import {
 	SidebarMenuItem,
 } from "../ui/sidebar";
 import { LayoutDashboard } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getOrganizationContextQuery } from "@/api/organization";
 
 interface Props {
 	slug: string;
 }
 
 export function SettingNav({ slug }: Props) {
-	const membershipRole = useRouteContext({
-		from: "/_authed/community/$slug/_community",
-		select: (search) => search.organization?.membership?.role,
-	});
+	const { data } = useQuery(
+		getOrganizationContextQuery({
+			slug,
+		})
+	);
+	const membershipRole = data?.org?.membership?.role;
 
-	if (membershipRole === "member") {
+	if (membershipRole !== "owner") {
 		return null;
 	}
 
