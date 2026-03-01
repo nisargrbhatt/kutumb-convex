@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { addOrganizationMember, getOrganizationMemberListQuery } from "@/api/organizationMember";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { BookKeyIcon, CrownIcon, UserIcon } from "lucide-react";
 import z from "zod";
@@ -81,7 +81,7 @@ const formSchema = z.object({
 function AddOrganizationMemberForm() {
 	const formId = useId();
 	const { slug } = Route.useParams();
-	const { refetch } = useQuery(getOrganizationMemberListQuery({ slug: slug }));
+	const queryClient = useQueryClient();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -112,7 +112,9 @@ function AddOrganizationMemberForm() {
 				description: "Member could not be added",
 			});
 		} finally {
-			refetch();
+			queryClient.invalidateQueries({
+				queryKey: getOrganizationMemberListQuery({ slug: slug }).queryKey,
+			});
 		}
 	});
 
