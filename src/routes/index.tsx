@@ -7,8 +7,6 @@ import { RootLayout } from "@/components/RootLayout";
 
 export const Route = createFileRoute("/")({
 	component: App,
-	beforeLoad: () => ({ CF_URL: process.env.CF_PAGES_URL }),
-	loader: ({ context }) => context.CF_URL,
 });
 
 /* -------------------------------------------------------------------------- */
@@ -137,7 +135,6 @@ function FeatureGrid() {
 /* -------------------------------------------------------------------------- */
 
 function App() {
-	console.log(Route.useLoaderData());
 	return (
 		<RootLayout>
 			<div className="min-h-screen bg-background text-foreground">
