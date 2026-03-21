@@ -16,6 +16,7 @@
 		"lint:fix": "oxlint --fix",
 		"migration:generate": "drizzle-kit generate",
 		"migration:migrate": "drizzle-kit migrate",
+		"migration:migrate:prod": "wrangler d1 migrations apply D1",
 		"migration:migrate:local": "wrangler d1 migrations apply D1 --local",
 		"wrangler": "wrangler",
 		"localflare": "npx localflare attach"

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getOrganizationContextQuery } from "@/api/organization";
+import { authClient } from "@/lib/auth-client";
 
 interface Props {
 	slug: string;
@@ -97,7 +98,12 @@ export function AuthUser({ slug }: Props) {
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={async () => {
+								await authClient.signOut();
+								window.location.href = new URL("/login", window.location.origin).toString();
+							}}
+						>
 							<LogOut />
 							Log out
 						</DropdownMenuItem>
