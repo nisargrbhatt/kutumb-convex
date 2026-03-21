@@ -177,3 +177,51 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 			message: "Community Profile updated successfully",
 		};
 	});
+
+export const getCommunityProfileList = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.inputValidator(
+		z.object({
+			slug: z.string().trim().min(1, "Slug is required"),
+		})
+	)
+	.handler(async ({ context, data }) => {
+		const cachedUserContext = await getFullUserContextCached(context.userId);
+
+		if (!cachedUserContext) {
+			throw new Error("User not found");
+		}
+
+		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
+
+		if (!organizationId) {
+			throw new Error("Organization not found");
+		}
+
+		const communityProfiles = await db.query.communityProfile.findMany({
+			where: (fields, operators) => operators.eq(fields.organizationId, organizationId),
+			columns: {
+				id: true,
+				firstName: true,
+				lastName: true,
+				middleName: true,
+				nickName: true,
+			},
+		});
+
+		return communityProfiles;
+	});
+
+export const getCommunityProfileListQuery = (props: { slug: string }) =>
+	queryOptions({
+		queryKey: ["get-community-profile-list", props.slug],
+		queryFn: async ({ signal }) => {
+			const result = await getCommunityProfileList({
+				data: {
+					slug: props.slug,
+				},
+				signal,
+			});
+			return result;
+		},
+	});
