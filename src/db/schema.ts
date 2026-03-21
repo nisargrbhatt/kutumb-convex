@@ -2,7 +2,6 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import {
 	COMMUNITY_ADDRESS_TYPE,
 	COMMUNITY_PROFILE_BLOOD_GROUP,
-	COMMUNITY_PROFILE_RELATIONSHIP,
 	COMMUNITY_PROFILE_STATUS,
 	COMMUNITY_RELATION_TYPE,
 	CUSTOM_FIELD_TYPE,
@@ -140,20 +139,6 @@ export const communityProfile = sqliteTable("communityProfile", {
 	mobileNumber: text("mobileNumber"),
 	dateOfBirth: text("dateOfBirth"),
 	dateOfDeath: text("dateOfDeath"),
-	gotra: text("gotra"),
-	native: text("native"),
-	maternal: text("maternal"),
-	birthPlace: text("birthPlace"),
-	relationship: text("relationship", {
-		mode: "text",
-		enum: [
-			COMMUNITY_PROFILE_RELATIONSHIP.single,
-			COMMUNITY_PROFILE_RELATIONSHIP.married,
-			COMMUNITY_PROFILE_RELATIONSHIP.divorced,
-			COMMUNITY_PROFILE_RELATIONSHIP.widowed,
-			COMMUNITY_PROFILE_RELATIONSHIP["rather not say"],
-		],
-	}),
 	comment: text("comment"),
 	profileId: text("profileId")
 		.$type<PrimaryKey<"profile">>()
