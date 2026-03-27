@@ -2,7 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "@tanstack/react-router";
-import { Github, Linkedin, Twitter, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
+import {
+	IconBrandX as Twitter,
+	IconBrandGithub as Github,
+	IconBrandLinkedin as Linkedin,
+} from "@tabler/icons-react";
 import Logo from "@/assets/favicon.png";
 
 export default function Footer() {

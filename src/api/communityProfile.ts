@@ -340,3 +340,70 @@ export const getCommunityMembersQuery = (props: {
 			return result;
 		},
 	});
+
+export const getCommunityTree = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.inputValidator(
+		z.object({
+			slug: z.string().trim().min(1, "Slug is required"),
+		})
+	)
+	.handler(async ({ context, data }) => {
+		const cachedUserContext = await getFullUserContextCached(context.userId);
+
+		if (!cachedUserContext) {
+			throw new Error("User not found");
+		}
+
+		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
+
+		if (!organizationId) {
+			throw new Error("Organization not found");
+		}
+
+		const [profiles, relations] = await Promise.all([
+			db.query.communityProfile.findMany({
+				where: (fields, operators) => operators.eq(fields.organizationId, organizationId),
+				columns: {
+					id: true,
+					firstName: true,
+					middleName: true,
+					lastName: true,
+					nickName: true,
+					email: true,
+					gender: true,
+					status: true,
+				},
+			}),
+			db.query.communityRelation.findMany({
+				where: (fields, operators) => operators.eq(fields.organizationId, organizationId),
+				columns: {
+					id: true,
+					fromId: true,
+					toId: true,
+					type: true,
+					note: true,
+					bloodRelation: true,
+				},
+			}),
+		]);
+
+		return {
+			profiles,
+			relations,
+		};
+	});
+
+export const getCommunityTreeQuery = (props: { slug: string }) =>
+	queryOptions({
+		queryKey: ["get-community-tree", props.slug],
+		queryFn: async ({ signal }) => {
+			const result = await getCommunityTree({
+				data: {
+					slug: props.slug,
+				},
+				signal,
+			});
+			return result;
+		},
+	});
