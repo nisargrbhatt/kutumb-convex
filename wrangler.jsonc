@@ -24,6 +24,6 @@
 		},
 	],
 	"preview_urls": false,
-	"workers_dev": false,
+	"workers_dev": true,
 	"keep_vars": true,
 }
