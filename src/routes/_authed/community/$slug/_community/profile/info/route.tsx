@@ -1,4 +1,6 @@
 import { getMyCommunityProfileQuery, upsertMyCommunityProfile } from "@/api/communityProfile";
+import { getOrganizationCustomFieldsQuery } from "@/api/fields";
+import { CustomFieldsForm, type CustomField } from "@/components/CustomFieldsForm";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -39,6 +41,9 @@ export const Route = createFileRoute("/_authed/community/$slug/_community/profil
 	component: RouteComponent,
 	loader: async ({ context, params }) => {
 		await context.queryClient.ensureQueryData(getMyCommunityProfileQuery({ slug: params.slug }));
+		await context.queryClient.ensureQueryData(
+			getOrganizationCustomFieldsQuery({ orgSlug: params.slug })
+		);
 	},
 });
 
@@ -91,11 +96,18 @@ const communityProfileSchema = z.object({
 	mobileNumber: z.string().optional(),
 	dateOfBirth: z.date().optional(),
 	dateOfDeath: z.date().optional(),
+	customFieldData: z.record(z.string(), z.any()).optional(),
 });
 
 type CommunityProfileFormValues = z.infer<typeof communityProfileSchema>;
 
-function CommunityProfileForm({ defaultValues }: { defaultValues?: CommunityProfileFormValues }) {
+function CommunityProfileForm({
+	defaultValues,
+	customFields,
+}: {
+	defaultValues?: CommunityProfileFormValues;
+	customFields: CustomField[];
+}) {
 	const { slug } = Route.useParams();
 	const form = useForm<CommunityProfileFormValues>({
 		resolver: zodResolver(communityProfileSchema),
@@ -120,6 +132,8 @@ function CommunityProfileForm({ defaultValues }: { defaultValues?: CommunityProf
 						data?.mobileNumber && data?.mobileNumber?.length > 0 ? data?.mobileNumber : undefined,
 					dateOfBirth: data?.dateOfBirth ? data?.dateOfBirth?.toJSON() : undefined,
 					dateOfDeath: data?.dateOfDeath ? data?.dateOfDeath?.toJSON() : undefined,
+					customFieldData:
+						Object.keys(data?.customFieldData ?? {}).length > 0 ? data?.customFieldData : undefined,
 				},
 			},
 		});
@@ -279,7 +293,14 @@ function CommunityProfileForm({ defaultValues }: { defaultValues?: CommunityProf
 					/>
 				</div>
 
-				<Button type="submit" disabled={form.formState.isSubmitting} onSubmit={onSubmit}>
+				{customFields && customFields.length > 0 && (
+					<>
+						<div className="my-2 border-t" />
+						<CustomFieldsForm customFields={customFields} />
+					</>
+				)}
+
+				<Button type="submit" disabled={form.formState.isSubmitting}>
 					Submit
 				</Button>
 			</form>
@@ -289,38 +310,39 @@ function CommunityProfileForm({ defaultValues }: { defaultValues?: CommunityProf
 
 function RouteComponent() {
 	const { slug } = Route.useParams();
-	const { data, isLoading } = useSuspenseQuery(getMyCommunityProfileQuery({ slug }));
+	const { data } = useSuspenseQuery(getMyCommunityProfileQuery({ slug }));
+	const { data: customFieldsResponse } = useSuspenseQuery(
+		getOrganizationCustomFieldsQuery({ orgSlug: slug })
+	);
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
 			<PageHeader />
 
-			{!isLoading ? (
-				<CommunityProfileForm
-					defaultValues={
-						data
-							? {
-									firstName: data.firstName,
-									lastName: data.lastName,
-									middleName: data.middleName ?? undefined,
-									nickName: data.nickName ?? undefined,
-									email: data.email ?? undefined,
-									mobileNumber: data.mobileNumber ?? undefined,
-									dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
-									dateOfDeath: data.dateOfDeath ? new Date(data.dateOfDeath) : undefined,
-									gender: data.gender as any,
-									bloodGroup: data.bloodGroup as any,
-								}
-							: {
-									firstName: "",
-									lastName: "",
-									gender: "male",
-								}
-					}
-				/>
-			) : (
-				<Skeleton />
-			)}
+			<CommunityProfileForm
+				customFields={customFieldsResponse?.data ?? []}
+				defaultValues={
+					data
+						? {
+								firstName: data.firstName,
+								lastName: data.lastName,
+								middleName: data.middleName ?? undefined,
+								nickName: data.nickName ?? undefined,
+								email: data.email ?? undefined,
+								mobileNumber: data.mobileNumber ?? undefined,
+								dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+								dateOfDeath: data.dateOfDeath ? new Date(data.dateOfDeath) : undefined,
+								gender: data.gender as any,
+								bloodGroup: data.bloodGroup as any,
+								customFieldData: data.customFieldData as Record<string, any> | undefined,
+							}
+						: {
+								firstName: "",
+								lastName: "",
+								gender: "male",
+							}
+				}
+			/>
 		</div>
 	);
 }

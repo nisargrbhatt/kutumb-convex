@@ -37,10 +37,7 @@ export const Route = createFileRoute("/api/polar/portal")({
 
 					return orgCustomerId;
 				}, // Function to resolve a Polar Customer ID
-				returnUrl:
-					env.POLAR_MODE === "sandbox"
-						? new URL("/", "http://localhost:3000").toString()
-						: "https://kutumb.com", // An optional URL which renders a back-button in the Checkout
+				returnUrl: new URL("/", env.BETTER_AUTH_URL).toString(), // An optional URL which renders a back-button in the Checkout
 				server: env.POLAR_MODE === "sandbox" ? "sandbox" : "production", // Use sandbox if you're testing Polar - omit the parameter or pass 'production' otherwise
 			}),
 		},

@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, blob } from "drizzle-orm/sqlite-core";
 import {
 	COMMUNITY_ADDRESS_TYPE,
 	COMMUNITY_PROFILE_BLOOD_GROUP,
@@ -10,6 +10,7 @@ import {
 } from "./constants";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
+import { generatePrimaryKey } from "@/lib/generate";
 export * from "./auth-schema";
 
 export type PrimaryKey<T extends string> = string & { __brand: T };
@@ -105,7 +106,10 @@ export const communityProfileCustomField = sqliteTable("communityProfileCustomFi
 });
 
 export const communityProfile = sqliteTable("communityProfile", {
-	id: text("id").primaryKey().$type<PrimaryKey<"communityProfile">>(),
+	id: text("id")
+		.primaryKey()
+		.$type<PrimaryKey<"communityProfile">>()
+		.$defaultFn(() => generatePrimaryKey("communityProfile")),
 	firstName: text("firstName").notNull(),
 	middleName: text("middleName"),
 	lastName: text("lastName").notNull(),
@@ -151,6 +155,7 @@ export const communityProfile = sqliteTable("communityProfile", {
 			onDelete: "cascade",
 		})
 		.notNull(),
+	customFieldData: blob({ mode: "json" }).$type<Record<string, any>>(),
 });
 
 export const communityProfileRelations = relations(communityProfile, ({ one, many }) => ({

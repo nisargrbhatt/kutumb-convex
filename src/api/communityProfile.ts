@@ -89,6 +89,7 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 				dateOfBirth: z.string().optional(),
 				dateOfDeath: z.string().optional(),
 				comment: z.string().optional(),
+				customFieldData: z.record(z.string(), z.any()).optional(),
 			}),
 		})
 	)
@@ -143,6 +144,11 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 					: {}),
 				comment: data.profile.comment,
 				status: "active",
+				...(data?.profile?.customFieldData
+					? {
+							customFieldData: data?.profile?.customFieldData,
+						}
+					: {}),
 			});
 		} else {
 			const communityProfileId = communityProfileItem?.id;
@@ -169,6 +175,11 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 						: {}),
 					comment: data.profile.comment,
 					status: "active",
+					...(data?.profile?.customFieldData
+						? {
+								customFieldData: data?.profile?.customFieldData,
+							}
+						: {}),
 				})
 				.where(eq(communityProfile.id, communityProfileId));
 		}

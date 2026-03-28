@@ -1,0 +1,1 @@
+ALTER TABLE `communityProfile` ADD `customFieldData` blob;
