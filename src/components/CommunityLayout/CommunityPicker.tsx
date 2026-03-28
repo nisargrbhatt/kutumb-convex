@@ -1,6 +1,4 @@
-import * as React from "react";
 import { ChevronsUpDown, Plus, Building } from "lucide-react";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -15,22 +13,13 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { getOrganizationContextQuery } from "@/api/organization";
+import { authClient } from "@/lib/auth-client";
 
-interface Props {
-	slug: string;
-}
-
-export function CommunityPicker({ slug }: Props) {
-	const { data } = useSuspenseQuery(getOrganizationContextQuery({ slug }));
+export function CommunityPicker() {
+	const { data: organizations } = authClient.useListOrganizations();
+	const { data: activeOrg } = authClient.useActiveOrganization();
 
 	const { isMobile } = useSidebar();
-	const [activeTeam, setActiveTeam] = React.useState(data?.allOrg?.find((i) => slug === i.slug));
-
-	if (!activeTeam) {
-		return null;
-	}
 
 	return (
 		<SidebarMenu>
@@ -45,8 +34,8 @@ export function CommunityPicker({ slug }: Props) {
 								<Building className="size-4" />
 							</div>
 							<div className="grid flex-1 text-left text-sm leading-tight">
-								<span className="truncate font-medium">{activeTeam.name}</span>
-								<span className="truncate text-xs">{activeTeam.slug}</span>
+								<span className="truncate font-medium">{activeOrg?.name}</span>
+								<span className="truncate text-xs">{activeOrg?.slug}</span>
 							</div>
 							<ChevronsUpDown className="ml-auto" />
 						</SidebarMenuButton>
@@ -58,10 +47,16 @@ export function CommunityPicker({ slug }: Props) {
 						sideOffset={4}
 					>
 						<DropdownMenuLabel className="text-xs text-muted-foreground">Teams</DropdownMenuLabel>
-						{data?.allOrg.map((team) => (
+						{organizations?.map((team) => (
 							<DropdownMenuItem
 								key={team.slug}
-								onClick={() => setActiveTeam(team)}
+								onClick={async () => {
+									await authClient.organization.setActive({
+										organizationId: team.id,
+										organizationSlug: team.slug,
+									});
+									window.location.reload();
+								}}
 								className="gap-2 p-2"
 							>
 								<div className="flex size-6 items-center justify-center rounded-md border">

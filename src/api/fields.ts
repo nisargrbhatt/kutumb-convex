@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
-import { communityProfileCustomField, type PrimaryKey } from "@/db/schema";
+import { communityProfileCustomField, type PrimaryKey } from "@/db/app-schema";
 import { checkOrgRoleResult } from "@/handler/organization";
 import { generatePrimaryKey } from "@/lib/generate";
 import { authMiddleware } from "@/middleware/auth";

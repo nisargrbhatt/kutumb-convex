@@ -5,7 +5,7 @@ import { getFullUserContextCached } from "./auth";
 import { db } from "@/db";
 import { queryOptions } from "@tanstack/react-query";
 import { COMMUNITY_PROFILE_BLOOD_GROUP, COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
-import { communityProfile } from "@/db/schema";
+import { communityProfile } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { and, count, eq, like, sql } from "drizzle-orm";
 
