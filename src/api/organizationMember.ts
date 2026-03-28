@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { ORGANIZATION_ROLES } from "@/db/constants";
-import { organizationMember } from "@/db/schema";
+import { organizationMember } from "@/db/app-schema";
 import { checkOrgRoleResult } from "@/handler/organization";
 import { generatePrimaryKey } from "@/lib/generate";
 import { authMiddleware } from "@/middleware/auth";

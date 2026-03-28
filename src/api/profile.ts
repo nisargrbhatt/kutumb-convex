@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { profile } from "@/db/schema";
+import { profile } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { safeAsync } from "@/lib/safe";
 import { authMiddleware } from "@/middleware/auth";

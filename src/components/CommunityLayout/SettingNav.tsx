@@ -1,4 +1,4 @@
-import { Link, useRouteContext } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
@@ -7,22 +7,12 @@ import {
 	SidebarMenuItem,
 } from "../ui/sidebar";
 import { LayoutDashboard } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { getOrganizationContextQuery } from "@/api/organization";
+import { authClient } from "@/lib/auth-client";
 
-interface Props {
-	slug: string;
-}
+export function SettingNav() {
+	const { data: activeMemberRole } = authClient.useActiveMemberRole();
 
-export function SettingNav({ slug }: Props) {
-	const { data } = useQuery(
-		getOrganizationContextQuery({
-			slug,
-		})
-	);
-	const membershipRole = data?.org?.membership?.role;
-
-	if (membershipRole !== "owner") {
+	if (activeMemberRole?.role !== "owner") {
 		return null;
 	}
 
@@ -32,12 +22,7 @@ export function SettingNav({ slug }: Props) {
 			<SidebarMenu>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/settings/overview"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/settings/overview"}>
 							<LayoutDashboard />
 							<span>Overview</span>
 						</Link>
@@ -45,12 +30,7 @@ export function SettingNav({ slug }: Props) {
 				</SidebarMenuItem>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/settings/fields"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/settings/fields"}>
 							<LayoutDashboard />
 							<span>Fields</span>
 						</Link>
@@ -58,12 +38,7 @@ export function SettingNav({ slug }: Props) {
 				</SidebarMenuItem>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/settings/members"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/settings/members"}>
 							<LayoutDashboard />
 							<span>Members</span>
 						</Link>

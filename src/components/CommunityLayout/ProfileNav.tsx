@@ -9,23 +9,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Link } from "@tanstack/react-router";
 
-interface Props {
-	slug: string;
-}
-
-export function ProfileNav({ slug }: Props) {
+export function ProfileNav() {
 	return (
 		<SidebarGroup>
 			<SidebarGroupLabel>Profile</SidebarGroupLabel>
 			<SidebarMenu>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/profile/info"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/profile/info"}>
 							<LayoutDashboard />
 							<span>Info</span>
 						</Link>
@@ -33,12 +24,7 @@ export function ProfileNav({ slug }: Props) {
 				</SidebarMenuItem>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/profile/addresses"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/profile/addresses"}>
 							<LayoutList />
 							<span>Addresses</span>
 						</Link>
@@ -46,12 +32,7 @@ export function ProfileNav({ slug }: Props) {
 				</SidebarMenuItem>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/profile/relationships"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/profile/relationships"}>
 							<LayoutList />
 							<span>Relationships</span>
 						</Link>

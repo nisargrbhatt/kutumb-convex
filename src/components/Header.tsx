@@ -15,7 +15,7 @@ export default function Header() {
 						</Link>
 					</div>
 					<div>
-						<Link to={"/community/pick"}>
+						<Link to={"/dashboard"}>
 							<Button variant={"link"} size="sm">
 								Console <ExternalLink className="h-2 w-2" />
 							</Button>

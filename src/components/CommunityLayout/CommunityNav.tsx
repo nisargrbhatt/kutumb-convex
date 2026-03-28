@@ -9,23 +9,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Link } from "@tanstack/react-router";
 
-interface Props {
-	slug: string;
-}
-
-export function CommunityNav({ slug }: Props) {
+export function CommunityNav() {
 	return (
 		<SidebarGroup>
 			<SidebarGroupLabel>Community</SidebarGroupLabel>
 			<SidebarMenu>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/dashboard"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/dashboard"}>
 							<LayoutDashboard />
 							<span>Dashboard</span>
 						</Link>
@@ -33,12 +24,7 @@ export function CommunityNav({ slug }: Props) {
 				</SidebarMenuItem>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/members"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/members"}>
 							<LayoutList />
 							<span>Members</span>
 						</Link>
@@ -46,12 +32,7 @@ export function CommunityNav({ slug }: Props) {
 				</SidebarMenuItem>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/community-tree"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/community-tree"}>
 							<LayoutList />
 							<span>Community Tree</span>
 						</Link>
@@ -59,12 +40,7 @@ export function CommunityNav({ slug }: Props) {
 				</SidebarMenuItem>
 				<SidebarMenuItem>
 					<SidebarMenuButton asChild>
-						<Link
-							to={"/community/$slug/memories"}
-							params={{
-								slug,
-							}}
-						>
+						<Link to={"/memories"}>
 							<LayoutList />
 							<span>Memories</span>
 						</Link>

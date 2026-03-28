@@ -15,16 +15,11 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { getOrganizationContextQuery } from "@/api/organization";
 import { authClient } from "@/lib/auth-client";
 
-interface Props {
-	slug: string;
-}
-
-export function AuthUser({ slug }: Props) {
-	const { data } = useSuspenseQuery(getOrganizationContextQuery({ slug }));
+export function AuthUser() {
+	const { data: session } = authClient.useSession();
+	const { data: activeOrg } = authClient.useActiveOrganization();
 	const { isMobile } = useSidebar();
 
 	return (
@@ -38,12 +33,14 @@ export function AuthUser({ slug }: Props) {
 						>
 							<Avatar className="h-8 w-8 rounded-lg">
 								<AvatarFallback className="rounded-lg">
-									{data?.profile?.displayName?.at(0)?.toUpperCase()}
+									{(session?.user?.name ?? session?.user?.email)?.at(0)?.toUpperCase()}
 								</AvatarFallback>
 							</Avatar>
 							<div className="grid flex-1 text-left text-sm leading-tight">
-								<span className="truncate font-medium">{data?.profile.displayName}</span>
-								<span className="truncate text-xs">{data?.profile.email}</span>
+								<span className="truncate font-medium">
+									{session?.user?.name ?? session?.user?.email}
+								</span>
+								<span className="truncate text-xs">{session?.user?.email}</span>
 							</div>
 							<ChevronsUpDown className="ml-auto size-4" />
 						</SidebarMenuButton>
@@ -58,12 +55,14 @@ export function AuthUser({ slug }: Props) {
 							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
 								<Avatar className="h-8 w-8 rounded-lg">
 									<AvatarFallback className="rounded-lg">
-										{data?.profile?.displayName?.at(0)?.toUpperCase()}
+										{(session?.user?.name ?? session?.user?.email)?.at(0)?.toUpperCase()}
 									</AvatarFallback>
 								</Avatar>
 								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-medium">{data?.profile.displayName}</span>
-									<span className="truncate text-xs">{data?.profile.email}</span>
+									<span className="truncate font-medium">
+										{session?.user?.name ?? session?.user?.email}
+									</span>
+									<span className="truncate text-xs">{session?.user?.email}</span>
 								</div>
 							</div>
 						</DropdownMenuLabel>
@@ -80,10 +79,10 @@ export function AuthUser({ slug }: Props) {
 								<BadgeCheck />
 								Account
 							</DropdownMenuItem>
-							{data?.org?.id ? (
+							{activeOrg?.id ? (
 								<a
 									href={`/api/polar/portal?${new URLSearchParams({
-										organizationId: data?.org?.id,
+										organizationId: activeOrg?.id,
 									}).toString()}`}
 								>
 									<DropdownMenuItem>

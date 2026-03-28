@@ -5,8 +5,8 @@ import { getFullUserContextCached } from "./auth";
 import { db } from "@/db";
 import { queryOptions } from "@tanstack/react-query";
 import { COMMUNITY_RELATION_TYPE } from "@/db/constants";
-import type { PrimaryKey } from "@/db/schema";
-import { communityRelation } from "@/db/schema";
+import type { PrimaryKey } from "@/db/app-schema";
+import { communityRelation } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { eq } from "drizzle-orm";
 

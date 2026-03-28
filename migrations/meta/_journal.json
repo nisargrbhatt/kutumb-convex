@@ -5,50 +5,8 @@
 		{
 			"idx": 0,
 			"version": "6",
-			"when": 1766224221055,
-			"tag": "0000_flashy_eternity",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "6",
-			"when": 1766252089452,
-			"tag": "0001_careless_luckman",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "6",
-			"when": 1766598524131,
-			"tag": "0002_luxuriant_the_twelve",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "6",
-			"when": 1766768427363,
-			"tag": "0003_huge_bulldozer",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "6",
-			"when": 1769244999197,
-			"tag": "0004_last_bedlam",
-			"breakpoints": true
-		},
-		{
-			"idx": 5,
-			"version": "6",
-			"when": 1774095703306,
-			"tag": "0005_greedy_inertia",
-			"breakpoints": true
-		},
-		{
-			"idx": 6,
-			"version": "6",
-			"when": 1774702740974,
-			"tag": "0006_chemical_morph",
+			"when": 1774717021827,
+			"tag": "0000_material_dazzler",
 			"breakpoints": true
 		}
 	]

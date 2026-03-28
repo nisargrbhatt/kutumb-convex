@@ -7,30 +7,23 @@ import {
 } from "@/components/ui/sidebar";
 import { CommunityPicker } from "./CommunityPicker";
 import { AuthUser } from "./AuthUser";
-import type { getOrganizationContext } from "@/api/organization";
 import { CommunityNav } from "./CommunityNav";
 import { ProfileNav } from "./ProfileNav";
 import { SettingNav } from "./SettingNav";
 
-type OrgContext = Awaited<ReturnType<typeof getOrganizationContext>>;
-
-interface Props {
-	slug: string;
-}
-
-export function AppSidebar({ slug }: Props) {
+export function AppSidebar() {
 	return (
 		<Sidebar collapsible="icon">
 			<SidebarHeader>
-				<CommunityPicker slug={slug} />
+				<CommunityPicker />
 			</SidebarHeader>
 			<SidebarContent>
-				<CommunityNav slug={slug} />
-				<ProfileNav slug={slug} />
-				<SettingNav slug={slug} />
+				<CommunityNav />
+				<ProfileNav />
+				<SettingNav />
 			</SidebarContent>
 			<SidebarFooter>
-				<AuthUser slug={slug} />
+				<AuthUser />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>
