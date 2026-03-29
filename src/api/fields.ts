@@ -1,34 +1,39 @@
 import { db } from "@/db";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
-import { communityProfileCustomField, type PrimaryKey } from "@/db/app-schema";
-import { checkOrgRoleResult } from "@/handler/organization";
-import { generatePrimaryKey } from "@/lib/generate";
+import { communityProfileCustomField } from "@/db/app-schema";
 import { authMiddleware } from "@/middleware/auth";
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import * as z from "zod";
+import { auth } from "@/lib/auth";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { generatePrimaryKey } from "@/lib/generate";
 
 export const getOrganizationCustomFields = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
-	.inputValidator(
-		z.object({
-			organizationSlug: z.string().min(1, "organizationSlug is required"),
-		})
-	)
-	.handler(async ({ context, data }) => {
-		const orgRoleCheck = await checkOrgRoleResult({
-			userId: context.userId,
-			organizationSlug: data.organizationSlug,
-			requiredRoles: ["owner"],
+	.handler(async ({ context }) => {
+		const canReadCustomFields = await auth.api.hasPermission({
+			headers: getRequestHeaders(),
+			body: {
+				permissions: {
+					customFields: ["read"],
+				},
+			},
 		});
 
-		if (!orgRoleCheck) {
+		if (!canReadCustomFields.success) {
 			throw new Error("You do not have permission to get this resource");
 		}
 
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
 		const customFields = await db.query.communityProfileCustomField.findMany({
-			where: (fields, operators) => operators.eq(fields.organizationId, orgRoleCheck.id),
+			where: (fields, operators) => operators.eq(fields.organizationId, organizationId),
 			columns: {
 				id: true,
 				label: true,
@@ -46,7 +51,6 @@ export const addOrganizationCustomField = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
 	.inputValidator(
 		z.object({
-			organizationSlug: z.string().min(1, "organizationSlug is required"),
 			label: z.string().min(1, "Label is required"),
 			type: z.enum([
 				CUSTOM_FIELD_TYPE.text,
@@ -57,21 +61,30 @@ export const addOrganizationCustomField = createServerFn({ method: "POST" })
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const orgRoleCheck = await checkOrgRoleResult({
-			userId: context.userId,
-			organizationSlug: data?.organizationSlug,
-			requiredRoles: ["owner"],
+		const canCreateCustomFields = await auth.api.hasPermission({
+			headers: getRequestHeaders(),
+			body: {
+				permissions: {
+					customFields: ["create"],
+				},
+			},
 		});
 
-		if (!orgRoleCheck) {
-			throw new Error("You do not have permission to add this resource");
+		if (!canCreateCustomFields.success) {
+			throw new Error("You do not have permission to create this resource");
+		}
+
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
 		await db.insert(communityProfileCustomField).values({
-			organizationId: orgRoleCheck?.id,
+			organizationId: organizationId,
 			label: data.label,
 			type: data.type,
-			id: generatePrimaryKey("communityProfileCustomField"),
+			id: generatePrimaryKey(),
 		});
 
 		return {
@@ -83,30 +96,35 @@ export const deleteOrganizationCustomField = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
 	.inputValidator(
 		z.object({
-			organizationSlug: z.string().min(1, "organizationSlug is required"),
 			fieldId: z.string().min(1, "fieldId is required"),
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const orgRoleCheck = await checkOrgRoleResult({
-			userId: context.userId,
-			organizationSlug: data?.organizationSlug,
-			requiredRoles: ["owner"],
+		const canDeleteCustomFields = await auth.api.hasPermission({
+			headers: getRequestHeaders(),
+			body: {
+				permissions: {
+					customFields: ["delete"],
+				},
+			},
 		});
 
-		if (!orgRoleCheck) {
-			throw new Error("You do not have permission to add this resource");
+		if (!canDeleteCustomFields.success) {
+			throw new Error("You do not have permission to delete this resource");
+		}
+
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
 		await db
 			.delete(communityProfileCustomField)
 			.where(
 				and(
-					eq(
-						communityProfileCustomField.id,
-						data.fieldId as PrimaryKey<"communityProfileCustomField">
-					),
-					eq(communityProfileCustomField.organizationId, orgRoleCheck.id)
+					eq(communityProfileCustomField.id, data.fieldId),
+					eq(communityProfileCustomField.organizationId, organizationId)
 				)
 			)
 			.limit(1);
@@ -116,14 +134,11 @@ export const deleteOrganizationCustomField = createServerFn({ method: "POST" })
 		};
 	});
 
-export const getOrganizationCustomFieldsQuery = (props: { orgSlug: string }) =>
+export const getOrganizationCustomFieldsQuery = () =>
 	queryOptions({
-		queryKey: ["get-organization-custom-fields", props.orgSlug],
+		queryKey: ["get-organization-custom-fields"],
 		queryFn: ({ signal }) =>
 			getOrganizationCustomFields({
-				data: {
-					organizationSlug: props.orgSlug,
-				},
 				signal,
 			}),
 	});

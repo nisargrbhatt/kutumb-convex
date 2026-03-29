@@ -1,4 +1,3 @@
-import { getOrganizationInfoQuery, updateOrganizationInfo } from "@/api/organization";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -19,9 +18,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Textarea } from "@/components/ui/textarea";
+import { authClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -29,13 +27,6 @@ import z from "zod";
 
 export const Route = createFileRoute("/_authed/_community/settings/overview")({
 	component: RouteComponent,
-	loader: async ({ context, params }) => {
-		await context.queryClient.ensureQueryData(
-			getOrganizationInfoQuery({
-				slug: params.slug,
-			})
-		);
-	},
 });
 
 function PageHeader() {
@@ -46,13 +37,13 @@ function PageHeader() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/dashboard"}>Home</Route.Link>
+							<Route.Link to={"/dashboard"}>Home</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/settings/overview"}>Settings</Route.Link>
+							<Route.Link to={"/settings/overview"}>Settings</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -66,27 +57,40 @@ function PageHeader() {
 }
 
 const formSchema = z.object({
-	description: z.string().min(1, "Organization description is required"),
+	name: z
+		.string()
+		.trim()
+		.min(3, "Organization name must be at least 3 characters.")
+		.max(10, "Organization name must be at most 10 characters.")
+		.regex(
+			/^[a-zA-Z0-9_]+$/,
+			"Organization name can only contain letters, numbers, and underscores."
+		),
 });
 
-function OrganizationForm() {
-	const { slug } = Route.useParams();
-	const { data } = useSuspenseQuery(getOrganizationInfoQuery({ slug }));
-
+function OrganizationForm(props: { name: string; slug: string; organizationId: string }) {
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
-			description: data?.description,
+			name: props?.name,
 		},
 	});
 
 	const onSubmit = form.handleSubmit(async (values) => {
-		await updateOrganizationInfo({
+		const { data, error } = await authClient.organization.update({
+			organizationId: props.organizationId,
 			data: {
-				slug: slug,
-				organization: values,
+				name: values.name,
 			},
 		});
+
+		if (!data) {
+			console.error(error);
+			toast.error("Failed to update organization", {
+				description: "Please try again later.",
+			});
+			return;
+		}
 
 		toast.success("Organization", {
 			description: "Organization updated successfully",
@@ -97,27 +101,24 @@ function OrganizationForm() {
 		<Form {...form}>
 			<form onSubmit={onSubmit} className="w-full">
 				<div className="grid w-full grid-cols-1 gap-2 pb-2 sm:grid-cols-2">
-					<Field>
-						<FieldLabel>Name</FieldLabel>
-						<Input type="text" placeholder="Org Name" value={data.name} disabled />
-					</Field>
-					<Field>
-						<FieldLabel>Slug</FieldLabel>
-						<Input type="text" placeholder="Org slug" value={data.slug} disabled />
-					</Field>
 					<FormField
 						control={form.control}
-						name="description"
+						name="name"
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel>Description</FormLabel>
+								<FormLabel>Name</FormLabel>
 								<FormControl>
-									<Textarea placeholder="e.g. Community for Tom and Jerry fans" {...field} />
+									<Input type="text" placeholder="Org Name" {...field} />
 								</FormControl>
 								<FormMessage />
 							</FormItem>
 						)}
 					/>
+
+					<Field>
+						<FieldLabel>Slug</FieldLabel>
+						<Input type="text" placeholder="Org slug" value={props.slug} disabled />
+					</Field>
 				</div>
 				<Button type="submit" disabled={form.formState.isSubmitting}>
 					Save
@@ -128,10 +129,17 @@ function OrganizationForm() {
 }
 
 function RouteComponent() {
+	const { data: activeOrg } = authClient.useActiveOrganization();
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
 			<PageHeader />
-			<OrganizationForm />
+			{activeOrg ? (
+				<OrganizationForm
+					name={activeOrg?.name}
+					slug={activeOrg?.slug}
+					organizationId={activeOrg.id}
+				/>
+			) : null}
 		</div>
 	);
 }
