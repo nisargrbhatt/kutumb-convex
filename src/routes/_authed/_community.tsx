@@ -1,6 +1,7 @@
 import { CommunityLayout } from "@/components/CommunityLayout/CommunityLayout";
 import { checkOrgPaymentDone } from "@/handler/organization";
 import { createFileRoute } from "@tanstack/react-router";
+import { PaymentRequiredBanner } from "./-components/PaymentRequiredBanner";
 
 export const Route = createFileRoute("/_authed/_community")({
 	beforeLoad: async () => {
@@ -14,9 +15,9 @@ export const Route = createFileRoute("/_authed/_community")({
 function CommunityLayoutComponent() {
 	const { paymentPending } = Route.useLoaderData();
 
-	// if (paymentPending) {
-	// 	return <h1>Please pay</h1>;
-	// }
+	if (paymentPending) {
+		return <PaymentRequiredBanner />;
+	}
 
 	return <CommunityLayout />;
 }
