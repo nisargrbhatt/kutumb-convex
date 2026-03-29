@@ -1,9 +1,8 @@
 import { getFullUserContextCached } from "@/api/auth";
+import { db } from "@/db";
 import type { ORGANIZATION_ROLES } from "@/db/constants";
-import { auth } from "@/lib/auth";
 import { authMiddleware } from "@/middleware/auth";
 import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 
 export const checkOrgPaymentDone = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -13,23 +12,27 @@ export const checkOrgPaymentDone = createServerFn({ method: "GET" })
 			throw new Error("No active org selected");
 		}
 
-		const orgInfo = await auth.api.getFullOrganization({
-			query: {
-				organizationId: orgId,
-				membersLimit: 1,
+		const orgInfo = await db.query.organization.findFirst({
+			where: (fields, op) => op.eq(fields.id, orgId),
+			columns: {
+				metadata: true,
 			},
-			headers: getRequestHeaders(),
 		});
 
 		if (!orgInfo) {
 			throw new Error("Invalid Org");
 		}
 
-		const subscriptionId = orgInfo?.metadata?.subscriptionId;
-
-		return {
-			paymentPending: typeof subscriptionId !== "string",
-		};
+		try {
+			const parsedMetadata = JSON.parse(orgInfo?.metadata ?? "{}");
+			return {
+				paymentPending: !parsedMetadata?.paymentSetup,
+			};
+		} catch (error) {
+			return {
+				paymentPending: true,
+			};
+		}
 	});
 
 export const checkOrgRoleResult = createServerOnlyFn(

@@ -6,3 +6,5 @@ export const generateOrgSlug = (name: string) => {
 
 	return [sluggedName, twoRandomNumber].join("");
 };
+
+export const generatePrimaryKey = () => crypto.randomUUID().replaceAll("-", "");

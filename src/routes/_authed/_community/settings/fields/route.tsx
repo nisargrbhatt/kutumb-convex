@@ -40,12 +40,8 @@ import { z } from "zod";
 
 export const Route = createFileRoute("/_authed/_community/settings/fields")({
 	component: RouteComponent,
-	loader: async ({ context, params }) => {
-		await context.queryClient.ensureQueryData(
-			getOrganizationCustomFieldsQuery({
-				orgSlug: params.slug,
-			})
-		);
+	loader: async ({ context }) => {
+		await context.queryClient.ensureQueryData(getOrganizationCustomFieldsQuery());
 	},
 });
 
@@ -57,13 +53,13 @@ function PageHeader() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/dashboard"}>Home</Route.Link>
+							<Route.Link to={"/dashboard"}>Home</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/settings/overview"}>Settings</Route.Link>
+							<Route.Link to={"/settings/overview"}>Settings</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -87,8 +83,7 @@ const addFieldSchema = z.object({
 });
 
 function AddFieldForm() {
-	const { slug } = Route.useParams();
-	const { refetch } = useSuspenseQuery(getOrganizationCustomFieldsQuery({ orgSlug: slug }));
+	const { refetch } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
 
 	const form = useForm<z.infer<typeof addFieldSchema>>({
 		resolver: zodResolver(addFieldSchema),
@@ -100,10 +95,7 @@ function AddFieldForm() {
 
 	const onSubmit = form.handleSubmit(async (values) => {
 		await addOrganizationCustomField({
-			data: {
-				organizationSlug: slug,
-				...values,
-			},
+			data: values,
 		});
 
 		form.reset();
@@ -161,13 +153,11 @@ function AddFieldForm() {
 }
 
 function FieldsList() {
-	const { slug } = Route.useParams();
-	const { data, refetch } = useSuspenseQuery(getOrganizationCustomFieldsQuery({ orgSlug: slug }));
+	const { data, refetch } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
 
 	const onDeleteField = async (id: string) => {
 		await deleteOrganizationCustomField({
 			data: {
-				organizationSlug: slug,
 				fieldId: id,
 			},
 		});
