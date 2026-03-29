@@ -14,6 +14,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
+import { Link } from "@tanstack/react-router";
 
 export function CommunityPicker() {
 	const { data: organizations } = authClient.useListOrganizations();
@@ -66,12 +67,14 @@ export function CommunityPicker() {
 							</DropdownMenuItem>
 						))}
 						<DropdownMenuSeparator />
-						<DropdownMenuItem className="gap-2 p-2">
-							<div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-								<Plus className="size-4" />
-							</div>
-							<div className="font-medium text-muted-foreground">Add team</div>
-						</DropdownMenuItem>
+						<Link to={"/onboarding/create"}>
+							<DropdownMenuItem className="gap-2 p-2">
+								<div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+									<Plus className="size-4" />
+								</div>
+								<div className="font-medium text-muted-foreground">Add team</div>
+							</DropdownMenuItem>
+						</Link>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</SidebarMenuItem>

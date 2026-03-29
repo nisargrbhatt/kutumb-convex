@@ -16,6 +16,7 @@ import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community
 import { Route as ApiWebhookPolarRouteImport } from './routes/api/webhook/polar'
 import { Route as ApiPolarPortalRouteImport } from './routes/api/polar/portal'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthedOnboardingSuccessRouteRouteImport } from './routes/_authed/onboarding/success/route'
 import { Route as AuthedOnboardingCreateRouteRouteImport } from './routes/_authed/onboarding/create/route'
 import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
 import { Route as AuthedCommunityMembersRouteRouteImport } from './routes/_authed/_community/members/route'
@@ -61,6 +62,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedOnboardingSuccessRouteRoute =
+  AuthedOnboardingSuccessRouteRouteImport.update({
+    id: '/onboarding/success',
+    path: '/onboarding/success',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 const AuthedOnboardingCreateRouteRoute =
   AuthedOnboardingCreateRouteRouteImport.update({
     id: '/onboarding/create',
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/members': typeof AuthedCommunityMembersRouteRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/onboarding/create': typeof AuthedOnboardingCreateRouteRoute
+  '/onboarding/success': typeof AuthedOnboardingSuccessRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/webhook/polar': typeof ApiWebhookPolarRoute
@@ -154,6 +162,7 @@ export interface FileRoutesByTo {
   '/members': typeof AuthedCommunityMembersRouteRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/onboarding/create': typeof AuthedOnboardingCreateRouteRoute
+  '/onboarding/success': typeof AuthedOnboardingSuccessRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/webhook/polar': typeof ApiWebhookPolarRoute
@@ -175,6 +184,7 @@ export interface FileRoutesById {
   '/_authed/_community/members': typeof AuthedCommunityMembersRouteRoute
   '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/_authed/onboarding/create': typeof AuthedOnboardingCreateRouteRoute
+  '/_authed/onboarding/success': typeof AuthedOnboardingSuccessRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/webhook/polar': typeof ApiWebhookPolarRoute
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/memories'
     | '/onboarding/create'
+    | '/onboarding/success'
     | '/api/auth/$'
     | '/api/polar/portal'
     | '/api/webhook/polar'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/memories'
     | '/onboarding/create'
+    | '/onboarding/success'
     | '/api/auth/$'
     | '/api/polar/portal'
     | '/api/webhook/polar'
@@ -233,6 +245,7 @@ export interface FileRouteTypes {
     | '/_authed/_community/members'
     | '/_authed/_community/memories'
     | '/_authed/onboarding/create'
+    | '/_authed/onboarding/success'
     | '/api/auth/$'
     | '/api/polar/portal'
     | '/api/webhook/polar'
@@ -303,6 +316,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/onboarding/success': {
+      id: '/_authed/onboarding/success'
+      path: '/onboarding/success'
+      fullPath: '/onboarding/success'
+      preLoaderRoute: typeof AuthedOnboardingSuccessRouteRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/onboarding/create': {
       id: '/_authed/onboarding/create'
@@ -423,11 +443,13 @@ const AuthedCommunityRouteWithChildren = AuthedCommunityRoute._addFileChildren(
 interface AuthedRouteChildren {
   AuthedCommunityRoute: typeof AuthedCommunityRouteWithChildren
   AuthedOnboardingCreateRouteRoute: typeof AuthedOnboardingCreateRouteRoute
+  AuthedOnboardingSuccessRouteRoute: typeof AuthedOnboardingSuccessRouteRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCommunityRoute: AuthedCommunityRouteWithChildren,
   AuthedOnboardingCreateRouteRoute: AuthedOnboardingCreateRouteRoute,
+  AuthedOnboardingSuccessRouteRoute: AuthedOnboardingSuccessRouteRoute,
 }
 
 const AuthedRouteWithChildren =
