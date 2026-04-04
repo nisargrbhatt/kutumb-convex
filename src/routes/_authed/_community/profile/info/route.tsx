@@ -34,16 +34,15 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authed/_community/profile/info")({
 	component: RouteComponent,
-	loader: async ({ context, params }) => {
-		await context.queryClient.ensureQueryData(getMyCommunityProfileQuery({ slug: params.slug }));
-		await context.queryClient.ensureQueryData(
-			getOrganizationCustomFieldsQuery({ orgSlug: params.slug })
-		);
+	loader: async ({ context }) => {
+		await Promise.allSettled([
+			context.queryClient.ensureQueryData(getMyCommunityProfileQuery()),
+			context.queryClient.ensureQueryData(getOrganizationCustomFieldsQuery()),
+		]);
 	},
 });
 
@@ -55,13 +54,13 @@ function PageHeader() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/dashboard"}>Home</Route.Link>
+							<Route.Link to={"/dashboard"}>Home</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/profile/info"}>Profile</Route.Link>
+							<Route.Link to={"/profile/info"}>Profile</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -108,7 +107,6 @@ function CommunityProfileForm({
 	defaultValues?: CommunityProfileFormValues;
 	customFields: CustomField[];
 }) {
-	const { slug } = Route.useParams();
 	const form = useForm<CommunityProfileFormValues>({
 		resolver: zodResolver(communityProfileSchema),
 		defaultValues: defaultValues,
@@ -117,24 +115,19 @@ function CommunityProfileForm({
 	const onSubmit = form.handleSubmit(async (data) => {
 		await upsertMyCommunityProfile({
 			data: {
-				slug: slug,
-				profile: {
-					firstName: data.firstName,
-					lastName: data.lastName,
-					middleName:
-						data?.middleName && data?.middleName?.length > 0 ? data?.middleName : undefined,
-					nickName: data?.nickName && data?.nickName?.length > 0 ? data?.nickName : undefined,
-					gender: data?.gender && data?.gender?.length > 0 ? data?.gender : undefined,
-					email: data?.email && data?.email?.length > 0 ? data?.email : undefined,
-					bloodGroup:
-						data?.bloodGroup && data?.bloodGroup?.length > 0 ? data?.bloodGroup : undefined,
-					mobileNumber:
-						data?.mobileNumber && data?.mobileNumber?.length > 0 ? data?.mobileNumber : undefined,
-					dateOfBirth: data?.dateOfBirth ? data?.dateOfBirth?.toJSON() : undefined,
-					dateOfDeath: data?.dateOfDeath ? data?.dateOfDeath?.toJSON() : undefined,
-					customFieldData:
-						Object.keys(data?.customFieldData ?? {}).length > 0 ? data?.customFieldData : undefined,
-				},
+				firstName: data.firstName,
+				lastName: data.lastName,
+				middleName: data?.middleName && data?.middleName?.length > 0 ? data?.middleName : undefined,
+				nickName: data?.nickName && data?.nickName?.length > 0 ? data?.nickName : undefined,
+				gender: data?.gender && data?.gender?.length > 0 ? data?.gender : undefined,
+				email: data?.email && data?.email?.length > 0 ? data?.email : undefined,
+				bloodGroup: data?.bloodGroup && data?.bloodGroup?.length > 0 ? data?.bloodGroup : undefined,
+				mobileNumber:
+					data?.mobileNumber && data?.mobileNumber?.length > 0 ? data?.mobileNumber : undefined,
+				dateOfBirth: data?.dateOfBirth ? data?.dateOfBirth?.toJSON() : undefined,
+				dateOfDeath: data?.dateOfDeath ? data?.dateOfDeath?.toJSON() : undefined,
+				customFieldData:
+					Object.keys(data?.customFieldData ?? {}).length > 0 ? data?.customFieldData : undefined,
 			},
 		});
 		toast.success("Community Profile", {
@@ -309,11 +302,8 @@ function CommunityProfileForm({
 }
 
 function RouteComponent() {
-	const { slug } = Route.useParams();
-	const { data } = useSuspenseQuery(getMyCommunityProfileQuery({ slug }));
-	const { data: customFieldsResponse } = useSuspenseQuery(
-		getOrganizationCustomFieldsQuery({ orgSlug: slug })
-	);
+	const { data } = useSuspenseQuery(getMyCommunityProfileQuery());
+	const { data: customFieldsResponse } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">

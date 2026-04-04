@@ -137,8 +137,5 @@ export const deleteOrganizationCustomField = createServerFn({ method: "POST" })
 export const getOrganizationCustomFieldsQuery = () =>
 	queryOptions({
 		queryKey: ["get-organization-custom-fields"],
-		queryFn: ({ signal }) =>
-			getOrganizationCustomFields({
-				signal,
-			}),
+		queryFn: () => getOrganizationCustomFields(),
 	});

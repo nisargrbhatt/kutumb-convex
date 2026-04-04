@@ -1,8 +1,6 @@
-import { getFullUserContextCached } from "@/api/auth";
 import { db } from "@/db";
-import type { ORGANIZATION_ROLES } from "@/db/constants";
 import { authMiddleware } from "@/middleware/auth";
-import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
+import { createServerFn } from "@tanstack/react-start";
 
 export const checkOrgPaymentDone = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -34,38 +32,3 @@ export const checkOrgPaymentDone = createServerFn({ method: "GET" })
 			};
 		}
 	});
-
-export const checkOrgRoleResult = createServerOnlyFn(
-	async (props: {
-		userId: string;
-		organizationId?: string;
-		organizationSlug?: string;
-		requiredRoles: Array<keyof typeof ORGANIZATION_ROLES>;
-	}) => {
-		if (!props?.organizationId && !props?.organizationSlug) {
-			throw new Error("Organization id or slug is required");
-		}
-
-		const cachedUserContext = await getFullUserContextCached(props.userId);
-
-		if (!cachedUserContext) {
-			throw new Error("User not found");
-		}
-
-		const organization = props?.organizationId
-			? cachedUserContext.organization?.find((org) => org.id === props?.organizationId)
-			: cachedUserContext.organization?.find((org) => org.slug === props?.organizationSlug);
-
-		if (!organization) {
-			throw new Error("Organization not found");
-		}
-
-		const userRole = organization.membership.role;
-
-		if (props.requiredRoles.includes(userRole)) {
-			return organization;
-		}
-
-		return null;
-	}
-);

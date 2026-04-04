@@ -1,41 +1,27 @@
 import { authMiddleware } from "@/middleware/auth";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
-import { getFullUserContextCached } from "./auth";
 import { db } from "@/db";
 import { queryOptions } from "@tanstack/react-query";
 import { COMMUNITY_RELATION_TYPE } from "@/db/constants";
-import type { PrimaryKey } from "@/db/app-schema";
 import { communityRelation } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { eq } from "drizzle-orm";
 
 export const getMyCommunityRelationships = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
-	.inputValidator(
-		z.object({
-			slug: z.string().trim().min(1, "Slug is required"),
-		})
-	)
-	.handler(async ({ context, data }) => {
-		const cachedUserContext = await getFullUserContextCached(context.userId);
+	.handler(async ({ context }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
 
-		if (!cachedUserContext) {
-			throw new Error("User not found");
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
-		const profileId = cachedUserContext.profile?.id;
-
-		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
-
-		if (!organizationId) {
-			throw new Error("Organization not found");
-		}
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.profileId, profileId)
+					operators.eq(fields.userId, context.userId)
 				),
 			columns: {
 				id: true,
@@ -64,16 +50,11 @@ export const getMyCommunityRelationships = createServerFn({ method: "GET" })
 		return relationships;
 	});
 
-export const getMyCommunityRelationshipsQuery = (props: { slug: string }) =>
+export const getMyCommunityRelationshipsQuery = () =>
 	queryOptions({
-		queryKey: ["get-my-community-relationships", props.slug],
-		queryFn: async ({ signal }) => {
-			const result = await getMyCommunityRelationships({
-				data: {
-					slug: props.slug,
-				},
-				signal,
-			});
+		queryKey: ["get-my-community-relationships"],
+		queryFn: async () => {
+			const result = await getMyCommunityRelationships();
 			return result;
 		},
 	});
@@ -82,49 +63,38 @@ export const addMyCommunityRelationship = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
 	.inputValidator(
 		z.object({
-			slug: z.string().trim().min(1, "Slug is required"),
-			relationship: z.object({
-				type: z.enum([
-					COMMUNITY_RELATION_TYPE.brother,
-					COMMUNITY_RELATION_TYPE.brother_in_law,
-					COMMUNITY_RELATION_TYPE.child,
-					COMMUNITY_RELATION_TYPE.father,
-					COMMUNITY_RELATION_TYPE.father_in_law,
-					COMMUNITY_RELATION_TYPE.mother,
-					COMMUNITY_RELATION_TYPE.mother_in_law,
-					COMMUNITY_RELATION_TYPE.sister,
-					COMMUNITY_RELATION_TYPE.sister_in_law,
-					COMMUNITY_RELATION_TYPE.wife,
-					COMMUNITY_RELATION_TYPE.husband,
-					COMMUNITY_RELATION_TYPE.uncle,
-					COMMUNITY_RELATION_TYPE.aunt,
-				]),
-				toId: z.string().min(1, "Target profile is required"),
-				note: z.string().optional(),
-				bloodRelation: z.boolean().default(false).optional(),
-			}),
+			type: z.enum([
+				COMMUNITY_RELATION_TYPE.brother,
+				COMMUNITY_RELATION_TYPE.brother_in_law,
+				COMMUNITY_RELATION_TYPE.child,
+				COMMUNITY_RELATION_TYPE.father,
+				COMMUNITY_RELATION_TYPE.father_in_law,
+				COMMUNITY_RELATION_TYPE.mother,
+				COMMUNITY_RELATION_TYPE.mother_in_law,
+				COMMUNITY_RELATION_TYPE.sister,
+				COMMUNITY_RELATION_TYPE.sister_in_law,
+				COMMUNITY_RELATION_TYPE.wife,
+				COMMUNITY_RELATION_TYPE.husband,
+				COMMUNITY_RELATION_TYPE.uncle,
+				COMMUNITY_RELATION_TYPE.aunt,
+			]),
+			toId: z.string().min(1, "Target profile is required"),
+			note: z.string().optional(),
+			bloodRelation: z.boolean().default(false).optional(),
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const cachedUserContext = await getFullUserContextCached(context.userId);
+		const organizationId = context?.session?.session?.activeOrganizationId;
 
-		if (!cachedUserContext) {
-			throw new Error("User not found");
-		}
-
-		const profileId = cachedUserContext.profile?.id;
-
-		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
-
-		if (!organizationId) {
-			throw new Error("Organization not found or you are not a member");
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.profileId, profileId)
+					operators.eq(fields.userId, context.userId)
 				),
 			columns: {
 				id: true,
@@ -135,18 +105,18 @@ export const addMyCommunityRelationship = createServerFn({ method: "POST" })
 			throw new Error("Community profile not found");
 		}
 
-		if (profile.id === data.relationship.toId) {
+		if (profile.id === data.toId) {
 			throw new Error("You cannot add a relationship to yourself");
 		}
 
 		await db.insert(communityRelation).values({
-			id: generatePrimaryKey("communityRelation"),
+			id: generatePrimaryKey(),
 			fromId: profile.id,
-			toId: data.relationship.toId as PrimaryKey<"communityProfile">,
+			toId: data.toId,
 			organizationId: organizationId,
-			type: data.relationship.type,
-			note: data.relationship.note,
-			bloodRelation: data.relationship.bloodRelation,
+			type: data.type,
+			note: data.note,
+			bloodRelation: data.bloodRelation,
 		});
 
 		return {
@@ -158,30 +128,21 @@ export const deleteMyCommunityRelationship = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
 	.inputValidator(
 		z.object({
-			slug: z.string().trim().min(1, "Slug is required"),
 			id: z.string().trim().min(1, "Relationship ID is required"),
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const cachedUserContext = await getFullUserContextCached(context.userId);
+		const organizationId = context?.session?.session?.activeOrganizationId;
 
-		if (!cachedUserContext) {
-			throw new Error("User not found");
-		}
-
-		const profileId = cachedUserContext.profile?.id;
-
-		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
-
-		if (!organizationId) {
-			throw new Error("Organization not found or you are not a member");
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.profileId, profileId)
+					operators.eq(fields.userId, context.userId)
 				),
 			columns: {
 				id: true,
@@ -194,10 +155,7 @@ export const deleteMyCommunityRelationship = createServerFn({ method: "POST" })
 
 		const relationship = await db.query.communityRelation.findFirst({
 			where: (fields, operators) =>
-				operators.and(
-					operators.eq(fields.id, data.id as PrimaryKey<"communityRelation">),
-					operators.eq(fields.fromId, profile.id)
-				),
+				operators.and(operators.eq(fields.id, data.id), operators.eq(fields.fromId, profile.id)),
 			columns: {
 				id: true,
 			},

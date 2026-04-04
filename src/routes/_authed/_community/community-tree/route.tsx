@@ -30,8 +30,8 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export const Route = createFileRoute("/_authed/_community/community-tree")({
 	loaderDeps: () => ({}),
-	loader: async ({ context, params: { slug } }) => {
-		await context.queryClient.ensureQueryData(getCommunityTreeQuery({ slug }));
+	loader: async ({ context }) => {
+		await context.queryClient.ensureQueryData(getCommunityTreeQuery());
 	},
 	component: RouteComponent,
 });
@@ -44,7 +44,7 @@ function PageHeader() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/dashboard"}>Home</Route.Link>
+							<Route.Link to={"/dashboard"}>Home</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -76,7 +76,7 @@ function MemberNode({ data }: NodeProps) {
 				</div>
 				{/* Just a stylized text for now since we don't have the exact profile route mapped easily */}
 				<Route.Link
-					to={"/community/$slug/members"}
+					to={"/members"}
 					className="text-sm font-semibold whitespace-nowrap text-purple-600 hover:text-purple-700"
 				>
 					View Profile
@@ -139,8 +139,7 @@ function capitalizeFirstLetter(string: string) {
 }
 
 function RouteComponent() {
-	const { slug } = Route.useParams();
-	const { data } = useSuspenseQuery(getCommunityTreeQuery({ slug }));
+	const { data } = useSuspenseQuery(getCommunityTreeQuery());
 
 	const initialNodes: Node[] = useMemo(
 		() =>
@@ -149,14 +148,13 @@ function RouteComponent() {
 				type: "member",
 				data: {
 					id: p.id,
-					slug,
 					name: [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" "),
 					email: p.email,
 					gender: p.gender,
 				},
 				position: { x: 0, y: 0 },
 			})),
-		[data.profiles, slug]
+		[data.profiles]
 	);
 
 	const initialEdges: Edge[] = useMemo(
@@ -177,8 +175,8 @@ function RouteComponent() {
 		[data.relations]
 	);
 
-	const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-	const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+	const [nodes, setNodes] = useNodesState(initialNodes);
+	const [edges, setEdges] = useEdgesState(initialEdges);
 
 	const onLayout = useCallback(
 		(direction: string) => {
