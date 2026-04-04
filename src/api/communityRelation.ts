@@ -109,6 +109,27 @@ export const addMyCommunityRelationship = createServerFn({ method: "POST" })
 			throw new Error("You cannot add a relationship to yourself");
 		}
 
+		const existingRelationship = await db.query.communityRelation.findFirst({
+			where: (fields, operators) =>
+				operators.or(
+					operators.and(
+						operators.eq(fields.fromId, profile.id),
+						operators.eq(fields.toId, data.toId)
+					),
+					operators.and(
+						operators.eq(fields.toId, profile.id),
+						operators.eq(fields.fromId, data.toId)
+					)
+				),
+			columns: {
+				id: true,
+			},
+		});
+
+		if (existingRelationship) {
+			throw new Error("Relationship already exists");
+		}
+
 		await db.insert(communityRelation).values({
 			id: generatePrimaryKey(),
 			fromId: profile.id,

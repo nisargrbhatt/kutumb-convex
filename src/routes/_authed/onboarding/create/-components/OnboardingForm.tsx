@@ -17,17 +17,17 @@ import { Form } from "@/components/ui/form";
 import { useId } from "react";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 
 const formSchema = z.object({
 	name: z
 		.string()
 		.trim()
 		.min(3, "Organization name must be at least 3 characters.")
-		.max(10, "Organization name must be at most 10 characters.")
+		.max(25, "Organization name must be at most 25 characters.")
 		.regex(
-			/^[a-zA-Z0-9_]+$/,
-			"Organization name can only contain letters, numbers, and underscores."
+			/^[a-zA-Z0-9_ ]+$/,
+			"Organization name can only contain letters, numbers, spaces and underscores."
 		),
 	slug: z
 		.string()
@@ -90,6 +90,7 @@ export function OnboardingForm() {
 		toast.success("Organization created successfully", {
 			description: "You can now access your organization. Redirecting you to dashboard",
 		});
+		await authClient.updateSession();
 		router.navigate({
 			to: "/dashboard",
 		});
@@ -102,7 +103,11 @@ export function OnboardingForm() {
 					<CardTitle className="text-xl">Create your organization</CardTitle>
 					<CardDescription>
 						Enter your organization details below to create your organization. or ask organization
-						admin to invite you.
+						admin to{" "}
+						<Link className="link" to={"/onboarding/invitations"} title="My Org Invitations">
+							invite
+						</Link>{" "}
+						you.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -151,7 +156,12 @@ export function OnboardingForm() {
 				</CardContent>
 				<CardFooter>
 					<Field orientation="horizontal">
-						<Button type="submit" form={formId} className="w-full">
+						<Button
+							type="submit"
+							form={formId}
+							className="w-full"
+							disabled={form.formState.isSubmitting}
+						>
 							Create
 						</Button>
 					</Field>

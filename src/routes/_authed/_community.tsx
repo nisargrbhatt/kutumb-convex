@@ -1,6 +1,6 @@
 import { CommunityLayout } from "@/components/CommunityLayout/CommunityLayout";
 import { checkOrgPaymentDone } from "@/handler/organization";
-import { createFileRoute } from "@tanstack/react-router";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { PaymentRequiredBanner } from "./-components/PaymentRequiredBanner";
 
 export const Route = createFileRoute("/_authed/_community")({
@@ -19,5 +19,9 @@ function CommunityLayoutComponent() {
 		return <PaymentRequiredBanner />;
 	}
 
-	return <CommunityLayout />;
+	return (
+		<CommunityLayout>
+			<Outlet />
+		</CommunityLayout>
+	);
 }

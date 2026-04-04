@@ -1,9 +1,9 @@
 import { db } from "@/db";
-import { betterAuth } from "better-auth";
+import { betterAuth } from "better-auth/minimal";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { organization } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import { ac, member, owner, admin } from "./permission";
 import { polar, checkout, portal, usage, webhooks } from "@polar-sh/better-auth";
 import { polar as polarClient } from "@/lib/polar";
@@ -15,6 +15,17 @@ export const auth = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: "sqlite",
 	}),
+	session: {
+		cookieCache: {
+			enabled: true,
+			maxAge: 1 * 60, // Cache duration in seconds
+			refreshCache: true,
+			version: "1", // Cookie Version - Change if session field updates
+		},
+	},
+	advanced: {
+		backgroundTasks: { handler: waitUntil },
+	},
 	plugins: [
 		tanstackStartCookies(),
 		organization({
@@ -180,6 +191,7 @@ export const auth = betterAuth({
 	secret: env.BETTER_AUTH_SECRET,
 	socialProviders: {
 		google: {
+			disableSignUp: env.BETTER_AUTH_DISABLE_SIGNUP === "1",
 			clientId: env.GOOGLE_CLIENT_ID,
 			clientSecret: env.GOOGLE_CLIENT_SECRET,
 		},

@@ -1,9 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import Logo from "@/assets/favicon.png";
-import { ExternalLink } from "lucide-react";
 import { Button } from "./ui/button";
+import { LogOut } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
 export default function Header() {
+	const { data: session } = authClient.useSession();
+
 	return (
 		<header className="w-full border-b border-gray-200 px-1">
 			<div className="container mx-auto">
@@ -14,12 +17,26 @@ export default function Header() {
 							<span className="font-medium">Kutumb</span>
 						</Link>
 					</div>
-					<div>
+					<div className="flex items-center justify-end gap-1">
 						<Link to={"/dashboard"}>
-							<Button variant={"link"} size="sm">
-								Console <ExternalLink className="h-2 w-2" />
+							<Button variant={"outline"} size="sm">
+								Console
 							</Button>
 						</Link>
+						{session ? (
+							<Button
+								type="button"
+								variant={"ghost"}
+								size={"icon-sm"}
+								title="Logout"
+								onClick={async () => {
+									await authClient.signOut();
+									window.location.href = new URL("/login", window.location.origin).toString();
+								}}
+							>
+								<LogOut />
+							</Button>
+						) : null}
 					</div>
 				</nav>
 			</div>

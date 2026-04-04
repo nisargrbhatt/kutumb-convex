@@ -1,4 +1,5 @@
 import { checkCurrentOrgPaymentSetupQuery } from "@/api/organization";
+import { RootLayout } from "@/components/RootLayout";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -46,43 +47,45 @@ function RouteComponent() {
 	}, [paymentSetupData]);
 
 	return (
-		<div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-			<div className="w-full max-w-sm">
-				<div className={cn("flex flex-col gap-6")}>
-					<Card>
-						<CardHeader>
-							<CardTitle>Organization payment</CardTitle>
-							<CardDescription>
-								Payment done successfully for <span aria-label="Checkout ID">{checkout_id}</span>
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Item variant="outline">
-								<ItemMedia variant="default">
-									<Spinner />
-								</ItemMedia>
-								<ItemContent>
-									<ItemTitle>Server Confirmation</ItemTitle>
-									<ItemDescription>
-										Waiting for server to confirm the payment and create organization assets
-									</ItemDescription>
-								</ItemContent>
-							</Item>
-						</CardContent>
-						<CardFooter>
-							<Button
-								type="button"
-								variant={"outline"}
-								onClick={() => {
-									refetch();
-								}}
-							>
-								<Loader2 /> Recheck
-							</Button>
-						</CardFooter>
-					</Card>
+		<RootLayout>
+			<div className="flex w-full items-center justify-center p-6 md:p-10">
+				<div className="w-full max-w-sm">
+					<div className={cn("flex flex-col gap-6")}>
+						<Card>
+							<CardHeader>
+								<CardTitle>Organization payment</CardTitle>
+								<CardDescription>
+									Payment done successfully for <span aria-label="Checkout ID">{checkout_id}</span>
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<Item variant="outline">
+									<ItemMedia variant="default">
+										<Spinner />
+									</ItemMedia>
+									<ItemContent>
+										<ItemTitle>Server Confirmation</ItemTitle>
+										<ItemDescription>
+											Waiting for server to confirm the payment and create organization assets
+										</ItemDescription>
+									</ItemContent>
+								</Item>
+							</CardContent>
+							<CardFooter>
+								<Button
+									type="button"
+									variant={"outline"}
+									onClick={() => {
+										refetch();
+									}}
+								>
+									<Loader2 /> Recheck
+								</Button>
+							</CardFooter>
+						</Card>
+					</div>
 				</div>
 			</div>
-		</div>
+		</RootLayout>
 	);
 }

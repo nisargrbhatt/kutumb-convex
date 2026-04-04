@@ -1,5 +1,7 @@
 import { listMyOrganizationInvitations } from "@/api/organization";
+import { RootLayout } from "@/components/RootLayout";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import {
 	Table,
@@ -11,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { authClient } from "@/lib/auth-client";
 import { createFileRoute } from "@tanstack/react-router";
+import { GalleryVerticalEnd } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -89,44 +92,63 @@ function RouteComponent() {
 	const invitations = Route.useLoaderData();
 
 	return (
-		<div className="flex h-full w-full flex-col items-center justify-start gap-2 py-2">
-			<h1 className="text-xl font-bold">Your Organization Invites</h1>
-			<div className="w-full max-w-xl">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="w-[100px]">Organization Name</TableHead>
-							<TableHead>Role</TableHead>
-							<TableHead>Status</TableHead>
-							<TableHead className="text-right">Actions</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{invitations?.length < 1 ? (
-							<TableRow>
-								<TableCell className="text-center" colSpan={4}>
-									No organization invites found
-								</TableCell>
-							</TableRow>
-						) : null}
-						{invitations.map((invite) => (
-							<TableRow key={invite.id}>
-								<TableCell className="font-medium">{invite.organizationName}</TableCell>
-								<TableCell className="capitalize">{invite.role}</TableCell>
-								<TableCell className="capitalize">{invite.status}</TableCell>
-								<TableCell className="text-right">
-									{invite.status === "pending" ? (
-										<AcceptInvitationAction invitationId={invite.id} />
-									) : null}
-									{invite.status === "pending" ? (
-										<RejectInvitationAction invitationId={invite.id} />
-									) : null}
-								</TableCell>
-							</TableRow>
-						))}
-					</TableBody>
-				</Table>
+		<RootLayout>
+			<div className="flex flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+				<div className="flex w-full max-w-sm flex-col gap-6">
+					<Route.Link to="/" className="flex items-center gap-2 self-center font-medium">
+						<div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+							<GalleryVerticalEnd className="size-4" />
+						</div>
+						Kutumb
+					</Route.Link>
+					<div className={"flex flex-col gap-6"}>
+						<Card>
+							<CardHeader>
+								<CardTitle>My Organization Invites</CardTitle>
+								<CardDescription>
+									You have been invited to join some organizations. Please accept or reject them
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead className="w-[100px]">Organization Name</TableHead>
+											<TableHead>Role</TableHead>
+											<TableHead>Status</TableHead>
+											<TableHead className="text-right">Actions</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{invitations?.length < 1 ? (
+											<TableRow>
+												<TableCell className="text-center" colSpan={4}>
+													No organization invites found
+												</TableCell>
+											</TableRow>
+										) : null}
+										{invitations.map((invite) => (
+											<TableRow key={invite.id}>
+												<TableCell className="font-medium">{invite.organizationName}</TableCell>
+												<TableCell className="capitalize">{invite.role}</TableCell>
+												<TableCell className="capitalize">{invite.status}</TableCell>
+												<TableCell className="text-right">
+													{invite.status === "pending" ? (
+														<AcceptInvitationAction invitationId={invite.id} />
+													) : null}
+													{invite.status === "pending" ? (
+														<RejectInvitationAction invitationId={invite.id} />
+													) : null}
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							</CardContent>
+						</Card>
+					</div>
+				</div>
 			</div>
-		</div>
+		</RootLayout>
 	);
 }
