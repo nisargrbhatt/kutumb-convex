@@ -51,8 +51,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 export const Route = createFileRoute("/_authed/_community/profile/addresses")({
-	loader: async ({ context, params: { slug } }) => {
-		await context.queryClient.ensureQueryData(getMyCommunityAddressesQuery({ slug }));
+	loader: async ({ context }) => {
+		await context.queryClient.ensureQueryData(getMyCommunityAddressesQuery());
 	},
 	component: RouteComponent,
 });
@@ -65,13 +65,13 @@ function PageHeader() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/dashboard"}>Home</Route.Link>
+							<Route.Link to={"/dashboard"}>Home</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/profile/info"}>Profile</Route.Link>
+							<Route.Link to={"/profile/info"}>Profile</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -99,17 +99,16 @@ const addressFormSchema = z.object({
 });
 
 function RouteComponent() {
-	const { slug } = Route.useParams();
 	const [isAddOpen, setIsAddOpen] = useState(false);
 
-	const { data: addresses } = useSuspenseQuery(getMyCommunityAddressesQuery({ slug }));
+	const { data: addresses } = useSuspenseQuery(getMyCommunityAddressesQuery());
 
 	const { mutate: deleteAddress, isPending: isDeleting } = useMutation({
 		mutationFn: deleteMyCommunityAddress,
 		onSuccess: (_d, _v, _r, context) => {
 			toast.success("Address deleted successfully");
 			context.client.invalidateQueries({
-				queryKey: getMyCommunityAddressesQuery({ slug }).queryKey,
+				queryKey: getMyCommunityAddressesQuery().queryKey,
 			});
 		},
 		onError: (error) => {
@@ -129,7 +128,7 @@ function RouteComponent() {
 							Manage your residential, work, and other addresses.
 						</p>
 					</div>
-					<AddressFormModal slug={slug} open={isAddOpen} onOpenChange={setIsAddOpen} />
+					<AddressFormModal open={isAddOpen} onOpenChange={setIsAddOpen} />
 				</div>
 
 				<div className="grid gap-4 md:grid-cols-2">
@@ -159,7 +158,7 @@ function RouteComponent() {
 												size="icon-sm"
 												disabled={isDeleting}
 												onClick={() => {
-													deleteAddress({ data: { slug, id: address.id } });
+													deleteAddress({ data: { id: address.id } });
 												}}
 											>
 												<Trash2 className="size-4" />
@@ -197,7 +196,7 @@ function RouteComponent() {
 
 											{address.digipin ? (
 												<a
-													className="link"
+													className="w-fit link"
 													href={`https://dac.indiapost.gov.in/mydigipin/home/${address.digipin}`}
 													target="_blank"
 												>
@@ -219,11 +218,9 @@ function RouteComponent() {
 }
 
 function AddressFormModal({
-	slug,
 	open,
 	onOpenChange,
 }: {
-	slug: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
@@ -249,7 +246,7 @@ function AddressFormModal({
 			form.reset();
 			onOpenChange(false);
 			context.client.invalidateQueries({
-				queryKey: getMyCommunityAddressesQuery({ slug }).queryKey,
+				queryKey: getMyCommunityAddressesQuery().queryKey,
 			});
 		},
 		onError: (error) => {
@@ -259,10 +256,7 @@ function AddressFormModal({
 
 	function onSubmit(values: z.infer<typeof addressFormSchema>) {
 		addAddress({
-			data: {
-				slug,
-				address: values,
-			},
+			data: values,
 		});
 	}
 

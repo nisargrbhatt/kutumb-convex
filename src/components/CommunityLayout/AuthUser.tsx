@@ -1,4 +1,4 @@
-import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles } from "lucide-react";
+import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -19,7 +19,6 @@ import { authClient } from "@/lib/auth-client";
 
 export function AuthUser() {
 	const { data: session } = authClient.useSession();
-	const { data: activeOrg } = authClient.useActiveOrganization();
 	const { isMobile } = useSidebar();
 
 	return (
@@ -71,31 +70,8 @@ export function AuthUser() {
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
 							<DropdownMenuItem>
-								<Sparkles />
-								Upgrade to Pro
-							</DropdownMenuItem>
-						</DropdownMenuGroup>
-						<DropdownMenuSeparator />
-						<DropdownMenuGroup>
-							<DropdownMenuItem>
 								<BadgeCheck />
 								Account
-							</DropdownMenuItem>
-							{activeOrg?.id ? (
-								<a
-									href={`/api/polar/portal?${new URLSearchParams({
-										organizationId: activeOrg?.id,
-									}).toString()}`}
-								>
-									<DropdownMenuItem>
-										<CreditCard />
-										Billing
-									</DropdownMenuItem>
-								</a>
-							) : null}
-							<DropdownMenuItem>
-								<Bell />
-								Notifications
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />

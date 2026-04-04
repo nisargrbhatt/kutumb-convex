@@ -41,10 +41,9 @@ type MembersSearch = z.infer<typeof membersSearchSchema>;
 export const Route = createFileRoute("/_authed/_community/members")({
 	validateSearch: membersSearchSchema,
 	loaderDeps: ({ search }) => search,
-	loader: async ({ context, params: { slug }, deps }) => {
+	loader: async ({ context, deps }) => {
 		await context.queryClient.ensureQueryData(
 			getCommunityMembersQuery({
-				slug,
 				search: deps.search || undefined,
 				status: deps.status || undefined,
 				gender: deps.gender || undefined,
@@ -64,7 +63,7 @@ function PageHeader() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/dashboard"}>Home</Route.Link>
+							<Route.Link to={"/dashboard"}>Home</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -347,12 +346,10 @@ function MembersPagination({
 }
 
 function RouteComponent() {
-	const { slug } = Route.useParams();
 	const search = Route.useSearch();
 
 	const { data: result } = useSuspenseQuery(
 		getCommunityMembersQuery({
-			slug,
 			search: search.search || undefined,
 			status: search.status || undefined,
 			gender: search.gender || undefined,

@@ -53,10 +53,10 @@ import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/_authed/_community/profile/relationships")({
-	loader: async ({ context, params: { slug } }) => {
-		await Promise.all([
-			context.queryClient.ensureQueryData(getMyCommunityRelationshipsQuery({ slug })),
-			context.queryClient.ensureQueryData(getCommunityProfileListQuery({ slug })),
+	loader: async ({ context }) => {
+		await Promise.allSettled([
+			context.queryClient.ensureQueryData(getMyCommunityRelationshipsQuery()),
+			context.queryClient.ensureQueryData(getCommunityProfileListQuery()),
 		]);
 	},
 	component: RouteComponent,
@@ -70,13 +70,13 @@ function PageHeader() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/dashboard"}>Home</Route.Link>
+							<Route.Link to={"/dashboard"}>Home</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/profile/info"}>Profile</Route.Link>
+							<Route.Link to={"/profile/info"}>Profile</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -111,17 +111,16 @@ const relationshipFormSchema = z.object({
 });
 
 function RouteComponent() {
-	const { slug } = Route.useParams();
 	const [isAddOpen, setIsAddOpen] = useState(false);
 
-	const { data: relationships } = useSuspenseQuery(getMyCommunityRelationshipsQuery({ slug }));
+	const { data: relationships } = useSuspenseQuery(getMyCommunityRelationshipsQuery());
 
 	const { mutate: deleteRelationship, isPending: isDeleting } = useMutation({
 		mutationFn: deleteMyCommunityRelationship,
 		onSuccess: (_d, _v, _r, context) => {
 			toast.success("Relationship deleted successfully");
 			context.client.invalidateQueries({
-				queryKey: getMyCommunityRelationshipsQuery({ slug }).queryKey,
+				queryKey: getMyCommunityRelationshipsQuery().queryKey,
 			});
 		},
 		onError: (error) => {
@@ -140,7 +139,7 @@ function RouteComponent() {
 							Manage your family and community relationships.
 						</p>
 					</div>
-					<RelationshipFormModal slug={slug} open={isAddOpen} onOpenChange={setIsAddOpen} />
+					<RelationshipFormModal open={isAddOpen} onOpenChange={setIsAddOpen} />
 				</div>
 
 				<div className="grid gap-4 md:grid-cols-2">
@@ -178,7 +177,7 @@ function RouteComponent() {
 													size="icon-sm"
 													disabled={isDeleting}
 													onClick={() => {
-														deleteRelationship({ data: { slug, id: rel.id } });
+														deleteRelationship({ data: { id: rel.id } });
 													}}
 												>
 													<Trash2 className="size-4" />
@@ -211,15 +210,13 @@ function RouteComponent() {
 }
 
 function RelationshipFormModal({
-	slug,
 	open,
 	onOpenChange,
 }: {
-	slug: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
-	const { data: profiles } = useSuspenseQuery(getCommunityProfileListQuery({ slug }));
+	const { data: profiles } = useSuspenseQuery(getCommunityProfileListQuery());
 
 	const form = useForm<z.infer<typeof relationshipFormSchema>>({
 		resolver: zodResolver(relationshipFormSchema),
@@ -238,7 +235,7 @@ function RelationshipFormModal({
 			form.reset();
 			onOpenChange(false);
 			context.client.invalidateQueries({
-				queryKey: getMyCommunityRelationshipsQuery({ slug }).queryKey,
+				queryKey: getMyCommunityRelationshipsQuery().queryKey,
 			});
 		},
 		onError: (error) => {
@@ -248,10 +245,7 @@ function RelationshipFormModal({
 
 	function onSubmit(values: z.infer<typeof relationshipFormSchema>) {
 		addRelationship({
-			data: {
-				slug,
-				relationship: values,
-			},
+			data: values,
 		});
 	}
 

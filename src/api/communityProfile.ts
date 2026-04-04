@@ -1,7 +1,6 @@
 import { authMiddleware } from "@/middleware/auth";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
-import { getFullUserContextCached } from "./auth";
 import { db } from "@/db";
 import { queryOptions } from "@tanstack/react-query";
 import { COMMUNITY_PROFILE_BLOOD_GROUP, COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
@@ -11,108 +10,82 @@ import { and, count, eq, like, sql } from "drizzle-orm";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
-	.inputValidator(
-		z.object({
-			slug: z.string().trim().min(1, "Slug is required"),
-		})
-	)
-	.handler(async ({ context, data }) => {
-		const cachedUserContext = await getFullUserContextCached(context.userId);
 
-		if (!cachedUserContext) {
-			throw new Error("User not found");
-		}
+	.handler(async ({ context }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
 
-		const profileId = cachedUserContext.profile?.id;
-
-		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
-
-		if (!organizationId) {
-			throw new Error("Organization not found");
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
 		const communityProfile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.profileId, profileId)
+					operators.eq(fields.userId, context.userId)
 				),
 
 			columns: {
 				organizationId: false,
-				profileId: false,
+				userId: false,
 			},
 		});
 
 		return communityProfile ?? null;
 	});
 
-export const getMyCommunityProfileQuery = (props: { slug: string }) =>
+export const getMyCommunityProfileQuery = () =>
 	queryOptions({
-		queryKey: ["get-my-community-profile", props.slug],
-		queryFn: async ({ signal }) => {
-			const result = await getMyCommunityProfile({
-				data: {
-					slug: props.slug,
-				},
-				signal,
-			});
+		queryKey: ["get-my-community-profile"],
+		queryFn: async () => {
+			const result = await getMyCommunityProfile();
 			return result;
 		},
+		staleTime: 0,
+		gcTime: 0,
 	});
 
 export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
 	.inputValidator(
 		z.object({
-			slug: z.string().trim().min(1, "Slug is required"),
-			profile: z.object({
-				firstName: z.string().min(1, "First name is required"),
-				middleName: z.string().optional(),
-				lastName: z.string().min(1, "Last name is required"),
-				nickName: z.string().optional(),
-				gender: z.enum([GENDERS.male, GENDERS.female, GENDERS.other]).optional(),
-				email: z.email().optional(),
-				bloodGroup: z
-					.enum([
-						COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
-						COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
-						COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
-						COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
-						COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
-						COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
-						COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
-						COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
-					])
-					.optional(),
-				mobileNumber: z.string().optional(),
-				dateOfBirth: z.string().optional(),
-				dateOfDeath: z.string().optional(),
-				comment: z.string().optional(),
-				customFieldData: z.record(z.string(), z.any()).optional(),
-			}),
+			firstName: z.string().min(1, "First name is required"),
+			middleName: z.string().optional(),
+			lastName: z.string().min(1, "Last name is required"),
+			nickName: z.string().optional(),
+			gender: z.enum([GENDERS.male, GENDERS.female, GENDERS.other]).optional(),
+			email: z.email().optional(),
+			bloodGroup: z
+				.enum([
+					COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
+				])
+				.optional(),
+			mobileNumber: z.string().optional(),
+			dateOfBirth: z.string().optional(),
+			dateOfDeath: z.string().optional(),
+			comment: z.string().optional(),
+			customFieldData: z.record(z.string(), z.any()).optional(),
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const cachedUserContext = await getFullUserContextCached(context.userId);
+		const organizationId = context?.session?.session?.activeOrganizationId;
 
-		if (!cachedUserContext) {
-			throw new Error("User not found");
-		}
-
-		const profileId = cachedUserContext.profile?.id;
-
-		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
-
-		if (!organizationId) {
-			throw new Error("Organization not found");
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
 		const communityProfileItem = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.profileId, profileId)
+					operators.eq(fields.userId, context.userId)
 				),
 
 			columns: {
@@ -121,32 +94,32 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 		});
 		if (!communityProfileItem) {
 			await db.insert(communityProfile).values({
-				id: generatePrimaryKey("communityProfile"),
+				id: generatePrimaryKey(),
 				organizationId: organizationId,
-				profileId: profileId,
-				firstName: data.profile.firstName,
-				middleName: data.profile.middleName,
-				lastName: data.profile.lastName,
-				nickName: data.profile.nickName,
-				gender: data.profile.gender,
-				email: data.profile.email,
-				bloodGroup: data.profile.bloodGroup,
-				mobileNumber: data.profile.mobileNumber,
-				...(data.profile.dateOfBirth
+				userId: context.userId,
+				firstName: data.firstName,
+				middleName: data.middleName,
+				lastName: data.lastName,
+				nickName: data.nickName,
+				gender: data.gender,
+				email: data.email,
+				bloodGroup: data.bloodGroup,
+				mobileNumber: data.mobileNumber,
+				...(data.dateOfBirth
 					? {
-							dateOfBirth: data.profile.dateOfBirth,
+							dateOfBirth: data.dateOfBirth,
 						}
 					: {}),
-				...(data.profile.dateOfDeath
+				...(data.dateOfDeath
 					? {
-							dateOfDeath: data.profile.dateOfDeath,
+							dateOfDeath: data.dateOfDeath,
 						}
 					: {}),
-				comment: data.profile.comment,
+				comment: data.comment,
 				status: "active",
-				...(data?.profile?.customFieldData
+				...(data?.customFieldData
 					? {
-							customFieldData: data?.profile?.customFieldData,
+							customFieldData: data?.customFieldData,
 						}
 					: {}),
 			});
@@ -155,29 +128,29 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 			await db
 				.update(communityProfile)
 				.set({
-					firstName: data.profile.firstName,
-					middleName: data.profile.middleName,
-					lastName: data.profile.lastName,
-					nickName: data.profile.nickName,
-					gender: data.profile.gender,
-					email: data.profile.email,
-					bloodGroup: data.profile.bloodGroup,
-					mobileNumber: data.profile.mobileNumber,
-					...(data.profile.dateOfBirth
+					firstName: data.firstName,
+					middleName: data.middleName,
+					lastName: data.lastName,
+					nickName: data.nickName,
+					gender: data.gender,
+					email: data.email,
+					bloodGroup: data.bloodGroup,
+					mobileNumber: data.mobileNumber,
+					...(data.dateOfBirth
 						? {
-								dateOfBirth: data.profile.dateOfBirth,
+								dateOfBirth: data.dateOfBirth,
 							}
 						: {}),
-					...(data.profile.dateOfDeath
+					...(data.dateOfDeath
 						? {
-								dateOfDeath: data.profile.dateOfDeath,
+								dateOfDeath: data.dateOfDeath,
 							}
 						: {}),
-					comment: data.profile.comment,
+					comment: data.comment,
 					status: "active",
-					...(data?.profile?.customFieldData
+					...(data?.customFieldData
 						? {
-								customFieldData: data?.profile?.customFieldData,
+								customFieldData: data?.customFieldData,
 							}
 						: {}),
 				})
@@ -191,22 +164,11 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 
 export const getCommunityProfileList = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
-	.inputValidator(
-		z.object({
-			slug: z.string().trim().min(1, "Slug is required"),
-		})
-	)
-	.handler(async ({ context, data }) => {
-		const cachedUserContext = await getFullUserContextCached(context.userId);
+	.handler(async ({ context }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
 
-		if (!cachedUserContext) {
-			throw new Error("User not found");
-		}
-
-		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
-
-		if (!organizationId) {
-			throw new Error("Organization not found");
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
 		const communityProfiles = await db.query.communityProfile.findMany({
@@ -223,16 +185,11 @@ export const getCommunityProfileList = createServerFn({ method: "GET" })
 		return communityProfiles;
 	});
 
-export const getCommunityProfileListQuery = (props: { slug: string }) =>
+export const getCommunityProfileListQuery = () =>
 	queryOptions({
-		queryKey: ["get-community-profile-list", props.slug],
-		queryFn: async ({ signal }) => {
-			const result = await getCommunityProfileList({
-				data: {
-					slug: props.slug,
-				},
-				signal,
-			});
+		queryKey: ["get-community-profile-list"],
+		queryFn: async () => {
+			const result = await getCommunityProfileList();
 			return result;
 		},
 	});
@@ -241,7 +198,6 @@ export const getCommunityMembers = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
 	.inputValidator(
 		z.object({
-			slug: z.string().trim().min(1, "Slug is required"),
 			search: z.string().optional(),
 			status: z
 				.enum([
@@ -256,16 +212,10 @@ export const getCommunityMembers = createServerFn({ method: "GET" })
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const cachedUserContext = await getFullUserContextCached(context.userId);
+		const organizationId = context?.session?.session?.activeOrganizationId;
 
-		if (!cachedUserContext) {
-			throw new Error("User not found");
-		}
-
-		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
-
-		if (!organizationId) {
-			throw new Error("Organization not found");
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
 		const conditions = [eq(communityProfile.organizationId, organizationId)];
@@ -319,7 +269,6 @@ export const getCommunityMembers = createServerFn({ method: "GET" })
 	});
 
 export const getCommunityMembersQuery = (props: {
-	slug: string;
 	search?: string;
 	status?: string;
 	gender?: string;
@@ -329,24 +278,22 @@ export const getCommunityMembersQuery = (props: {
 	queryOptions({
 		queryKey: [
 			"get-community-members",
-			props.slug,
+
 			props.search ?? "",
 			props.status ?? "",
 			props.gender ?? "",
 			props.page ?? 1,
 			props.pageSize ?? 10,
 		],
-		queryFn: async ({ signal }) => {
+		queryFn: async () => {
 			const result = await getCommunityMembers({
 				data: {
-					slug: props.slug,
 					search: props.search,
 					status: props.status as "active" | "inactive" | "draft" | undefined,
 					gender: props.gender as "male" | "female" | "other" | undefined,
 					page: props.page ?? 1,
 					pageSize: props.pageSize ?? 10,
 				},
-				signal,
 			});
 			return result;
 		},
@@ -354,22 +301,11 @@ export const getCommunityMembersQuery = (props: {
 
 export const getCommunityTree = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
-	.inputValidator(
-		z.object({
-			slug: z.string().trim().min(1, "Slug is required"),
-		})
-	)
-	.handler(async ({ context, data }) => {
-		const cachedUserContext = await getFullUserContextCached(context.userId);
+	.handler(async ({ context }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
 
-		if (!cachedUserContext) {
-			throw new Error("User not found");
-		}
-
-		const organizationId = cachedUserContext?.organization?.find((o) => o.slug === data.slug)?.id;
-
-		if (!organizationId) {
-			throw new Error("Organization not found");
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
 		}
 
 		const [profiles, relations] = await Promise.all([
@@ -405,16 +341,11 @@ export const getCommunityTree = createServerFn({ method: "GET" })
 		};
 	});
 
-export const getCommunityTreeQuery = (props: { slug: string }) =>
+export const getCommunityTreeQuery = () =>
 	queryOptions({
-		queryKey: ["get-community-tree", props.slug],
-		queryFn: async ({ signal }) => {
-			const result = await getCommunityTree({
-				data: {
-					slug: props.slug,
-				},
-				signal,
-			});
+		queryKey: ["get-community-tree"],
+		queryFn: async () => {
+			const result = await getCommunityTree();
 			return result;
 		},
 	});
