@@ -1,46 +1,9 @@
 import { authMiddleware } from "@/middleware/auth";
-import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
-import { polar } from "@/lib/polar";
+import { createServerFn } from "@tanstack/react-start";
 import { db } from "@/db";
 import { queryOptions } from "@tanstack/react-query";
-
-const createOrganizationOwnerRecord = createServerOnlyFn(
-	async (props: {
-		profileId: PrimaryKey<"profile">;
-		organizationId: PrimaryKey<"organization">;
-		customerId: string;
-	}) => {
-		const createdOrgMember = await db
-			.insert(organizationMember)
-			.values({
-				id: generatePrimaryKey("organizationMember"),
-				organizationId: props.organizationId,
-				memberId: props.profileId,
-				role: "owner",
-			})
-			.returning({
-				id: organizationMember.id,
-			});
-
-		const createdOrgMemberId = createdOrgMember?.at(0)?.id;
-
-		if (!createdOrgMemberId) {
-			throw new Error("Failed to create organization member");
-		}
-
-		await polar.events.ingest({
-			events: [
-				{
-					customerId: props.customerId,
-					name: "user_added",
-					metadata: {
-						organizationMemberId: createdOrgMemberId,
-					},
-				},
-			],
-		});
-	}
-);
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { auth } from "@/lib/auth";
 
 export const checkCurrentOrgPaymentSetup = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -85,4 +48,13 @@ export const checkCurrentOrgPaymentSetupQuery = () =>
 			}
 			return 5 * 1000;
 		},
+	});
+
+export const listMyOrganizationInvitations = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.handler(async () => {
+		const invites = await auth.api.listUserInvitations({
+			headers: getRequestHeaders(),
+		});
+		return invites;
 	});

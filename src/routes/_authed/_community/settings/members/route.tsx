@@ -8,11 +8,16 @@ import {
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { addOrganizationMember, getOrganizationMemberListQuery } from "@/api/organizationMember";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import {
+	Item,
+	ItemActions,
+	ItemContent,
+	ItemDescription,
+	ItemMedia,
+	ItemTitle,
+} from "@/components/ui/item";
 import { BookKeyIcon, CrownIcon, UserIcon } from "lucide-react";
-import z from "zod";
+import * as z from "zod";
 import { ORGANIZATION_ROLES } from "@/db/constants";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,14 +41,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { useId } from "react";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_authed/_community/settings/members")({
 	component: RouteComponent,
-	loader: async ({ context, params }) => {
-		await context.queryClient.ensureQueryData(
-			getOrganizationMemberListQuery({ slug: params.slug })
-		);
-	},
 });
 
 function PageHeader() {
@@ -54,13 +55,13 @@ function PageHeader() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/dashboard"}>Home</Route.Link>
+							<Route.Link to={"/dashboard"}>Home</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Route.Link to={"/community/$slug/settings/overview"}>Settings</Route.Link>
+							<Route.Link to={"/settings/overview"}>Settings</Route.Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -75,13 +76,11 @@ function PageHeader() {
 
 const formSchema = z.object({
 	email: z.email().min(1, "Email is required"),
-	role: z.enum([ORGANIZATION_ROLES.manager, ORGANIZATION_ROLES.member]),
+	role: z.enum([ORGANIZATION_ROLES.admin, ORGANIZATION_ROLES.member]),
 });
 
 function AddOrganizationMemberForm() {
 	const formId = useId();
-	const { slug } = Route.useParams();
-	const queryClient = useQueryClient();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -92,35 +91,28 @@ function AddOrganizationMemberForm() {
 	});
 
 	const onSubmit = form.handleSubmit(async (values) => {
-		try {
-			await addOrganizationMember({
-				data: {
-					member: {
-						email: values.email,
-						role: values.role,
-					},
-					slug,
-				},
-			});
-			toast.success("Member", {
-				description: "Member added successfully",
-			});
-			form.reset();
-		} catch (error) {
+		const { error } = await authClient.organization.inviteMember({
+			role: values.role,
+			email: values.email,
+			resend: true,
+		});
+
+		if (error) {
 			console.error(error);
 			toast.error("Member", {
-				description: "Member could not be added",
+				description: "Member could not be invited",
 			});
-		} finally {
-			queryClient.invalidateQueries({
-				queryKey: getOrganizationMemberListQuery({ slug: slug }).queryKey,
-			});
+			return;
 		}
+		toast.success("Member", {
+			description: "Member invited successfully",
+		});
+		form.reset();
 	});
 
 	return (
 		<Form {...form}>
-			<form onSubmit={onSubmit} className="w-full" id={formId}>
+			<form onSubmit={onSubmit} className="w-full max-w-md" id={formId}>
 				<Card>
 					<CardContent>
 						<div className="flex flex-col items-start justify-start gap-2">
@@ -149,7 +141,7 @@ function AddOrganizationMemberForm() {
 													<SelectValue placeholder="Select a role" />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value={ORGANIZATION_ROLES.manager}>Manager</SelectItem>
+													<SelectItem value={ORGANIZATION_ROLES.admin}>Admin</SelectItem>
 													<SelectItem value={ORGANIZATION_ROLES.member}>Member</SelectItem>
 												</SelectContent>
 											</Select>
@@ -174,22 +166,50 @@ function AddOrganizationMemberForm() {
 }
 
 function OrganizationMemberList() {
-	const { slug } = Route.useParams();
-	const { data } = useQuery(getOrganizationMemberListQuery({ slug }));
+	const { data: activeOrganization } = authClient.useActiveOrganization();
+
+	const handleRemoveFromOrg = async (memberId: string) => {
+		const { error } = await authClient.organization.removeMember({
+			memberIdOrEmail: memberId,
+		});
+
+		if (error) {
+			console.error(error);
+			toast.error("Member", {
+				description: error?.message ?? "Member could not be removed",
+			});
+			return;
+		}
+		toast.success("Member", {
+			description: "Member removed successfully",
+		});
+	};
 
 	return (
 		<div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-			{data?.map((member) => (
+			{activeOrganization?.members?.map((member) => (
 				<Item key={member.id} variant={"outline"}>
-					<ItemMedia variant="icon">
+					<ItemMedia variant="icon" title={member.role}>
 						{member.role === "owner" ? <CrownIcon aria-label="Owner" /> : null}
-						{member.role === "manager" ? <BookKeyIcon aria-label="Manager" /> : null}
+						{member.role === "admin" ? <BookKeyIcon aria-label="Manager" /> : null}
 						{member.role === "member" ? <UserIcon aria-label="Member" /> : null}
 					</ItemMedia>
 					<ItemContent>
-						<ItemTitle>{member.member?.displayName}</ItemTitle>
-						<ItemDescription>{member?.member?.email}</ItemDescription>
+						<ItemTitle>{member.user?.name}</ItemTitle>
+						<ItemDescription>{member?.user?.email}</ItemDescription>
 					</ItemContent>
+					<ItemActions>
+						<Button
+							variant="outline"
+							size="sm"
+							type="button"
+							onClick={() => {
+								handleRemoveFromOrg(member.id);
+							}}
+						>
+							Remove
+						</Button>
+					</ItemActions>
 				</Item>
 			))}
 		</div>
