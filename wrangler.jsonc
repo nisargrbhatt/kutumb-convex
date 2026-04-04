@@ -14,13 +14,13 @@
 		{
 			"binding": "D1",
 			"database_name": "D1",
-			"database_id": "80fc87df-ca34-469d-9ea8-9897e2596575",
+			"database_id": "6c87b6c7-5b1e-4e30-99c1-43e470c0c408",
 		},
 	],
 	"kv_namespaces": [
 		{
 			"binding": "KV",
-			"id": "d41d4475a3204f30b08cd46a2e5dcb4f",
+			"id": "75a706cda3c44a00949860c48ee271ab",
 		},
 	],
 	"preview_urls": false,
