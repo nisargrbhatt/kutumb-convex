@@ -9,6 +9,7 @@ import { polar, checkout, portal, usage, webhooks } from "@polar-sh/better-auth"
 import { polar as polarClient } from "@/lib/polar";
 import { organization as organizationTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { safeAsync, safeSync } from "./safe";
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -22,6 +23,95 @@ export const auth = betterAuth({
 				owner: owner,
 				admin: admin,
 				member: member,
+			},
+			sendInvitationEmail: async (payload) => {
+				const inviteLink = `${env.BETTER_AUTH_URL}/onboarding/invitations`;
+				console.log("payload", payload, inviteLink);
+				// [TODO]: Send Invitation Email
+			},
+			organizationHooks: {
+				afterAddMember: async (payload) => {
+					const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
+					if (!parsedPayloadResult.success) {
+						console.error("Payload parsing failed for", payload.organization.id);
+						return;
+					}
+
+					const parsedPayload = parsedPayloadResult.data;
+					const orgCustomerId = parsedPayload?.customerId;
+
+					if (typeof orgCustomerId !== "string") {
+						console.error("No Organization Customer Id found for", payload.organization.id);
+					}
+
+					const eventIngestResult = await safeAsync(
+						polarClient.events.ingest({
+							events: [
+								{
+									customerId: orgCustomerId,
+									name: "user_added",
+									metadata: {
+										user_count: 1,
+										organizationMemberId: payload.member.id,
+										organizationId: payload.organization.id,
+										userId: payload.user.id,
+									},
+									externalMemberId: payload.member.id,
+									externalCustomerId: payload.organization.id,
+								},
+							],
+						})
+					);
+
+					if (!eventIngestResult.success) {
+						console.error(
+							"Event Ingest failed for ",
+							payload.organization.id,
+							eventIngestResult.error
+						);
+					}
+				},
+				afterRemoveMember: async (payload) => {
+					const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
+					if (!parsedPayloadResult.success) {
+						console.error("Payload parsing failed for", payload.organization.id);
+						return;
+					}
+
+					const parsedPayload = parsedPayloadResult.data;
+					const orgCustomerId = parsedPayload?.customerId;
+
+					if (typeof orgCustomerId !== "string") {
+						console.error("No Organization Customer Id found for", payload.organization.id);
+					}
+
+					const eventIngestResult = await safeAsync(
+						polarClient.events.ingest({
+							events: [
+								{
+									customerId: orgCustomerId,
+									name: "user_removed",
+									metadata: {
+										user_count: -1,
+										organizationMemberId: payload.member.id,
+										organizationId: payload.organization.id,
+										userId: payload.user.id,
+									},
+									externalMemberId: payload.member.id,
+									externalCustomerId: payload.organization.id,
+								},
+							],
+						})
+					);
+
+					if (!eventIngestResult.success) {
+						console.error(
+							"Event Ingest failed for ",
+							payload.organization.id,
+							eventIngestResult.error
+						);
+					}
+				},
 			},
 		}),
 		polar({

@@ -17,6 +17,7 @@ import { Route as ApiWebhookPolarRouteImport } from './routes/api/webhook/polar'
 import { Route as ApiPolarPortalRouteImport } from './routes/api/polar/portal'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedOnboardingSuccessRouteRouteImport } from './routes/_authed/onboarding/success/route'
+import { Route as AuthedOnboardingInvitationsRouteRouteImport } from './routes/_authed/onboarding/invitations/route'
 import { Route as AuthedOnboardingCreateRouteRouteImport } from './routes/_authed/onboarding/create/route'
 import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
 import { Route as AuthedCommunityMembersRouteRouteImport } from './routes/_authed/_community/members/route'
@@ -66,6 +67,12 @@ const AuthedOnboardingSuccessRouteRoute =
   AuthedOnboardingSuccessRouteRouteImport.update({
     id: '/onboarding/success',
     path: '/onboarding/success',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedOnboardingInvitationsRouteRoute =
+  AuthedOnboardingInvitationsRouteRouteImport.update({
+    id: '/onboarding/invitations',
+    path: '/onboarding/invitations',
     getParentRoute: () => AuthedRoute,
   } as any)
 const AuthedOnboardingCreateRouteRoute =
@@ -143,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/members': typeof AuthedCommunityMembersRouteRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/onboarding/create': typeof AuthedOnboardingCreateRouteRoute
+  '/onboarding/invitations': typeof AuthedOnboardingInvitationsRouteRoute
   '/onboarding/success': typeof AuthedOnboardingSuccessRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
@@ -162,6 +170,7 @@ export interface FileRoutesByTo {
   '/members': typeof AuthedCommunityMembersRouteRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/onboarding/create': typeof AuthedOnboardingCreateRouteRoute
+  '/onboarding/invitations': typeof AuthedOnboardingInvitationsRouteRoute
   '/onboarding/success': typeof AuthedOnboardingSuccessRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
@@ -184,6 +193,7 @@ export interface FileRoutesById {
   '/_authed/_community/members': typeof AuthedCommunityMembersRouteRoute
   '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/_authed/onboarding/create': typeof AuthedOnboardingCreateRouteRoute
+  '/_authed/onboarding/invitations': typeof AuthedOnboardingInvitationsRouteRoute
   '/_authed/onboarding/success': typeof AuthedOnboardingSuccessRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/memories'
     | '/onboarding/create'
+    | '/onboarding/invitations'
     | '/onboarding/success'
     | '/api/auth/$'
     | '/api/polar/portal'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/memories'
     | '/onboarding/create'
+    | '/onboarding/invitations'
     | '/onboarding/success'
     | '/api/auth/$'
     | '/api/polar/portal'
@@ -245,6 +257,7 @@ export interface FileRouteTypes {
     | '/_authed/_community/members'
     | '/_authed/_community/memories'
     | '/_authed/onboarding/create'
+    | '/_authed/onboarding/invitations'
     | '/_authed/onboarding/success'
     | '/api/auth/$'
     | '/api/polar/portal'
@@ -322,6 +335,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/success'
       fullPath: '/onboarding/success'
       preLoaderRoute: typeof AuthedOnboardingSuccessRouteRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/onboarding/invitations': {
+      id: '/_authed/onboarding/invitations'
+      path: '/onboarding/invitations'
+      fullPath: '/onboarding/invitations'
+      preLoaderRoute: typeof AuthedOnboardingInvitationsRouteRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/onboarding/create': {
@@ -443,12 +463,14 @@ const AuthedCommunityRouteWithChildren = AuthedCommunityRoute._addFileChildren(
 interface AuthedRouteChildren {
   AuthedCommunityRoute: typeof AuthedCommunityRouteWithChildren
   AuthedOnboardingCreateRouteRoute: typeof AuthedOnboardingCreateRouteRoute
+  AuthedOnboardingInvitationsRouteRoute: typeof AuthedOnboardingInvitationsRouteRoute
   AuthedOnboardingSuccessRouteRoute: typeof AuthedOnboardingSuccessRouteRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCommunityRoute: AuthedCommunityRouteWithChildren,
   AuthedOnboardingCreateRouteRoute: AuthedOnboardingCreateRouteRoute,
+  AuthedOnboardingInvitationsRouteRoute: AuthedOnboardingInvitationsRouteRoute,
   AuthedOnboardingSuccessRouteRoute: AuthedOnboardingSuccessRouteRoute,
 }
 

@@ -6,7 +6,7 @@ export const GENDERS = {
 
 export const ORGANIZATION_ROLES = {
 	owner: "owner",
-	manager: "manager",
+	admin: "admin",
 	member: "member",
 } as const;
 
