@@ -90,7 +90,7 @@ export function OnboardingForm() {
 		toast.success("Organization created successfully", {
 			description: "You can now access your organization. Redirecting you to dashboard",
 		});
-		await authClient.updateSession();
+
 		router.navigate({
 			to: "/dashboard",
 		});

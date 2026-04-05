@@ -15,14 +15,6 @@ export const auth = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: "sqlite",
 	}),
-	session: {
-		cookieCache: {
-			enabled: true,
-			maxAge: 1 * 60, // Cache duration in seconds
-			refreshCache: true,
-			version: "1", // Cookie Version - Change if session field updates
-		},
-	},
 	advanced: {
 		backgroundTasks: { handler: waitUntil },
 	},
