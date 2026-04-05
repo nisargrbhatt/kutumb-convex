@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { betterAuth } from "better-auth";
+import { betterAuth } from "better-auth/minimal";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { organization } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -183,6 +183,26 @@ export const auth = betterAuth({
 			disableSignUp: env.BETTER_AUTH_DISABLE_SIGNUP === "1",
 			clientId: env.GOOGLE_CLIENT_ID,
 			clientSecret: env.GOOGLE_CLIENT_SECRET,
+		},
+	},
+	databaseHooks: {
+		session: {
+			create: {
+				before: async (session) => {
+					const firstOrganization = await db.query.member.findFirst({
+						where: (fields, operators) => operators.eq(fields.userId, session.userId),
+						columns: {
+							organizationId: true,
+						},
+					});
+					return {
+						data: {
+							...session,
+							activeOrganizationId: firstOrganization?.organizationId ?? null,
+						},
+					};
+				},
+			},
 		},
 	},
 	baseURL: env.BETTER_AUTH_URL,
