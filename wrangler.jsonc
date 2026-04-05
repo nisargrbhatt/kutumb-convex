@@ -2,7 +2,10 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "kutumb",
 	"compatibility_date": "2026-02-24",
-	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
 	"main": "@tanstack/react-start/server-entry",
 	"observability": {
 		"enabled": true,
@@ -26,4 +29,11 @@
 	"preview_urls": false,
 	"workers_dev": true,
 	"keep_vars": true,
+	"routes": [
+		{
+			"pattern": "kutumb.nisargbhatt.org",
+			"zone_name": "nisargbhatt.org",
+			"custom_domain": true,
+		}
+	]
 }
