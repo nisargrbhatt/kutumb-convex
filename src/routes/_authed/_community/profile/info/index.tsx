@@ -35,8 +35,9 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 
-export const Route = createFileRoute("/_authed/_community/profile/info")({
+export const Route = createFileRoute("/_authed/_community/profile/info/")({
 	component: RouteComponent,
 	loader: async ({ context }) => {
 		await Promise.allSettled([
@@ -302,6 +303,7 @@ function CommunityProfileForm({
 }
 
 function RouteComponent() {
+	const { data: session } = authClient.useSession();
 	const { data } = useSuspenseQuery(getMyCommunityProfileQuery());
 	const { data: customFieldsResponse } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
 
@@ -330,6 +332,7 @@ function RouteComponent() {
 								firstName: "",
 								lastName: "",
 								gender: "male",
+								email: session?.user?.email ?? "",
 							}
 				}
 			/>

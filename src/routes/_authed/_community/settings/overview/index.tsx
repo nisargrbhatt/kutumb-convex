@@ -25,7 +25,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
 
-export const Route = createFileRoute("/_authed/_community/settings/overview")({
+export const Route = createFileRoute("/_authed/_community/settings/overview/")({
 	component: RouteComponent,
 });
 

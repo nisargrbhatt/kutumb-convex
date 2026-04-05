@@ -8,7 +8,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/_authed/_community/dashboard")({
+export const Route = createFileRoute("/_authed/_community/dashboard/")({
 	component: RouteComponent,
 });
 

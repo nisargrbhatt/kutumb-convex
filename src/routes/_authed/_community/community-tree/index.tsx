@@ -28,7 +28,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent } from "@/components/ui/card";
 
-export const Route = createFileRoute("/_authed/_community/community-tree")({
+export const Route = createFileRoute("/_authed/_community/community-tree/")({
 	loaderDeps: () => ({}),
 	loader: async ({ context }) => {
 		await context.queryClient.ensureQueryData(getCommunityTreeQuery());

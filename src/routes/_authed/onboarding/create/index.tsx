@@ -3,7 +3,7 @@ import { GalleryVerticalEnd } from "lucide-react";
 import { OnboardingForm } from "./-components/OnboardingForm";
 import { RootLayout } from "@/components/RootLayout";
 
-export const Route = createFileRoute("/_authed/onboarding/create")({
+export const Route = createFileRoute("/_authed/onboarding/create/")({
 	component: RouteComponent,
 });
 

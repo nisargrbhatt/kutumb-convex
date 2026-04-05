@@ -24,7 +24,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Search, Users, X } from "lucide-react";
 import { z } from "zod";
 
@@ -38,7 +38,7 @@ const membersSearchSchema = z.object({
 
 type MembersSearch = z.infer<typeof membersSearchSchema>;
 
-export const Route = createFileRoute("/_authed/_community/members")({
+export const Route = createFileRoute("/_authed/_community/members/")({
 	validateSearch: membersSearchSchema,
 	loaderDeps: ({ search }) => search,
 	loader: async ({ context, deps }) => {
@@ -99,12 +99,14 @@ const columns: ColumnDef<CommunityMember>[] = [
 				.filter(Boolean)
 				.join(" ");
 			return (
-				<div className="flex flex-col">
-					<span className="font-medium">{fullName}</span>
-					{row.original.nickName && (
-						<span className="text-xs text-muted-foreground">({row.original.nickName})</span>
-					)}
-				</div>
+				<Link to={"/members/$id"} params={{ id: row.original.id }}>
+					<div className="flex flex-col">
+						<span className="font-medium">{fullName}</span>
+						{row.original.nickName && (
+							<span className="text-xs text-muted-foreground">({row.original.nickName})</span>
+						)}
+					</div>
+				</Link>
 			);
 		},
 	},

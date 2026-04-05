@@ -52,7 +52,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export const Route = createFileRoute("/_authed/_community/profile/relationships")({
+export const Route = createFileRoute("/_authed/_community/profile/relationships/")({
 	loader: async ({ context }) => {
 		await Promise.allSettled([
 			context.queryClient.ensureQueryData(getMyCommunityRelationshipsQuery()),

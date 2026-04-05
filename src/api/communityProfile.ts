@@ -349,3 +349,61 @@ export const getCommunityTreeQuery = () =>
 			return result;
 		},
 	});
+
+export const getCommunityMemberById = createServerFn({ method: "GET" })
+	.inputValidator(
+		z.object({
+			id: z.string().describe("Community Profile Id"),
+		})
+	)
+	.middleware([authMiddleware])
+	.handler(async ({ context, data }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const communityProfile = await db.query.communityProfile.findFirst({
+			where: (fields, ops) =>
+				ops.and(ops.eq(fields.id, data.id), ops.eq(fields.organizationId, organizationId)),
+			columns: {
+				organizationId: false,
+			},
+		});
+
+		if (!communityProfile) {
+			throw new Error("Community Profile not found");
+		}
+
+		const profileAddresses = await db.query.communityAddress.findMany({
+			where: (fields, ops) => ops.eq(fields.communityProfileId, communityProfile.id),
+			columns: {
+				communityProfileId: false,
+			},
+		});
+
+		const customFields = await db.query.communityProfileCustomField.findMany({
+			where: (fields, ops) => ops.eq(fields.organizationId, organizationId),
+			columns: {
+				label: true,
+			},
+		});
+
+		// const profileRelations = await db.query.communityRelation.findMany({
+		// 	where: (fields, ops) =>
+		// 		ops.or(
+		// 			ops.eq(fields.fromId, communityProfile.id),
+		// 			ops.eq(fields.toId, communityProfile.id)
+		// 		),
+		// 	columns: {
+		// 		organizationId: false,
+		// 	},
+		// });
+
+		return {
+			profile: communityProfile,
+			addresses: profileAddresses,
+			customFields: customFields?.map((i) => i.label),
+		};
+	});

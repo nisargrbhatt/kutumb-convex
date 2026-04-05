@@ -50,7 +50,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-export const Route = createFileRoute("/_authed/_community/profile/addresses")({
+export const Route = createFileRoute("/_authed/_community/profile/addresses/")({
 	loader: async ({ context }) => {
 		await context.queryClient.ensureQueryData(getMyCommunityAddressesQuery());
 	},

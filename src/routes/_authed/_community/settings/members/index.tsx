@@ -43,7 +43,7 @@ import { useId } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 
-export const Route = createFileRoute("/_authed/_community/settings/members")({
+export const Route = createFileRoute("/_authed/_community/settings/members/")({
 	component: RouteComponent,
 });
 

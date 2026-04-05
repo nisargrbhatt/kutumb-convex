@@ -20,7 +20,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import z from "zod";
 
-export const Route = createFileRoute("/_authed/onboarding/success")({
+export const Route = createFileRoute("/_authed/onboarding/success/")({
 	component: RouteComponent,
 	validateSearch: z.object({
 		checkout_id: z.string(),

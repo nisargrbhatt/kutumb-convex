@@ -14,19 +14,20 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as AuthedOnboardingSuccessRouteRouteImport } from './routes/_authed/onboarding/success/route'
-import { Route as AuthedOnboardingInvitationsRouteRouteImport } from './routes/_authed/onboarding/invitations/route'
-import { Route as AuthedOnboardingCreateRouteRouteImport } from './routes/_authed/onboarding/create/route'
 import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
-import { Route as AuthedCommunityMembersRouteRouteImport } from './routes/_authed/_community/members/route'
-import { Route as AuthedCommunityDashboardRouteRouteImport } from './routes/_authed/_community/dashboard/route'
-import { Route as AuthedCommunityCommunityTreeRouteRouteImport } from './routes/_authed/_community/community-tree/route'
-import { Route as AuthedCommunitySettingsOverviewRouteRouteImport } from './routes/_authed/_community/settings/overview/route'
-import { Route as AuthedCommunitySettingsMembersRouteRouteImport } from './routes/_authed/_community/settings/members/route'
-import { Route as AuthedCommunitySettingsFieldsRouteRouteImport } from './routes/_authed/_community/settings/fields/route'
-import { Route as AuthedCommunityProfileRelationshipsRouteRouteImport } from './routes/_authed/_community/profile/relationships/route'
-import { Route as AuthedCommunityProfileInfoRouteRouteImport } from './routes/_authed/_community/profile/info/route'
-import { Route as AuthedCommunityProfileAddressesRouteRouteImport } from './routes/_authed/_community/profile/addresses/route'
+import { Route as AuthedOnboardingSuccessIndexRouteImport } from './routes/_authed/onboarding/success/index'
+import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
+import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
+import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
+import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
+import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
+import { Route as AuthedCommunitySettingsOverviewIndexRouteImport } from './routes/_authed/_community/settings/overview/index'
+import { Route as AuthedCommunitySettingsMembersIndexRouteImport } from './routes/_authed/_community/settings/members/index'
+import { Route as AuthedCommunitySettingsFieldsIndexRouteImport } from './routes/_authed/_community/settings/fields/index'
+import { Route as AuthedCommunityProfileRelationshipsIndexRouteImport } from './routes/_authed/_community/profile/relationships/index'
+import { Route as AuthedCommunityProfileInfoIndexRouteImport } from './routes/_authed/_community/profile/info/index'
+import { Route as AuthedCommunityProfileAddressesIndexRouteImport } from './routes/_authed/_community/profile/addresses/index'
+import { Route as AuthedCommunityMembersIdIndexRouteImport } from './routes/_authed/_community/members/$id/index'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -51,120 +52,128 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedOnboardingSuccessRouteRoute =
-  AuthedOnboardingSuccessRouteRouteImport.update({
-    id: '/onboarding/success',
-    path: '/onboarding/success',
-    getParentRoute: () => AuthedRoute,
-  } as any)
-const AuthedOnboardingInvitationsRouteRoute =
-  AuthedOnboardingInvitationsRouteRouteImport.update({
-    id: '/onboarding/invitations',
-    path: '/onboarding/invitations',
-    getParentRoute: () => AuthedRoute,
-  } as any)
-const AuthedOnboardingCreateRouteRoute =
-  AuthedOnboardingCreateRouteRouteImport.update({
-    id: '/onboarding/create',
-    path: '/onboarding/create',
-    getParentRoute: () => AuthedRoute,
-  } as any)
 const AuthedCommunityMemoriesRouteRoute =
   AuthedCommunityMemoriesRouteRouteImport.update({
     id: '/memories',
     path: '/memories',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunityMembersRouteRoute =
-  AuthedCommunityMembersRouteRouteImport.update({
-    id: '/members',
-    path: '/members',
+const AuthedOnboardingSuccessIndexRoute =
+  AuthedOnboardingSuccessIndexRouteImport.update({
+    id: '/onboarding/success/',
+    path: '/onboarding/success/',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedOnboardingInvitationsIndexRoute =
+  AuthedOnboardingInvitationsIndexRouteImport.update({
+    id: '/onboarding/invitations/',
+    path: '/onboarding/invitations/',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedOnboardingCreateIndexRoute =
+  AuthedOnboardingCreateIndexRouteImport.update({
+    id: '/onboarding/create/',
+    path: '/onboarding/create/',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedCommunityMembersIndexRoute =
+  AuthedCommunityMembersIndexRouteImport.update({
+    id: '/members/',
+    path: '/members/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunityDashboardRouteRoute =
-  AuthedCommunityDashboardRouteRouteImport.update({
-    id: '/dashboard',
-    path: '/dashboard',
+const AuthedCommunityDashboardIndexRoute =
+  AuthedCommunityDashboardIndexRouteImport.update({
+    id: '/dashboard/',
+    path: '/dashboard/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunityCommunityTreeRouteRoute =
-  AuthedCommunityCommunityTreeRouteRouteImport.update({
-    id: '/community-tree',
-    path: '/community-tree',
+const AuthedCommunityCommunityTreeIndexRoute =
+  AuthedCommunityCommunityTreeIndexRouteImport.update({
+    id: '/community-tree/',
+    path: '/community-tree/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunitySettingsOverviewRouteRoute =
-  AuthedCommunitySettingsOverviewRouteRouteImport.update({
-    id: '/settings/overview',
-    path: '/settings/overview',
+const AuthedCommunitySettingsOverviewIndexRoute =
+  AuthedCommunitySettingsOverviewIndexRouteImport.update({
+    id: '/settings/overview/',
+    path: '/settings/overview/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunitySettingsMembersRouteRoute =
-  AuthedCommunitySettingsMembersRouteRouteImport.update({
-    id: '/settings/members',
-    path: '/settings/members',
+const AuthedCommunitySettingsMembersIndexRoute =
+  AuthedCommunitySettingsMembersIndexRouteImport.update({
+    id: '/settings/members/',
+    path: '/settings/members/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunitySettingsFieldsRouteRoute =
-  AuthedCommunitySettingsFieldsRouteRouteImport.update({
-    id: '/settings/fields',
-    path: '/settings/fields',
+const AuthedCommunitySettingsFieldsIndexRoute =
+  AuthedCommunitySettingsFieldsIndexRouteImport.update({
+    id: '/settings/fields/',
+    path: '/settings/fields/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunityProfileRelationshipsRouteRoute =
-  AuthedCommunityProfileRelationshipsRouteRouteImport.update({
-    id: '/profile/relationships',
-    path: '/profile/relationships',
+const AuthedCommunityProfileRelationshipsIndexRoute =
+  AuthedCommunityProfileRelationshipsIndexRouteImport.update({
+    id: '/profile/relationships/',
+    path: '/profile/relationships/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunityProfileInfoRouteRoute =
-  AuthedCommunityProfileInfoRouteRouteImport.update({
-    id: '/profile/info',
-    path: '/profile/info',
+const AuthedCommunityProfileInfoIndexRoute =
+  AuthedCommunityProfileInfoIndexRouteImport.update({
+    id: '/profile/info/',
+    path: '/profile/info/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunityProfileAddressesRouteRoute =
-  AuthedCommunityProfileAddressesRouteRouteImport.update({
-    id: '/profile/addresses',
-    path: '/profile/addresses',
+const AuthedCommunityProfileAddressesIndexRoute =
+  AuthedCommunityProfileAddressesIndexRouteImport.update({
+    id: '/profile/addresses/',
+    path: '/profile/addresses/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
+const AuthedCommunityMembersIdIndexRoute =
+  AuthedCommunityMembersIdIndexRouteImport.update({
+    id: '/members/$id/',
+    path: '/members/$id/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/community-tree': typeof AuthedCommunityCommunityTreeRouteRoute
-  '/dashboard': typeof AuthedCommunityDashboardRouteRoute
-  '/members': typeof AuthedCommunityMembersRouteRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
-  '/onboarding/create': typeof AuthedOnboardingCreateRouteRoute
-  '/onboarding/invitations': typeof AuthedOnboardingInvitationsRouteRoute
-  '/onboarding/success': typeof AuthedOnboardingSuccessRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/profile/addresses': typeof AuthedCommunityProfileAddressesRouteRoute
-  '/profile/info': typeof AuthedCommunityProfileInfoRouteRoute
-  '/profile/relationships': typeof AuthedCommunityProfileRelationshipsRouteRoute
-  '/settings/fields': typeof AuthedCommunitySettingsFieldsRouteRoute
-  '/settings/members': typeof AuthedCommunitySettingsMembersRouteRoute
-  '/settings/overview': typeof AuthedCommunitySettingsOverviewRouteRoute
+  '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
+  '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
+  '/members/': typeof AuthedCommunityMembersIndexRoute
+  '/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
+  '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
+  '/onboarding/success/': typeof AuthedOnboardingSuccessIndexRoute
+  '/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
+  '/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
+  '/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
+  '/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
+  '/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
+  '/settings/members/': typeof AuthedCommunitySettingsMembersIndexRoute
+  '/settings/overview/': typeof AuthedCommunitySettingsOverviewIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/community-tree': typeof AuthedCommunityCommunityTreeRouteRoute
-  '/dashboard': typeof AuthedCommunityDashboardRouteRoute
-  '/members': typeof AuthedCommunityMembersRouteRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
-  '/onboarding/create': typeof AuthedOnboardingCreateRouteRoute
-  '/onboarding/invitations': typeof AuthedOnboardingInvitationsRouteRoute
-  '/onboarding/success': typeof AuthedOnboardingSuccessRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/profile/addresses': typeof AuthedCommunityProfileAddressesRouteRoute
-  '/profile/info': typeof AuthedCommunityProfileInfoRouteRoute
-  '/profile/relationships': typeof AuthedCommunityProfileRelationshipsRouteRoute
-  '/settings/fields': typeof AuthedCommunitySettingsFieldsRouteRoute
-  '/settings/members': typeof AuthedCommunitySettingsMembersRouteRoute
-  '/settings/overview': typeof AuthedCommunitySettingsOverviewRouteRoute
+  '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
+  '/dashboard': typeof AuthedCommunityDashboardIndexRoute
+  '/members': typeof AuthedCommunityMembersIndexRoute
+  '/onboarding/create': typeof AuthedOnboardingCreateIndexRoute
+  '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
+  '/onboarding/success': typeof AuthedOnboardingSuccessIndexRoute
+  '/members/$id': typeof AuthedCommunityMembersIdIndexRoute
+  '/profile/addresses': typeof AuthedCommunityProfileAddressesIndexRoute
+  '/profile/info': typeof AuthedCommunityProfileInfoIndexRoute
+  '/profile/relationships': typeof AuthedCommunityProfileRelationshipsIndexRoute
+  '/settings/fields': typeof AuthedCommunitySettingsFieldsIndexRoute
+  '/settings/members': typeof AuthedCommunitySettingsMembersIndexRoute
+  '/settings/overview': typeof AuthedCommunitySettingsOverviewIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -172,52 +181,55 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
-  '/_authed/_community/community-tree': typeof AuthedCommunityCommunityTreeRouteRoute
-  '/_authed/_community/dashboard': typeof AuthedCommunityDashboardRouteRoute
-  '/_authed/_community/members': typeof AuthedCommunityMembersRouteRoute
   '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
-  '/_authed/onboarding/create': typeof AuthedOnboardingCreateRouteRoute
-  '/_authed/onboarding/invitations': typeof AuthedOnboardingInvitationsRouteRoute
-  '/_authed/onboarding/success': typeof AuthedOnboardingSuccessRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/_authed/_community/profile/addresses': typeof AuthedCommunityProfileAddressesRouteRoute
-  '/_authed/_community/profile/info': typeof AuthedCommunityProfileInfoRouteRoute
-  '/_authed/_community/profile/relationships': typeof AuthedCommunityProfileRelationshipsRouteRoute
-  '/_authed/_community/settings/fields': typeof AuthedCommunitySettingsFieldsRouteRoute
-  '/_authed/_community/settings/members': typeof AuthedCommunitySettingsMembersRouteRoute
-  '/_authed/_community/settings/overview': typeof AuthedCommunitySettingsOverviewRouteRoute
+  '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
+  '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
+  '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
+  '/_authed/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
+  '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
+  '/_authed/onboarding/success/': typeof AuthedOnboardingSuccessIndexRoute
+  '/_authed/_community/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
+  '/_authed/_community/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
+  '/_authed/_community/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
+  '/_authed/_community/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
+  '/_authed/_community/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
+  '/_authed/_community/settings/members/': typeof AuthedCommunitySettingsMembersIndexRoute
+  '/_authed/_community/settings/overview/': typeof AuthedCommunitySettingsOverviewIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
-    | '/community-tree'
-    | '/dashboard'
-    | '/members'
     | '/memories'
-    | '/onboarding/create'
-    | '/onboarding/invitations'
-    | '/onboarding/success'
     | '/api/auth/$'
-    | '/profile/addresses'
-    | '/profile/info'
-    | '/profile/relationships'
-    | '/settings/fields'
-    | '/settings/members'
-    | '/settings/overview'
+    | '/community-tree/'
+    | '/dashboard/'
+    | '/members/'
+    | '/onboarding/create/'
+    | '/onboarding/invitations/'
+    | '/onboarding/success/'
+    | '/members/$id/'
+    | '/profile/addresses/'
+    | '/profile/info/'
+    | '/profile/relationships/'
+    | '/settings/fields/'
+    | '/settings/members/'
+    | '/settings/overview/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/memories'
+    | '/api/auth/$'
     | '/community-tree'
     | '/dashboard'
     | '/members'
-    | '/memories'
     | '/onboarding/create'
     | '/onboarding/invitations'
     | '/onboarding/success'
-    | '/api/auth/$'
+    | '/members/$id'
     | '/profile/addresses'
     | '/profile/info'
     | '/profile/relationships'
@@ -230,20 +242,21 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/login'
     | '/_authed/_community'
-    | '/_authed/_community/community-tree'
-    | '/_authed/_community/dashboard'
-    | '/_authed/_community/members'
     | '/_authed/_community/memories'
-    | '/_authed/onboarding/create'
-    | '/_authed/onboarding/invitations'
-    | '/_authed/onboarding/success'
     | '/api/auth/$'
-    | '/_authed/_community/profile/addresses'
-    | '/_authed/_community/profile/info'
-    | '/_authed/_community/profile/relationships'
-    | '/_authed/_community/settings/fields'
-    | '/_authed/_community/settings/members'
-    | '/_authed/_community/settings/overview'
+    | '/_authed/_community/community-tree/'
+    | '/_authed/_community/dashboard/'
+    | '/_authed/_community/members/'
+    | '/_authed/onboarding/create/'
+    | '/_authed/onboarding/invitations/'
+    | '/_authed/onboarding/success/'
+    | '/_authed/_community/members/$id/'
+    | '/_authed/_community/profile/addresses/'
+    | '/_authed/_community/profile/info/'
+    | '/_authed/_community/profile/relationships/'
+    | '/_authed/_community/settings/fields/'
+    | '/_authed/_community/settings/members/'
+    | '/_authed/_community/settings/overview/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -290,27 +303,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/onboarding/success': {
-      id: '/_authed/onboarding/success'
-      path: '/onboarding/success'
-      fullPath: '/onboarding/success'
-      preLoaderRoute: typeof AuthedOnboardingSuccessRouteRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/onboarding/invitations': {
-      id: '/_authed/onboarding/invitations'
-      path: '/onboarding/invitations'
-      fullPath: '/onboarding/invitations'
-      preLoaderRoute: typeof AuthedOnboardingInvitationsRouteRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/onboarding/create': {
-      id: '/_authed/onboarding/create'
-      path: '/onboarding/create'
-      fullPath: '/onboarding/create'
-      preLoaderRoute: typeof AuthedOnboardingCreateRouteRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/_community/memories': {
       id: '/_authed/_community/memories'
       path: '/memories'
@@ -318,102 +310,132 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityMemoriesRouteRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/members': {
-      id: '/_authed/_community/members'
+    '/_authed/onboarding/success/': {
+      id: '/_authed/onboarding/success/'
+      path: '/onboarding/success'
+      fullPath: '/onboarding/success/'
+      preLoaderRoute: typeof AuthedOnboardingSuccessIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/onboarding/invitations/': {
+      id: '/_authed/onboarding/invitations/'
+      path: '/onboarding/invitations'
+      fullPath: '/onboarding/invitations/'
+      preLoaderRoute: typeof AuthedOnboardingInvitationsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/onboarding/create/': {
+      id: '/_authed/onboarding/create/'
+      path: '/onboarding/create'
+      fullPath: '/onboarding/create/'
+      preLoaderRoute: typeof AuthedOnboardingCreateIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/_community/members/': {
+      id: '/_authed/_community/members/'
       path: '/members'
-      fullPath: '/members'
-      preLoaderRoute: typeof AuthedCommunityMembersRouteRouteImport
+      fullPath: '/members/'
+      preLoaderRoute: typeof AuthedCommunityMembersIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/dashboard': {
-      id: '/_authed/_community/dashboard'
+    '/_authed/_community/dashboard/': {
+      id: '/_authed/_community/dashboard/'
       path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthedCommunityDashboardRouteRouteImport
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof AuthedCommunityDashboardIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/community-tree': {
-      id: '/_authed/_community/community-tree'
+    '/_authed/_community/community-tree/': {
+      id: '/_authed/_community/community-tree/'
       path: '/community-tree'
-      fullPath: '/community-tree'
-      preLoaderRoute: typeof AuthedCommunityCommunityTreeRouteRouteImport
+      fullPath: '/community-tree/'
+      preLoaderRoute: typeof AuthedCommunityCommunityTreeIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/settings/overview': {
-      id: '/_authed/_community/settings/overview'
+    '/_authed/_community/settings/overview/': {
+      id: '/_authed/_community/settings/overview/'
       path: '/settings/overview'
-      fullPath: '/settings/overview'
-      preLoaderRoute: typeof AuthedCommunitySettingsOverviewRouteRouteImport
+      fullPath: '/settings/overview/'
+      preLoaderRoute: typeof AuthedCommunitySettingsOverviewIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/settings/members': {
-      id: '/_authed/_community/settings/members'
+    '/_authed/_community/settings/members/': {
+      id: '/_authed/_community/settings/members/'
       path: '/settings/members'
-      fullPath: '/settings/members'
-      preLoaderRoute: typeof AuthedCommunitySettingsMembersRouteRouteImport
+      fullPath: '/settings/members/'
+      preLoaderRoute: typeof AuthedCommunitySettingsMembersIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/settings/fields': {
-      id: '/_authed/_community/settings/fields'
+    '/_authed/_community/settings/fields/': {
+      id: '/_authed/_community/settings/fields/'
       path: '/settings/fields'
-      fullPath: '/settings/fields'
-      preLoaderRoute: typeof AuthedCommunitySettingsFieldsRouteRouteImport
+      fullPath: '/settings/fields/'
+      preLoaderRoute: typeof AuthedCommunitySettingsFieldsIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/profile/relationships': {
-      id: '/_authed/_community/profile/relationships'
+    '/_authed/_community/profile/relationships/': {
+      id: '/_authed/_community/profile/relationships/'
       path: '/profile/relationships'
-      fullPath: '/profile/relationships'
-      preLoaderRoute: typeof AuthedCommunityProfileRelationshipsRouteRouteImport
+      fullPath: '/profile/relationships/'
+      preLoaderRoute: typeof AuthedCommunityProfileRelationshipsIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/profile/info': {
-      id: '/_authed/_community/profile/info'
+    '/_authed/_community/profile/info/': {
+      id: '/_authed/_community/profile/info/'
       path: '/profile/info'
-      fullPath: '/profile/info'
-      preLoaderRoute: typeof AuthedCommunityProfileInfoRouteRouteImport
+      fullPath: '/profile/info/'
+      preLoaderRoute: typeof AuthedCommunityProfileInfoIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/profile/addresses': {
-      id: '/_authed/_community/profile/addresses'
+    '/_authed/_community/profile/addresses/': {
+      id: '/_authed/_community/profile/addresses/'
       path: '/profile/addresses'
-      fullPath: '/profile/addresses'
-      preLoaderRoute: typeof AuthedCommunityProfileAddressesRouteRouteImport
+      fullPath: '/profile/addresses/'
+      preLoaderRoute: typeof AuthedCommunityProfileAddressesIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
+    '/_authed/_community/members/$id/': {
+      id: '/_authed/_community/members/$id/'
+      path: '/members/$id'
+      fullPath: '/members/$id/'
+      preLoaderRoute: typeof AuthedCommunityMembersIdIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
   }
 }
 
 interface AuthedCommunityRouteChildren {
-  AuthedCommunityCommunityTreeRouteRoute: typeof AuthedCommunityCommunityTreeRouteRoute
-  AuthedCommunityDashboardRouteRoute: typeof AuthedCommunityDashboardRouteRoute
-  AuthedCommunityMembersRouteRoute: typeof AuthedCommunityMembersRouteRoute
   AuthedCommunityMemoriesRouteRoute: typeof AuthedCommunityMemoriesRouteRoute
-  AuthedCommunityProfileAddressesRouteRoute: typeof AuthedCommunityProfileAddressesRouteRoute
-  AuthedCommunityProfileInfoRouteRoute: typeof AuthedCommunityProfileInfoRouteRoute
-  AuthedCommunityProfileRelationshipsRouteRoute: typeof AuthedCommunityProfileRelationshipsRouteRoute
-  AuthedCommunitySettingsFieldsRouteRoute: typeof AuthedCommunitySettingsFieldsRouteRoute
-  AuthedCommunitySettingsMembersRouteRoute: typeof AuthedCommunitySettingsMembersRouteRoute
-  AuthedCommunitySettingsOverviewRouteRoute: typeof AuthedCommunitySettingsOverviewRouteRoute
+  AuthedCommunityCommunityTreeIndexRoute: typeof AuthedCommunityCommunityTreeIndexRoute
+  AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
+  AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
+  AuthedCommunityMembersIdIndexRoute: typeof AuthedCommunityMembersIdIndexRoute
+  AuthedCommunityProfileAddressesIndexRoute: typeof AuthedCommunityProfileAddressesIndexRoute
+  AuthedCommunityProfileInfoIndexRoute: typeof AuthedCommunityProfileInfoIndexRoute
+  AuthedCommunityProfileRelationshipsIndexRoute: typeof AuthedCommunityProfileRelationshipsIndexRoute
+  AuthedCommunitySettingsFieldsIndexRoute: typeof AuthedCommunitySettingsFieldsIndexRoute
+  AuthedCommunitySettingsMembersIndexRoute: typeof AuthedCommunitySettingsMembersIndexRoute
+  AuthedCommunitySettingsOverviewIndexRoute: typeof AuthedCommunitySettingsOverviewIndexRoute
 }
 
 const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
-  AuthedCommunityCommunityTreeRouteRoute:
-    AuthedCommunityCommunityTreeRouteRoute,
-  AuthedCommunityDashboardRouteRoute: AuthedCommunityDashboardRouteRoute,
-  AuthedCommunityMembersRouteRoute: AuthedCommunityMembersRouteRoute,
   AuthedCommunityMemoriesRouteRoute: AuthedCommunityMemoriesRouteRoute,
-  AuthedCommunityProfileAddressesRouteRoute:
-    AuthedCommunityProfileAddressesRouteRoute,
-  AuthedCommunityProfileInfoRouteRoute: AuthedCommunityProfileInfoRouteRoute,
-  AuthedCommunityProfileRelationshipsRouteRoute:
-    AuthedCommunityProfileRelationshipsRouteRoute,
-  AuthedCommunitySettingsFieldsRouteRoute:
-    AuthedCommunitySettingsFieldsRouteRoute,
-  AuthedCommunitySettingsMembersRouteRoute:
-    AuthedCommunitySettingsMembersRouteRoute,
-  AuthedCommunitySettingsOverviewRouteRoute:
-    AuthedCommunitySettingsOverviewRouteRoute,
+  AuthedCommunityCommunityTreeIndexRoute:
+    AuthedCommunityCommunityTreeIndexRoute,
+  AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
+  AuthedCommunityMembersIndexRoute: AuthedCommunityMembersIndexRoute,
+  AuthedCommunityMembersIdIndexRoute: AuthedCommunityMembersIdIndexRoute,
+  AuthedCommunityProfileAddressesIndexRoute:
+    AuthedCommunityProfileAddressesIndexRoute,
+  AuthedCommunityProfileInfoIndexRoute: AuthedCommunityProfileInfoIndexRoute,
+  AuthedCommunityProfileRelationshipsIndexRoute:
+    AuthedCommunityProfileRelationshipsIndexRoute,
+  AuthedCommunitySettingsFieldsIndexRoute:
+    AuthedCommunitySettingsFieldsIndexRoute,
+  AuthedCommunitySettingsMembersIndexRoute:
+    AuthedCommunitySettingsMembersIndexRoute,
+  AuthedCommunitySettingsOverviewIndexRoute:
+    AuthedCommunitySettingsOverviewIndexRoute,
 }
 
 const AuthedCommunityRouteWithChildren = AuthedCommunityRoute._addFileChildren(
@@ -422,16 +444,16 @@ const AuthedCommunityRouteWithChildren = AuthedCommunityRoute._addFileChildren(
 
 interface AuthedRouteChildren {
   AuthedCommunityRoute: typeof AuthedCommunityRouteWithChildren
-  AuthedOnboardingCreateRouteRoute: typeof AuthedOnboardingCreateRouteRoute
-  AuthedOnboardingInvitationsRouteRoute: typeof AuthedOnboardingInvitationsRouteRoute
-  AuthedOnboardingSuccessRouteRoute: typeof AuthedOnboardingSuccessRouteRoute
+  AuthedOnboardingCreateIndexRoute: typeof AuthedOnboardingCreateIndexRoute
+  AuthedOnboardingInvitationsIndexRoute: typeof AuthedOnboardingInvitationsIndexRoute
+  AuthedOnboardingSuccessIndexRoute: typeof AuthedOnboardingSuccessIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCommunityRoute: AuthedCommunityRouteWithChildren,
-  AuthedOnboardingCreateRouteRoute: AuthedOnboardingCreateRouteRoute,
-  AuthedOnboardingInvitationsRouteRoute: AuthedOnboardingInvitationsRouteRoute,
-  AuthedOnboardingSuccessRouteRoute: AuthedOnboardingSuccessRouteRoute,
+  AuthedOnboardingCreateIndexRoute: AuthedOnboardingCreateIndexRoute,
+  AuthedOnboardingInvitationsIndexRoute: AuthedOnboardingInvitationsIndexRoute,
+  AuthedOnboardingSuccessIndexRoute: AuthedOnboardingSuccessIndexRoute,
 }
 
 const AuthedRouteWithChildren =

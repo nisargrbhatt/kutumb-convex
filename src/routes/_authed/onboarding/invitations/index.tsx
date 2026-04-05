@@ -17,7 +17,7 @@ import { GalleryVerticalEnd } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authed/onboarding/invitations")({
+export const Route = createFileRoute("/_authed/onboarding/invitations/")({
 	component: RouteComponent,
 	loader: async () => {
 		const response = await listMyOrganizationInvitations();

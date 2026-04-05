@@ -38,7 +38,7 @@ import { Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-export const Route = createFileRoute("/_authed/_community/settings/fields")({
+export const Route = createFileRoute("/_authed/_community/settings/fields/")({
 	component: RouteComponent,
 	loader: async ({ context }) => {
 		await context.queryClient.ensureQueryData(getOrganizationCustomFieldsQuery());
