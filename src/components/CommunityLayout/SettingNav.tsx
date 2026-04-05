@@ -5,11 +5,13 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	useSidebar,
 } from "../ui/sidebar";
-import { LayoutDashboard } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { IconAffiliate, IconInputSearch, IconUser } from "@tabler/icons-react";
 
 export function SettingNav() {
+	const { toggleSidebar, isMobile, open } = useSidebar();
 	const { data: activeMemberRole } = authClient.useActiveMemberRole();
 
 	if (activeMemberRole?.role !== "owner") {
@@ -20,26 +22,59 @@ export function SettingNav() {
 		<SidebarGroup>
 			<SidebarGroupLabel>Settings</SidebarGroupLabel>
 			<SidebarMenu>
-				<SidebarMenuItem>
+				<SidebarMenuItem
+					onClick={() => {
+						if (open && isMobile) {
+							toggleSidebar();
+						}
+					}}
+				>
 					<SidebarMenuButton asChild>
-						<Link to={"/settings/overview"}>
-							<LayoutDashboard />
+						<Link
+							to={"/settings/overview"}
+							activeProps={{
+								className: "bg-muted",
+							}}
+						>
+							<IconAffiliate />
 							<span>Overview</span>
 						</Link>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
-				<SidebarMenuItem>
+				<SidebarMenuItem
+					onClick={() => {
+						if (open && isMobile) {
+							toggleSidebar();
+						}
+					}}
+				>
 					<SidebarMenuButton asChild>
-						<Link to={"/settings/fields"}>
-							<LayoutDashboard />
+						<Link
+							to={"/settings/fields"}
+							activeProps={{
+								className: "bg-muted",
+							}}
+						>
+							<IconInputSearch />
 							<span>Fields</span>
 						</Link>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
-				<SidebarMenuItem>
+				<SidebarMenuItem
+					onClick={() => {
+						if (open && isMobile) {
+							toggleSidebar();
+						}
+					}}
+				>
 					<SidebarMenuButton asChild>
-						<Link to={"/settings/members"}>
-							<LayoutDashboard />
+						<Link
+							to={"/settings/members"}
+							activeProps={{
+								className: "bg-muted",
+							}}
+						>
+							<IconUser />
 							<span>Members</span>
 						</Link>
 					</SidebarMenuButton>
