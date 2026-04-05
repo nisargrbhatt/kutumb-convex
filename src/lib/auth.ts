@@ -189,12 +189,14 @@ export const auth = betterAuth({
 		session: {
 			create: {
 				before: async (session) => {
+					console.log("databaseHook session", session);
 					const firstOrganization = await db.query.member.findFirst({
 						where: (fields, operators) => operators.eq(fields.userId, session.userId),
 						columns: {
 							organizationId: true,
 						},
 					});
+					console.log("databaseHook session firstOrganization", firstOrganization);
 					return {
 						data: {
 							...session,
