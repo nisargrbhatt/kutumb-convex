@@ -23,6 +23,11 @@ jobs:
         run: npm ci
       - name: build
         run: npm run build
+      - name: Add Env vars
+        run: |
+          touch .env
+          echo VITE_PUBLIC_POSTHOG_PROJECT_TOKEN=${{ secrets.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }} >> .env
+          echo VITE_PUBLIC_POSTHOG_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_HOST }} >> .env
       - name: Build & Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
