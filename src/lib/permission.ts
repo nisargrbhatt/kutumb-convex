@@ -8,7 +8,7 @@ import {
 
 export const statement = {
 	...defaultStatements,
-	communityProfile: ["create", "approve", "reject", "delete"],
+	communityProfile: ["create", "approve", "reject", "delete", "reassign"],
 	customFields: ["create", "read", "delete"],
 } as const;
 
@@ -22,12 +22,12 @@ export const member = ac.newRole({
 
 export const admin = ac.newRole({
 	...adminAc.statements,
-	communityProfile: ["create", "approve", "reject"],
+	communityProfile: ["create", "approve", "reject", "reassign"],
 	customFields: ["read"],
 });
 
 export const owner = ac.newRole({
 	...ownerAc.statements,
-	communityProfile: ["create", "approve", "reject", "delete"],
+	communityProfile: ["create", "approve", "reject", "delete", "reassign"],
 	customFields: ["read", "create", "delete"],
 });

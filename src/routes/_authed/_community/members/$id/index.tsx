@@ -1,6 +1,11 @@
-import { getCommunityMemberById } from "@/api/communityProfile";
+import {
+	acceptCommunityProfile,
+	getCommunityMemberById,
+	reassignProfileToUser,
+	rejectCommunityProfile,
+} from "@/api/communityProfile";
 import { safeAsync } from "@/lib/safe";
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { createFileRoute, notFound, Link, useRouter } from "@tanstack/react-router";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,8 +22,6 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { format } from "date-fns";
 import {
-	CheckCircle,
-	XCircle,
 	MapPin,
 	Mail,
 	Phone,
@@ -27,8 +30,49 @@ import {
 	User,
 	Info,
 	Building,
+	CheckIcon,
+	XIcon,
+	BadgeCheckIcon,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
+import {
+	Combobox,
+	ComboboxContent,
+	ComboboxEmpty,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxList,
+} from "@/components/ui/combobox";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 
 export const Route = createFileRoute("/_authed/_community/members/$id/")({
 	component: RouteComponent,
@@ -97,6 +141,226 @@ const StatusBadge = ({ status }: { status: string }) => {
 	);
 };
 
+const formSchema = z.object({
+	userId: z.string().trim().min(1, "User is required"),
+});
+
+function MemberActions() {
+	const router = useRouter();
+	const { profile } = Route.useLoaderData();
+	const [showReassignDialog, setShowReassignDialog] = useState(false);
+	const { data: activeOrg } = authClient.useActiveOrganization();
+
+	const orgMembers = activeOrg?.members ?? [];
+	const form = useForm<z.infer<typeof formSchema>>({
+		resolver: zodResolver(formSchema),
+		defaultValues: {
+			userId: "",
+		},
+	});
+
+	const acceptMember = async () => {
+		const result = await safeAsync(
+			acceptCommunityProfile({
+				data: {
+					memberId: profile.id,
+				},
+			})
+		);
+
+		if (!result.success) {
+			console.error(result.error);
+			toast.error("Profile", {
+				description: "Failed to accept profile",
+			});
+			return;
+		}
+
+		toast.success("Profile", {
+			description: "Profile accepted successfully",
+		});
+
+		router.invalidate();
+	};
+	const rejectMember = async () => {
+		const result = await safeAsync(
+			rejectCommunityProfile({
+				data: {
+					memberId: profile.id,
+				},
+			})
+		);
+
+		if (!result.success) {
+			console.error(result.error);
+			toast.error("Profile", {
+				description: "Failed to reject profile",
+			});
+			return;
+		}
+
+		toast.success("Profile", {
+			description: "Profile rejected successfully",
+		});
+
+		router.invalidate();
+	};
+
+	const openReassignDialog = () => {
+		setShowReassignDialog(() => true);
+	};
+
+	const closeReassignDialog = () => {
+		setShowReassignDialog(() => false);
+	};
+
+	const handleReassign = form.handleSubmit(async (values) => {
+		const result = await safeAsync(
+			reassignProfileToUser({
+				data: {
+					userId: values.userId,
+					memberId: profile.id,
+				},
+			})
+		);
+
+		if (!result.success) {
+			console.error(result.error);
+			toast.error("Profile", {
+				description: "Failed to reassign profile",
+			});
+			return;
+		}
+
+		toast.success("Profile", {
+			description: "Profile reassigned successfully",
+		});
+
+		router.invalidate();
+		closeReassignDialog();
+	});
+
+	const showProfileActions = profile?.status === "draft";
+	const showReassignAction = typeof profile?.userId !== "string";
+
+	if (!showProfileActions && !showReassignAction) {
+		return null;
+	}
+
+	return (
+		<>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button variant="outline">Actions</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent>
+					{showProfileActions ? (
+						<DropdownMenuGroup>
+							<DropdownMenuLabel>Profile Decision</DropdownMenuLabel>
+							<DropdownMenuItem onClick={acceptMember}>
+								<CheckIcon />
+								Accept
+							</DropdownMenuItem>
+							<DropdownMenuItem onClick={rejectMember}>
+								<XIcon />
+								Reject
+							</DropdownMenuItem>
+						</DropdownMenuGroup>
+					) : null}
+					{showReassignAction ? (
+						<DropdownMenuGroup>
+							<DropdownMenuLabel>Profile Assign</DropdownMenuLabel>
+							<DropdownMenuItem onClick={openReassignDialog}>
+								<User />
+								Assign to User
+							</DropdownMenuItem>
+						</DropdownMenuGroup>
+					) : null}
+				</DropdownMenuContent>
+			</DropdownMenu>
+			<Dialog open={showReassignDialog}>
+				<Form {...form}>
+					<form onSubmit={handleReassign}>
+						<DialogContent className="sm:max-w-md">
+							<DialogHeader>
+								<DialogTitle>Assign User</DialogTitle>
+								<DialogDescription>
+									This profile is added without any user. Assign a logged in user to this profile if
+									you want to link this profile with a user.
+								</DialogDescription>
+							</DialogHeader>
+							<FormField
+								control={form.control}
+								name="userId"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>User</FormLabel>
+										<FormControl>
+											<Combobox
+												items={orgMembers}
+												itemToStringLabel={(i: (typeof orgMembers)[0]) => i?.user?.name ?? ""}
+												onValueChange={(newVal) => {
+													field.onChange(newVal?.userId);
+												}}
+												name={field.name}
+												value={orgMembers?.find((o) => o.userId === field.value)}
+											>
+												<ComboboxInput placeholder="Select a person" />
+												<ComboboxContent>
+													<ComboboxEmpty>No items found.</ComboboxEmpty>
+													<ComboboxList>
+														{(item) => (
+															<ComboboxItem key={item.id} value={item}>
+																<Item size="xs" className="p-0">
+																	<ItemContent>
+																		<ItemTitle className="whitespace-nowrap">
+																			{item?.user?.name}
+																		</ItemTitle>
+																		<ItemDescription>{item?.user?.email}</ItemDescription>
+																	</ItemContent>
+																</Item>
+															</ComboboxItem>
+														)}
+													</ComboboxList>
+												</ComboboxContent>
+											</Combobox>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<Item variant="outline" size="xs">
+								<ItemMedia>
+									<BadgeCheckIcon className="size-5" />
+								</ItemMedia>
+								<ItemContent>
+									<ItemTitle>
+										Every user can only have 1 profile linked to them. This is a irreversible
+										action.
+									</ItemTitle>
+								</ItemContent>
+							</Item>
+							<DialogFooter>
+								<Button type="button" variant="outline" onClick={closeReassignDialog}>
+									Cancel
+								</Button>
+
+								<Button
+									type="submit"
+									onClick={handleReassign}
+									disabled={form.formState.isSubmitting}
+								>
+									Save changes
+								</Button>
+							</DialogFooter>
+						</DialogContent>
+					</form>
+				</Form>
+			</Dialog>
+		</>
+	);
+}
+
 function RouteComponent() {
 	const { profile, addresses, customFields } = Route.useLoaderData();
 	const { data: activeMemberRole } = authClient.useActiveMemberRole();
@@ -107,8 +371,6 @@ function RouteComponent() {
 	const initials = (profile.firstName?.[0] || "") + (profile.lastName?.[0] || "");
 
 	const showActionBlock = activeMemberRole?.role === "admin" || activeMemberRole?.role === "owner";
-
-	const acceptProfile = async () => {};
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 overflow-y-auto p-2">
@@ -122,7 +384,7 @@ function RouteComponent() {
 
 					<div className="relative flex flex-col justify-between gap-6 p-6 sm:flex-row sm:items-center">
 						<div className="flex items-center gap-6">
-							<div className="rounded-full bg-gradient-to-br from-primary/20 to-primary/10 p-2 shadow-sm ring-1 ring-primary/10">
+							<div className="rounded-full bg-linear-to-br from-primary/20 to-primary/10 p-2 shadow-sm ring-1 ring-primary/10">
 								<Avatar className="size-20 border-2 border-background shadow-sm sm:size-24">
 									<AvatarFallback className="text-2xl font-light text-primary">
 										{initials.toUpperCase()}
@@ -158,19 +420,7 @@ function RouteComponent() {
 								)}
 							</div>
 						</div>
-						{showActionBlock ? (
-							<div className="flex items-center gap-3 self-start rounded-xl border border-border/50 bg-muted/50 p-1.5 sm:self-center">
-								<Button
-									variant="ghost"
-									className="rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400"
-								>
-									<XCircle className="mr-2 size-4" /> Reject
-								</Button>
-								<Button className="rounded-lg shadow-sm">
-									<CheckCircle className="mr-2 size-4" /> Accept
-								</Button>
-							</div>
-						) : null}
+						{showActionBlock ? <MemberActions /> : null}
 					</div>
 				</div>
 

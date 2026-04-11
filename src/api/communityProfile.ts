@@ -7,6 +7,8 @@ import { COMMUNITY_PROFILE_BLOOD_GROUP, COMMUNITY_PROFILE_STATUS, GENDERS } from
 import { communityProfile } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { and, count, eq, like, sql } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -405,5 +407,186 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 			profile: communityProfile,
 			addresses: profileAddresses,
 			customFields: customFields?.map((i) => i.label),
+		};
+	});
+
+export const acceptCommunityProfile = createServerFn({ method: "POST" })
+	.inputValidator(
+		z.object({
+			memberId: z.string().describe("Community Profile Id"),
+		})
+	)
+	.middleware([authMiddleware])
+	.handler(async ({ data, context }) => {
+		const canApproveCommunityProfile = await auth.api.hasPermission({
+			headers: getRequestHeaders(),
+			body: {
+				permissions: {
+					communityProfile: ["approve"],
+				},
+			},
+		});
+
+		if (!canApproveCommunityProfile.success) {
+			throw new Error("You do not have permission to approve this resource");
+		}
+
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const existingProfile = await db.query.communityProfile.findFirst({
+			where: (fields, operators) =>
+				operators.and(
+					operators.eq(fields.id, data.memberId),
+					operators.eq(fields.organizationId, organizationId),
+					operators.eq(fields.status, COMMUNITY_PROFILE_STATUS.draft)
+				),
+			columns: {
+				id: true,
+			},
+		});
+
+		if (!existingProfile) {
+			throw new Error("Community Profile not found which is in draft state");
+		}
+
+		await db
+			.update(communityProfile)
+			.set({
+				status: COMMUNITY_PROFILE_STATUS.active,
+			})
+			.where(eq(communityProfile.id, data.memberId));
+
+		return {
+			message: "Community Profile accepted successfully",
+		};
+	});
+
+export const rejectCommunityProfile = createServerFn({ method: "POST" })
+	.inputValidator(
+		z.object({
+			memberId: z.string().describe("Community Profile Id"),
+		})
+	)
+	.middleware([authMiddleware])
+	.handler(async ({ data, context }) => {
+		const canRejectCommunityProfile = await auth.api.hasPermission({
+			headers: getRequestHeaders(),
+			body: {
+				permissions: {
+					communityProfile: ["reject"],
+				},
+			},
+		});
+
+		if (!canRejectCommunityProfile.success) {
+			throw new Error("You do not have permission to reject this resource");
+		}
+
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const existingProfile = await db.query.communityProfile.findFirst({
+			where: (fields, operators) =>
+				operators.and(
+					operators.eq(fields.id, data.memberId),
+					operators.eq(fields.organizationId, organizationId),
+					operators.eq(fields.status, COMMUNITY_PROFILE_STATUS.draft)
+				),
+			columns: {
+				id: true,
+			},
+		});
+
+		if (!existingProfile) {
+			throw new Error("Community Profile not found which is in draft state");
+		}
+
+		await db
+			.update(communityProfile)
+			.set({
+				status: COMMUNITY_PROFILE_STATUS.inactive,
+			})
+			.where(eq(communityProfile.id, data.memberId));
+
+		return {
+			message: "Community Profile rejected successfully",
+		};
+	});
+
+export const reassignProfileToUser = createServerFn({ method: "POST" })
+	.middleware([authMiddleware])
+	.inputValidator(
+		z.object({
+			memberId: z.string(),
+			userId: z.string(),
+		})
+	)
+	.handler(async ({ context, data }) => {
+		const canReassignCommunityProfile = await auth.api.hasPermission({
+			headers: getRequestHeaders(),
+			body: {
+				permissions: {
+					communityProfile: ["reassign"],
+				},
+			},
+		});
+
+		if (!canReassignCommunityProfile.success) {
+			throw new Error("You do not have permission to reassign this resource");
+		}
+
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		if (data.userId === context?.userId) {
+			throw new Error("Can't assign profile to yourself");
+		}
+
+		const user = await db.query.user.findFirst({
+			where: (fields, operators) => operators.eq(fields.id, data.userId),
+			columns: {
+				id: true,
+			},
+		});
+
+		if (!user) {
+			throw new Error("User doesn't exist");
+		}
+
+		const memberProfile = await db.query.communityProfile.findFirst({
+			where: (fields, operators) =>
+				operators.and(
+					operators.eq(fields.id, data.memberId),
+					operators.eq(fields.organizationId, organizationId),
+					operators.isNull(fields.userId)
+				),
+			columns: {
+				id: true,
+			},
+		});
+
+		if (!memberProfile) {
+			throw new Error("Member profile doesn't exist or already has linked user");
+		}
+
+		await db
+			.update(communityProfile)
+			.set({
+				userId: user.id,
+			})
+			.where(eq(communityProfile.id, memberProfile.id));
+
+		return {
+			message: "Profile reassigned successfully",
 		};
 	});
