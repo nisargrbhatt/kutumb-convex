@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import * as z from "zod";
 import { RootLayout } from "@/components/RootLayout";
+import { usePostHog } from "@posthog/react";
 
 export const Route = createFileRoute("/login")({
 	component: RouteComponent,
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/login")({
 
 function RouteComponent() {
 	const { redirectTo } = Route.useSearch();
+	const posthog = usePostHog();
 
 	const [loading, setLoading] = useState(false);
 
@@ -44,6 +46,7 @@ function RouteComponent() {
 									className={cn("w-full gap-2")}
 									disabled={loading}
 									onClick={async () => {
+										posthog.capture("sign_in_initiated", { provider: "google" });
 										await authClient.signIn.social(
 											{
 												provider: "google",

@@ -6,6 +6,8 @@ import appCss from "../styles.css?url";
 import { authStateFn } from "@/handler/auth";
 import type { QueryClient } from "@tanstack/react-query";
 import { Toaster } from "sonner";
+import { PostHogProvider } from "@posthog/react";
+import PostHogUserIdentifier from "@/components/PostHogUserIdentifier";
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient;
@@ -48,23 +50,35 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				<Toaster />
-				{children}
-				<TanStackDevtools
-					config={{
-						position: "bottom-right",
+				<PostHogProvider
+					apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN!}
+					options={{
+						api_host: "/ingest",
+						ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || "https://us.posthog.com",
+						defaults: "2025-05-24",
+						capture_exceptions: true,
+						debug: import.meta.env.DEV,
 					}}
-					plugins={[
-						{
-							name: "Tanstack Router",
-							render: <TanStackRouterDevtoolsPanel />,
-						},
-						{
-							name: "Tanstack Query",
-							render: <ReactQueryDevtoolsPanel />,
-						},
-					]}
-				/>
+				>
+					<PostHogUserIdentifier />
+					<Toaster />
+					{children}
+					<TanStackDevtools
+						config={{
+							position: "bottom-right",
+						}}
+						plugins={[
+							{
+								name: "Tanstack Router",
+								render: <TanStackRouterDevtoolsPanel />,
+							},
+							{
+								name: "Tanstack Query",
+								render: <ReactQueryDevtoolsPanel />,
+							},
+						]}
+					/>
+				</PostHogProvider>
 				<Scripts />
 			</body>
 		</html>

@@ -42,6 +42,18 @@ import { Button } from "@/components/ui/button";
 import { useId } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { usePostHog } from "@posthog/react";
 
 export const Route = createFileRoute("/_authed/_community/settings/members/")({
 	component: RouteComponent,
@@ -81,6 +93,7 @@ const formSchema = z.object({
 
 function AddOrganizationMemberForm() {
 	const formId = useId();
+	const posthog = usePostHog();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -104,6 +117,9 @@ function AddOrganizationMemberForm() {
 			});
 			return;
 		}
+		posthog.capture("org_member_invited", {
+			role: values.role,
+		});
 		toast.success("Member", {
 			description: "Member invited successfully",
 		});
@@ -167,6 +183,7 @@ function AddOrganizationMemberForm() {
 
 function OrganizationMemberList() {
 	const { data: activeOrganization } = authClient.useActiveOrganization();
+	const posthog = usePostHog();
 
 	const handleRemoveFromOrg = async (memberId: string) => {
 		const { error } = await authClient.organization.removeMember({
@@ -180,6 +197,7 @@ function OrganizationMemberList() {
 			});
 			return;
 		}
+		posthog.capture("org_member_removed", { member_id: memberId });
 		toast.success("Member", {
 			description: "Member removed successfully",
 		});
@@ -199,16 +217,32 @@ function OrganizationMemberList() {
 						<ItemDescription>{member?.user?.email}</ItemDescription>
 					</ItemContent>
 					<ItemActions>
-						<Button
-							variant="outline"
-							size="sm"
-							type="button"
-							onClick={() => {
-								handleRemoveFromOrg(member.id);
-							}}
-						>
-							Remove
-						</Button>
+						<AlertDialog>
+							<AlertDialogTrigger asChild>
+								<Button variant="outline" size="sm" type="button">
+									Remove
+								</Button>
+							</AlertDialogTrigger>
+							<AlertDialogContent>
+								<AlertDialogHeader>
+									<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+									<AlertDialogDescription>
+										This action cannot be undone. This will permanently remove member from our
+										organization.
+									</AlertDialogDescription>
+								</AlertDialogHeader>
+								<AlertDialogFooter>
+									<AlertDialogCancel>Cancel</AlertDialogCancel>
+									<AlertDialogAction
+										onClick={() => {
+											handleRemoveFromOrg(member.id);
+										}}
+									>
+										Continue
+									</AlertDialogAction>
+								</AlertDialogFooter>
+							</AlertDialogContent>
+						</AlertDialog>
 					</ItemActions>
 				</Item>
 			))}

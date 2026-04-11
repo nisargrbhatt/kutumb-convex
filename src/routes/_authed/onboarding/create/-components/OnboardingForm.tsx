@@ -18,6 +18,7 @@ import { useId } from "react";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Link, useRouter } from "@tanstack/react-router";
+import { usePostHog } from "@posthog/react";
 
 const formSchema = z.object({
 	name: z
@@ -40,6 +41,7 @@ const formSchema = z.object({
 export function OnboardingForm() {
 	const router = useRouter();
 	const formId = useId();
+	const posthog = usePostHog();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		defaultValues: {
@@ -55,6 +57,10 @@ export function OnboardingForm() {
 		});
 
 		if (!data) {
+			posthog.capture("organization_create_failed", {
+				reason: "slug_conflict",
+				slug: values.slug,
+			});
 			toast.error("Organization slug already exist", {
 				description: "Please try another slug.",
 			});
@@ -64,6 +70,10 @@ export function OnboardingForm() {
 			return;
 		}
 		if (data?.status === false) {
+			posthog.capture("organization_create_failed", {
+				reason: "slug_conflict",
+				slug: values.slug,
+			});
 			toast.error("Organization slug already exist", {
 				description: "Please try another slug.",
 			});
@@ -81,11 +91,21 @@ export function OnboardingForm() {
 		});
 
 		if (createOrgError) {
+			posthog.capture("organization_create_failed", {
+				reason: "server_error",
+				name: values.name,
+				slug: values.slug,
+			});
 			toast.error("Failed to create organization", {
 				description: "Please try again later.",
 			});
 			return;
 		}
+
+		posthog.capture("organization_created", {
+			organization_name: values.name,
+			organization_slug: values.slug,
+		});
 
 		toast.success("Organization created successfully", {
 			description: "You can now access your organization. Redirecting you to dashboard",

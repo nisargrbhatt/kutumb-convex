@@ -16,6 +16,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
+import { usePostHog } from "@posthog/react";
 
 export const Route = createFileRoute("/_authed/onboarding/invitations/")({
 	component: RouteComponent,
@@ -25,8 +26,9 @@ export const Route = createFileRoute("/_authed/onboarding/invitations/")({
 	},
 });
 
-function AcceptInvitationAction(props: { invitationId: string }) {
+function AcceptInvitationAction(props: { invitationId: string; organizationName?: string }) {
 	const [isPending, startTransition] = useTransition();
+	const posthog = usePostHog();
 
 	const handleAccept = async () => {
 		startTransition(async () => {
@@ -40,6 +42,10 @@ function AcceptInvitationAction(props: { invitationId: string }) {
 				});
 				return;
 			}
+			posthog.capture("invitation_accepted", {
+				invitation_id: props.invitationId,
+				organization_name: props.organizationName,
+			});
 			toast.success("Invitation", {
 				description: "Invitation accepted successfully",
 			});
@@ -53,8 +59,9 @@ function AcceptInvitationAction(props: { invitationId: string }) {
 	);
 }
 
-function RejectInvitationAction(props: { invitationId: string }) {
+function RejectInvitationAction(props: { invitationId: string; organizationName?: string }) {
 	const [isPending, startTransition] = useTransition();
+	const posthog = usePostHog();
 
 	const handleReject = async () => {
 		startTransition(async () => {
@@ -68,6 +75,10 @@ function RejectInvitationAction(props: { invitationId: string }) {
 				});
 				return;
 			}
+			posthog.capture("invitation_rejected", {
+				invitation_id: props.invitationId,
+				organization_name: props.organizationName,
+			});
 			toast.success("Invitation", {
 				description: "Invitation rejected successfully",
 			});
@@ -134,10 +145,16 @@ function RouteComponent() {
 												<TableCell className="capitalize">{invite.status}</TableCell>
 												<TableCell className="text-right">
 													{invite.status === "pending" ? (
-														<AcceptInvitationAction invitationId={invite.id} />
+														<AcceptInvitationAction
+															invitationId={invite.id}
+															organizationName={invite.organizationName}
+														/>
 													) : null}
 													{invite.status === "pending" ? (
-														<RejectInvitationAction invitationId={invite.id} />
+														<RejectInvitationAction
+															invitationId={invite.id}
+															organizationName={invite.organizationName}
+														/>
 													) : null}
 												</TableCell>
 											</TableRow>

@@ -16,9 +16,10 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import z from "zod";
+import { usePostHog } from "@posthog/react";
 
 export const Route = createFileRoute("/_authed/onboarding/success/")({
 	component: RouteComponent,
@@ -33,10 +34,14 @@ export const Route = createFileRoute("/_authed/onboarding/success/")({
 function RouteComponent() {
 	const { checkout_id } = Route.useSearch();
 	const navigate = Route.useNavigate();
+	const posthog = usePostHog();
+	const capturedRef = useRef(false);
 	const { data: paymentSetupData, refetch } = useQuery(checkCurrentOrgPaymentSetupQuery());
 
 	useEffect(() => {
-		if (paymentSetupData?.paymentSetup === true) {
+		if (paymentSetupData?.paymentSetup === true && !capturedRef.current) {
+			capturedRef.current = true;
+			posthog.capture("payment_completed", { checkout_id });
 			toast.success("Payment done successfully", {
 				description: "Redirecting you to your Organization's dashboard",
 			});

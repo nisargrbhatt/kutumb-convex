@@ -24,6 +24,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
+import { usePostHog } from "@posthog/react";
 
 export const Route = createFileRoute("/_authed/_community/settings/overview/")({
 	component: RouteComponent,
@@ -69,6 +70,7 @@ const formSchema = z.object({
 });
 
 function OrganizationForm(props: { name: string; slug: string; organizationId: string }) {
+	const posthog = usePostHog();
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
@@ -92,6 +94,9 @@ function OrganizationForm(props: { name: string; slug: string; organizationId: s
 			return;
 		}
 
+		posthog.capture("organization_settings_updated", {
+			organization_id: props.organizationId,
+		});
 		toast.success("Organization", {
 			description: "Organization updated successfully",
 		});

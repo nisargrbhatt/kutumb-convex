@@ -44,6 +44,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { usePostHog } from "@posthog/react";
 import {
 	Dialog,
 	DialogContent,
@@ -150,6 +151,7 @@ function MemberActions() {
 	const { profile } = Route.useLoaderData();
 	const [showReassignDialog, setShowReassignDialog] = useState(false);
 	const { data: activeOrg } = authClient.useActiveOrganization();
+	const posthog = usePostHog();
 
 	const orgMembers = activeOrg?.members ?? [];
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -176,6 +178,7 @@ function MemberActions() {
 			return;
 		}
 
+		posthog.capture("member_profile_accepted", { member_id: profile.id });
 		toast.success("Profile", {
 			description: "Profile accepted successfully",
 		});
@@ -199,6 +202,7 @@ function MemberActions() {
 			return;
 		}
 
+		posthog.capture("member_profile_rejected", { member_id: profile.id });
 		toast.success("Profile", {
 			description: "Profile rejected successfully",
 		});
@@ -232,6 +236,10 @@ function MemberActions() {
 			return;
 		}
 
+		posthog.capture("member_profile_reassigned", {
+			member_id: profile.id,
+			assigned_user_id: values.userId,
+		});
 		toast.success("Profile", {
 			description: "Profile reassigned successfully",
 		});
