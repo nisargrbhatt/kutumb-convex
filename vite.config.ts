@@ -6,8 +6,6 @@ import tailwindcss from "@tailwindcss/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import "dotenv/config";
 
-const posthogHost = process.env.VITE_PUBLIC_POSTHOG_HOST;
-
 const config = defineConfig({
 	plugins: [
 		devtools(),
@@ -18,16 +16,6 @@ const config = defineConfig({
 	],
 	server: {
 		allowedHosts: [".trycloudflare.com"],
-		proxy: posthogHost
-			? {
-					"/ingest": {
-						target: posthogHost,
-						changeOrigin: true,
-						rewrite: (path) => path.replace(/^\/ingest/, ""),
-						secure: false,
-					},
-				}
-			: undefined,
 	},
 	resolve: {
 		tsconfigPaths: true,

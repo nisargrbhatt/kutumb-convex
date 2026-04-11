@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community'
+import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
 import { Route as AuthedOnboardingSuccessIndexRouteImport } from './routes/_authed/onboarding/success/index'
@@ -46,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthedCommunityRoute = AuthedCommunityRouteImport.update({
   id: '/_community',
   getParentRoute: () => AuthedRoute,
+} as any)
+const ApiPhSplatRoute = ApiPhSplatRouteImport.update({
+  id: '/api/ph/$',
+  path: '/api/ph/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/ph/$': typeof ApiPhSplatRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/ph/$': typeof ApiPhSplatRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
   '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/ph/$': typeof ApiPhSplatRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
@@ -204,6 +213,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/memories'
     | '/api/auth/$'
+    | '/api/ph/$'
     | '/community-tree/'
     | '/dashboard/'
     | '/members/'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/memories'
     | '/api/auth/$'
+    | '/api/ph/$'
     | '/community-tree'
     | '/dashboard'
     | '/members'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/_authed/_community'
     | '/_authed/_community/memories'
     | '/api/auth/$'
+    | '/api/ph/$'
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
@@ -264,6 +276,7 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiPhSplatRoute: typeof ApiPhSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -295,6 +308,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthedCommunityRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/api/ph/$': {
+      id: '/api/ph/$'
+      path: '/api/ph/$'
+      fullPath: '/api/ph/$'
+      preLoaderRoute: typeof ApiPhSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -464,6 +484,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiPhSplatRoute: ApiPhSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
