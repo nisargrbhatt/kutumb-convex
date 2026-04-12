@@ -21,10 +21,20 @@
 			"sourceType": "github",
 			"computedHash": "9105cc29a462e8d07da45bbdbc90c3a60be3ba32fbd9d99d49944f5b971f8f96"
 		},
+		"email-best-practices": {
+			"source": "resend/email-best-practices",
+			"sourceType": "github",
+			"computedHash": "345d2c8d69ea959172f084b923241772695b73f66a1068787349dffcfd3df4e6"
+		},
 		"organization-best-practices": {
 			"source": "better-auth/skills",
 			"sourceType": "github",
 			"computedHash": "ec7bfca730d9263a357bfb059448035e62339ee58eb6191dfe9029088ed5bdf2"
+		},
+		"react-email": {
+			"source": "resend/react-email",
+			"sourceType": "github",
+			"computedHash": "1d6aaf3440547d384a21f9a9466d89c8a0357d15e0f9b37d0d3c9452861e7a9b"
 		},
 		"shadcn": {
 			"source": "shadcn/ui",

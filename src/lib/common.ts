@@ -1,3 +1,5 @@
 export const EMAIL_CONFIG = {
-	from: "",
+	fromPerson: "Kutumb",
+	fromEmail: "no-reply@kutumb.nisargbhatt.org",
+	from: "Kutumb <no-reply@kutumb.nisargbhatt.org>",
 } as const;

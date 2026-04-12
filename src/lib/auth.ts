@@ -10,6 +10,9 @@ import { polar as polarClient } from "@/lib/polar";
 import { organization as organizationTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { safeAsync, safeSync } from "./safe";
+import { resend } from "./resend";
+import InviteEmail from "@/emails/InviteEmail";
+import { EMAIL_CONFIG } from "./common";
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -26,8 +29,27 @@ export const auth = betterAuth({
 			},
 			sendInvitationEmail: async (payload) => {
 				const inviteLink = `${env.BETTER_AUTH_URL}/onboarding/invitations`;
-				console.log("payload", payload, inviteLink);
-				// [TODO]: Send Invitation Email
+
+				try {
+					const { error } = await resend.emails.send({
+						from: EMAIL_CONFIG.from,
+						to: payload.email,
+						subject: `You've been invited to join ${payload.organization.name}`,
+						react: InviteEmail({
+							organizationName: payload.organization.name,
+							inviterName: payload.inviter?.user?.name,
+							inviterEmail: payload.inviter?.user?.email,
+							inviteLink: inviteLink,
+							role: payload.role,
+						}),
+					});
+
+					if (error) {
+						console.error("Resend API correctly returned error:", error);
+					}
+				} catch (error) {
+					console.error("Failed to send invitation email", error);
+				}
 			},
 			organizationHooks: {
 				afterAddMember: async (payload) => {
