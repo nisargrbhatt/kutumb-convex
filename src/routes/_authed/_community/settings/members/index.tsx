@@ -16,7 +16,7 @@ import {
 	ItemMedia,
 	ItemTitle,
 } from "@/components/ui/item";
-import { BookKeyIcon, CrownIcon, UserIcon } from "lucide-react";
+import { BookKeyIcon, CrownIcon, DeleteIcon, UserIcon } from "lucide-react";
 import * as z from "zod";
 import { ORGANIZATION_ROLES } from "@/db/constants";
 import { useForm } from "react-hook-form";
@@ -39,7 +39,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -54,6 +54,18 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { usePostHog } from "@posthog/react";
+import { useQuery } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { IconReload } from "@tabler/icons-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authed/_community/settings/members/")({
 	component: RouteComponent,
@@ -136,7 +148,7 @@ function AddOrganizationMemberForm() {
 								control={form.control}
 								name="email"
 								render={({ field }) => (
-									<FormItem>
+									<FormItem className="w-full">
 										<FormLabel>Email</FormLabel>
 										<FormControl>
 											<Input placeholder="Email" {...field} />
@@ -250,12 +262,168 @@ function OrganizationMemberList() {
 	);
 }
 
+function OrganizationInviteList() {
+	const posthog = usePostHog();
+	const { data: activeOrg } = authClient.useActiveOrganization();
+	const { data, isLoading, error, refetch } = useQuery({
+		queryKey: ["org_invites"],
+		queryFn: async () => {
+			const { data, error } = await authClient.organization.listInvitations();
+
+			if (error) {
+				throw error;
+			}
+
+			return data;
+		},
+	});
+
+	useEffect(() => {
+		if (error) {
+			console.error(error);
+		}
+	}, [error]);
+
+	const deleteInvite = async (inviteId: string) => {
+		const { error } = await authClient.organization.cancelInvitation({
+			invitationId: inviteId,
+		});
+
+		if (error) {
+			console.error(error);
+			toast.error("Invitation", {
+				description: error?.message ?? "Invitation could not be cancelled",
+			});
+			return;
+		}
+
+		toast.success("Invitation", {
+			description: "Invitation cancelled successfully",
+		});
+		refetch();
+	};
+
+	const resendInvite = async (inviteId: string) => {
+		const inviteObj = data?.find((i) => i.id === inviteId);
+
+		if (!inviteObj) {
+			return;
+		}
+
+		const { error } = await authClient.organization.inviteMember({
+			resend: true,
+			email: inviteObj.email,
+			role: inviteObj.role,
+		});
+
+		if (error) {
+			console.error(error);
+			toast.error("Invitation", {
+				description: error?.message ?? "Invitation could not be resent",
+			});
+			return;
+		}
+
+		toast.success("Invitation", {
+			description: "Invitation resent successfully",
+		});
+		posthog.capture("org_member_invite_resend", {
+			inviteId: inviteId,
+		});
+		refetch();
+	};
+
+	if (isLoading) {
+		return (
+			<div className="flex items-center justify-center gap-2">
+				<Spinner />
+				<p>Loading...</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="w-full">
+			<Table className="w-fit">
+				<TableHeader>
+					<TableRow>
+						<TableHead>Email</TableHead>
+						<TableHead>Role</TableHead>
+						<TableHead>Status</TableHead>
+						<TableHead>Inviter</TableHead>
+						<TableHead>Expires At</TableHead>
+						<TableHead>Created At</TableHead>
+						<TableHead className="text-right">Actions</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{data?.map((i) => (
+						<TableRow key={i.id}>
+							<TableCell>{i.email}</TableCell>
+							<TableCell className="capitalize">{i.role}</TableCell>
+							<TableCell className="capitalize">{i.status}</TableCell>
+							<TableCell>
+								{activeOrg?.members?.find((m) => m.user.id === i.inviterId)?.user?.name ?? "-"}
+							</TableCell>
+							<TableCell title={new Date(i.expiresAt).toString()}>
+								{new Date(i.expiresAt).toDateString()}
+							</TableCell>
+							<TableCell title={new Date(i.createdAt).toString()}>
+								{new Date(i.createdAt).toDateString()}
+							</TableCell>
+							<TableCell>
+								{i.status === "pending" ? (
+									<Button
+										type="button"
+										variant={"ghost"}
+										size={"icon-sm"}
+										onClick={() => {
+											deleteInvite(i.id);
+										}}
+										title="Cancel Invite"
+									>
+										<DeleteIcon />
+									</Button>
+								) : null}{" "}
+								{i.status === "pending" ? (
+									<Button
+										type="button"
+										variant={"ghost"}
+										size={"icon-sm"}
+										onClick={() => {
+											resendInvite(i.id);
+										}}
+										title="Resend Invite"
+									>
+										<IconReload />
+									</Button>
+								) : null}
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
+		</div>
+	);
+}
+
 function RouteComponent() {
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
 			<PageHeader />
 			<AddOrganizationMemberForm />
-			<OrganizationMemberList />
+			<Tabs defaultValue="members" className="w-full">
+				<TabsList className="w-full">
+					<TabsTrigger value="members">Members</TabsTrigger>
+					<TabsTrigger value="invites">Invites</TabsTrigger>
+				</TabsList>
+				<TabsContent value="members">
+					<OrganizationMemberList />
+				</TabsContent>
+				<TabsContent value="invites">
+					<OrganizationInviteList />
+				</TabsContent>
+			</Tabs>
 		</div>
 	);
 }
