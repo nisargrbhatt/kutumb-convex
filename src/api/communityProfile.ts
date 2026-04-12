@@ -9,6 +9,7 @@ import { generatePrimaryKey } from "@/lib/generate";
 import { and, count, eq, like, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import { safeAsync } from "@/lib/safe";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -588,5 +589,83 @@ export const reassignProfileToUser = createServerFn({ method: "POST" })
 
 		return {
 			message: "Profile reassigned successfully",
+		};
+	});
+
+export const addMissingMember = createServerFn({ method: "POST" })
+	.middleware([authMiddleware])
+	.inputValidator(
+		z.object({
+			firstName: z.string().min(1, "First name is required"),
+			middleName: z.string().optional(),
+			lastName: z.string().min(1, "Last name is required"),
+			nickName: z.string().optional(),
+			gender: z.enum([GENDERS.male, GENDERS.female, GENDERS.other]).optional(),
+			email: z.email().optional(),
+			bloodGroup: z
+				.enum([
+					COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
+					COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
+				])
+				.optional(),
+			mobileNumber: z.string().optional(),
+			dateOfBirth: z.string().optional(),
+			dateOfDeath: z.string().optional(),
+			customFieldData: z.record(z.string(), z.any()).optional(),
+		})
+	)
+	.handler(async ({ context, data }) => {
+		const canCreateCommunityProfile = await auth.api.hasPermission({
+			headers: getRequestHeaders(),
+			body: {
+				permissions: {
+					communityProfile: ["create"],
+				},
+			},
+		});
+
+		if (!canCreateCommunityProfile.success) {
+			throw new Error("You do not have permission to create this resource");
+		}
+
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const result = await safeAsync(
+			db.insert(communityProfile).values({
+				id: generatePrimaryKey(),
+				firstName: data.firstName,
+				middleName: data.middleName,
+				lastName: data.lastName,
+				nickName: data.nickName,
+				gender: data.gender,
+				email: data.email,
+				bloodGroup: data.bloodGroup,
+				mobileNumber: data.mobileNumber,
+				dateOfBirth: data.dateOfBirth,
+				dateOfDeath: data.dateOfDeath,
+				comment: `Added by ${context?.session?.user?.name}(${context?.session?.user?.email})(${context?.userId})`,
+				customFieldData: data.customFieldData,
+				organizationId: organizationId,
+				status: "draft",
+			})
+		);
+
+		if (!result.success) {
+			console.error(result.error);
+			throw new Error("Failed to add member");
+		}
+
+		return {
+			message: "Member added successfully",
 		};
 	});
