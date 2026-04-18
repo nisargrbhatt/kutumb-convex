@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { IconExternalLink } from "@tabler/icons-react";
 
 export const Route = createFileRoute("/_authed/_community/community-tree/")({
 	loaderDeps: () => ({}),
@@ -60,7 +62,7 @@ function PageHeader() {
 function MemberNode({ data }: NodeProps) {
 	return (
 		<Card className="w-[380px] overflow-visible rounded-2xl border-muted-foreground/20 bg-background shadow-sm">
-			<CardContent className="flex flex-row items-center justify-between p-5">
+			<CardContent className="flex flex-row items-center justify-between px-5">
 				<Handle
 					type="target"
 					position={Position.Left}
@@ -74,12 +76,13 @@ function MemberNode({ data }: NodeProps) {
 						{typeof data.email === "string" ? data.email : "No email provided"}
 					</span>
 				</div>
-				{/* Just a stylized text for now since we don't have the exact profile route mapped easily */}
 				<Route.Link
-					to={"/members"}
-					className="text-sm font-semibold whitespace-nowrap text-purple-600 hover:text-purple-700"
+					to={"/members/$id"}
+					params={{ id: typeof data?.id === "string" ? data?.id : "" }}
 				>
-					View Profile
+					<Button variant={"ghost"} size="icon-sm">
+						<IconExternalLink />
+					</Button>
 				</Route.Link>
 				<Handle
 					type="source"
@@ -103,7 +106,7 @@ const nodeHeight = 120;
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = "LR") => {
 	const isHorizontal = direction === "LR";
-	dagreGraph.setGraph({ rankdir: direction, align: "UL", ranksep: 100, nodesep: 50 });
+	dagreGraph.setGraph({ rankdir: direction, align: "UL", ranksep: 150, nodesep: 100 });
 
 	nodes.forEach((node) => {
 		dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });

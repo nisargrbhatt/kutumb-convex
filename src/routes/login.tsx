@@ -50,9 +50,7 @@ function RouteComponent() {
 										await authClient.signIn.social(
 											{
 												provider: "google",
-												callbackURL: `/dashboard?${new URLSearchParams({
-													redirectTo: redirectTo || "/",
-												}).toString()}`,
+												callbackURL: redirectTo ? redirectTo : "/dashboard",
 											},
 											{
 												onRequest: () => {

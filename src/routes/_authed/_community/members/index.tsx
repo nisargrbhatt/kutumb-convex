@@ -25,7 +25,7 @@ import { COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Search, Users, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search, Users, X } from "lucide-react";
 import { z } from "zod";
 
 const membersSearchSchema = z.object({
@@ -365,12 +365,18 @@ function RouteComponent() {
 			<PageHeader />
 
 			<div className="flex w-full flex-col gap-6 pt-4">
-				<div className="flex items-center justify-between">
+				<div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
 					<div>
 						<h2 className="text-lg font-medium">Community Members</h2>
 						<p className="text-sm text-muted-foreground">
 							Browse and search all community members.
 						</p>
+						<Route.Link to={"/members/create"}>
+							<Button type="button" variant={"outline"} size="sm">
+								<Plus />
+								Add missing member
+							</Button>
+						</Route.Link>
 					</div>
 					<div className="flex items-center gap-2 text-sm text-muted-foreground">
 						<Users className="size-4" />
