@@ -45,6 +45,7 @@ export const Route = createFileRoute("/_authed/_community/profile/info/")({
 			context.queryClient.ensureQueryData(getOrganizationCustomFieldsQuery()),
 		]);
 	},
+	pendingComponent: () => <p>Loading...</p>,
 });
 
 function PageHeader() {

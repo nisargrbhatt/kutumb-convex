@@ -136,6 +136,11 @@ inline. `db` (`src/db/index.ts`) is the Drizzle client bound to the `D1` Cloudfl
   Desktop, Ultrawide every device should be able to see the application properly.
 - Page must have breadcrumbs in the top part. Every part of UI should be accessible.
 - Use Tailwind for styling the components and elements.
+- For Create/Edit Function, use Right side Drawer and for Actions like Delete Confirmation use
+  Dialogs.
+- For list data, always use Table format. If data is limited then use Simple Table from Shadcn, if
+  data has pagination, filter or sort then go for DataTable/DataGrid using Tanstack Table and Shadcn
+  components.
 
 ## Form handling
 

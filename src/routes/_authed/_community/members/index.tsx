@@ -229,7 +229,7 @@ function MembersFilters() {
 					});
 				}}
 			>
-				<SelectTrigger className="w-full sm:w-[140px]">
+				<SelectTrigger className="w-full sm:w-35">
 					<SelectValue placeholder="Status" />
 				</SelectTrigger>
 				<SelectContent>
@@ -253,7 +253,7 @@ function MembersFilters() {
 					});
 				}}
 			>
-				<SelectTrigger className="w-full sm:w-[140px]">
+				<SelectTrigger className="w-full sm:w-35">
 					<SelectValue placeholder="Gender" />
 				</SelectTrigger>
 				<SelectContent>

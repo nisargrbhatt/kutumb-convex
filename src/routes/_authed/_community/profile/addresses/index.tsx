@@ -11,6 +11,17 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import {
@@ -24,14 +35,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
-	Item,
-	ItemActions,
-	ItemContent,
-	ItemDescription,
-	ItemHeader,
-	ItemTitle,
-} from "@/components/ui/item";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -39,6 +42,14 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { COMMUNITY_ADDRESS_TYPE } from "@/db/constants";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -103,19 +114,6 @@ function RouteComponent() {
 
 	const { data: addresses } = useSuspenseQuery(getMyCommunityAddressesQuery());
 
-	const { mutate: deleteAddress, isPending: isDeleting } = useMutation({
-		mutationFn: deleteMyCommunityAddress,
-		onSuccess: (_d, _v, _r, context) => {
-			toast.success("Address deleted successfully");
-			context.client.invalidateQueries({
-				queryKey: getMyCommunityAddressesQuery().queryKey,
-			});
-		},
-		onError: (error) => {
-			toast.error(error.message);
-		},
-	});
-
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
 			<PageHeader />
@@ -131,69 +129,49 @@ function RouteComponent() {
 					<AddressFormModal open={isAddOpen} onOpenChange={setIsAddOpen} />
 				</div>
 
-				<div className="grid gap-4 md:grid-cols-2">
-					{addresses.length === 0 ? (
-						<div className="col-span-full flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-							<MapPinOff className="size-8 text-muted-foreground/50" />
-							<p>No addresses found.</p>
-						</div>
-					) : (
-						addresses.map((address) => (
-							<Item variant={"outline"} key={address.id} className="items-start shadow-xs">
-								<ItemContent>
-									<ItemHeader>
-										<ItemTitle>
-											<div className="flex flex-col items-start gap-1">
-												<span className="capitalize">{address.type ?? "Address"}</span>
+				<div className="rounded-lg border">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Type</TableHead>
+								<TableHead>Line 1</TableHead>
+								<TableHead className="hidden lg:table-cell">Line 2</TableHead>
+								<TableHead className="hidden sm:table-cell">City</TableHead>
+								<TableHead className="hidden md:table-cell">State</TableHead>
+								<TableHead className="hidden lg:table-cell">Country</TableHead>
+								<TableHead className="hidden md:table-cell">Postal Code</TableHead>
+								<TableHead className="hidden lg:table-cell">Digipin</TableHead>
+								<TableHead className="text-right">Actions</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{addresses.length === 0 ? (
+								<TableRow>
+									<TableCell colSpan={9} className="h-32">
+										<div className="flex flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+											<MapPinOff className="size-8 text-muted-foreground/50" />
+											<p>No addresses found.</p>
+										</div>
+									</TableCell>
+								</TableRow>
+							) : (
+								addresses.map((address) => (
+									<TableRow key={address.id}>
+										<TableCell>
+											<div className="flex flex-col items-start gap-0.5">
+												<span className="font-medium capitalize">{address.type ?? "Address"}</span>
 												{address.note && (
-													<span className="text-xs font-normal text-muted-foreground">
-														{address.note}
-													</span>
+													<span className="text-xs text-muted-foreground">{address.note}</span>
 												)}
 											</div>
-										</ItemTitle>
-										<ItemActions>
-											<Button
-												variant="destructive"
-												size="icon-sm"
-												disabled={isDeleting}
-												onClick={() => {
-													deleteAddress({ data: { id: address.id } });
-												}}
-											>
-												<Trash2 className="size-4" />
-												<span className="sr-only">Delete address</span>
-											</Button>
-										</ItemActions>
-									</ItemHeader>
-									<ItemDescription className="mt-2 text-foreground">
-										<div className="grid grid-cols-[100px_1fr] gap-2 border-b border-border py-2 text-sm last:border-0">
-											<span className="font-medium text-muted-foreground">Line 1</span>
-											<span>{address.line1}</span>
-										</div>
-										<div className="grid grid-cols-[100px_1fr] gap-2 border-b border-border py-2 text-sm last:border-0">
-											<span className="font-medium text-muted-foreground">Line 2</span>
-											<span>{address.line2 || "-"}</span>
-										</div>
-										<div className="grid grid-cols-[100px_1fr] gap-2 border-b border-border py-2 text-sm last:border-0">
-											<span className="font-medium text-muted-foreground">Country</span>
-											<span>{address.country}</span>
-										</div>
-										<div className="grid grid-cols-[100px_1fr] gap-2 border-b border-border py-2 text-sm last:border-0">
-											<span className="font-medium text-muted-foreground">State</span>
-											<span>{address.state}</span>
-										</div>
-										<div className="grid grid-cols-[100px_1fr] gap-2 border-b border-border py-2 text-sm last:border-0">
-											<span className="font-medium text-muted-foreground">City</span>
-											<span>{address.city}</span>
-										</div>
-										<div className="grid grid-cols-[100px_1fr] gap-2 border-b border-border py-2 text-sm last:border-0">
-											<span className="font-medium text-muted-foreground">Postal Code</span>
-											<span>{address.postalCode}</span>
-										</div>
-										<div className="grid grid-cols-[100px_1fr] gap-2 border-b border-border py-2 text-sm last:border-0">
-											<span className="font-medium text-muted-foreground">Digipin</span>
-
+										</TableCell>
+										<TableCell>{address.line1}</TableCell>
+										<TableCell className="hidden lg:table-cell">{address.line2 || "-"}</TableCell>
+										<TableCell className="hidden sm:table-cell">{address.city}</TableCell>
+										<TableCell className="hidden md:table-cell">{address.state}</TableCell>
+										<TableCell className="hidden lg:table-cell">{address.country}</TableCell>
+										<TableCell className="hidden md:table-cell">{address.postalCode}</TableCell>
+										<TableCell className="hidden lg:table-cell">
 											{address.digipin ? (
 												<a
 													className="w-fit link"
@@ -203,17 +181,70 @@ function RouteComponent() {
 													{address.digipin}
 												</a>
 											) : (
-												<span>-</span>
+												"-"
 											)}
-										</div>
-									</ItemDescription>
-								</ItemContent>
-							</Item>
-						))
-					)}
+										</TableCell>
+										<TableCell className="text-right">
+											<DeleteAddressDialog id={address.id} />
+										</TableCell>
+									</TableRow>
+								))
+							)}
+						</TableBody>
+					</Table>
 				</div>
 			</div>
 		</div>
+	);
+}
+
+function DeleteAddressDialog({ id }: { id: string }) {
+	const [open, setOpen] = useState(false);
+
+	const { mutate: deleteAddress, isPending: isDeleting } = useMutation({
+		mutationFn: deleteMyCommunityAddress,
+		onSuccess: (_d, _v, _r, context) => {
+			toast.success("Address deleted successfully");
+			setOpen(false);
+			context.client.invalidateQueries({
+				queryKey: getMyCommunityAddressesQuery().queryKey,
+			});
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
+
+	return (
+		<AlertDialog open={open} onOpenChange={setOpen}>
+			<AlertDialogTrigger asChild>
+				<Button variant="destructive" size="icon-sm">
+					<Trash2 className="size-4" />
+					<span className="sr-only">Delete address</span>
+				</Button>
+			</AlertDialogTrigger>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Delete address?</AlertDialogTitle>
+					<AlertDialogDescription>
+						This will permanently delete this address. This action cannot be undone.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+					<AlertDialogAction
+						variant="destructive"
+						disabled={isDeleting}
+						onClick={(e) => {
+							e.preventDefault();
+							deleteAddress({ data: { id } });
+						}}
+					>
+						{isDeleting ? "Deleting..." : "Delete"}
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	);
 }
 

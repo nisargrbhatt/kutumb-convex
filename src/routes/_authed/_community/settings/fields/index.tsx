@@ -4,6 +4,17 @@ import {
 	getOrganizationCustomFieldsQuery,
 } from "@/api/fields";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
 	Breadcrumb,
 	BreadcrumbItem,
 	BreadcrumbLink,
@@ -21,7 +32,6 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import {
 	Select,
 	SelectContent,
@@ -29,13 +39,32 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 export const Route = createFileRoute("/_authed/_community/settings/fields/")({
@@ -82,8 +111,8 @@ const addFieldSchema = z.object({
 	]),
 });
 
-function AddFieldForm() {
-	const { refetch } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
+function AddFieldDrawer() {
+	const [open, setOpen] = useState(false);
 
 	const form = useForm<z.infer<typeof addFieldSchema>>({
 		resolver: zodResolver(addFieldSchema),
@@ -93,96 +122,181 @@ function AddFieldForm() {
 		},
 	});
 
-	const onSubmit = form.handleSubmit(async (values) => {
-		await addOrganizationCustomField({
-			data: values,
-		});
+	const { mutate: addField, isPending } = useMutation({
+		mutationFn: addOrganizationCustomField,
+		onSuccess: (_d, _v, _r, context) => {
+			toast.success("Field added successfully");
+			form.reset();
+			setOpen(false);
+			context.client.invalidateQueries({
+				queryKey: getOrganizationCustomFieldsQuery().queryKey,
+			});
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
 
-		form.reset();
-
-		refetch();
+	const onSubmit = form.handleSubmit((values) => {
+		addField({ data: values });
 	});
 
 	return (
-		<div className="w-full max-w-md rounded-lg border p-4">
-			<h3 className="mb-4 text-lg font-medium">Add New Field</h3>
-			<Form {...form}>
-				<form onSubmit={onSubmit} className="space-y-4">
-					<FormField
-						control={form.control}
-						name="label"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Label</FormLabel>
-								<FormControl>
-									<Input placeholder="e.g. Birthdate" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="type"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Type</FormLabel>
-								<Select onValueChange={field.onChange} defaultValue={field.value}>
+		<Sheet open={open} onOpenChange={setOpen}>
+			<SheetTrigger asChild>
+				<Button size="sm">
+					<Plus className="size-4" />
+					Add Field
+				</Button>
+			</SheetTrigger>
+			<SheetContent side="right" className="overflow-y-auto">
+				<SheetHeader>
+					<SheetTitle>Add New Field</SheetTitle>
+					<SheetDescription>
+						Add an extra field captured on every community profile.
+					</SheetDescription>
+				</SheetHeader>
+				<Form {...form}>
+					<form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-6">
+						<FormField
+							control={form.control}
+							name="label"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Label</FormLabel>
 									<FormControl>
-										<SelectTrigger>
-											<SelectValue placeholder="Select a type" />
-										</SelectTrigger>
+										<Input placeholder="e.g. Birthdate" {...field} />
 									</FormControl>
-									<SelectContent>
-										{Object.values(CUSTOM_FIELD_TYPE).map((type) => (
-											<SelectItem key={type} value={type} className="capitalize">
-												{type}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<Button type="submit">Add Field</Button>
-				</form>
-			</Form>
-		</div>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="type"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Type</FormLabel>
+									<Select onValueChange={field.onChange} defaultValue={field.value}>
+										<FormControl>
+											<SelectTrigger>
+												<SelectValue placeholder="Select a type" />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent>
+											{Object.values(CUSTOM_FIELD_TYPE).map((type) => (
+												<SelectItem key={type} value={type} className="capitalize">
+													{type}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<SheetFooter className="px-0">
+							<Button type="submit" disabled={isPending}>
+								{isPending ? "Adding..." : "Add Field"}
+							</Button>
+							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
+								Cancel
+							</Button>
+						</SheetFooter>
+					</form>
+				</Form>
+			</SheetContent>
+		</Sheet>
 	);
 }
 
-function FieldsList() {
-	const { data, refetch } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
+function DeleteFieldDialog({ id }: { id: string }) {
+	const [open, setOpen] = useState(false);
 
-	const onDeleteField = async (id: string) => {
-		await deleteOrganizationCustomField({
-			data: {
-				fieldId: id,
-			},
-		});
-
-		refetch();
-	};
+	const { mutate: deleteField, isPending: isDeleting } = useMutation({
+		mutationFn: deleteOrganizationCustomField,
+		onSuccess: (_d, _v, _r, context) => {
+			toast.success("Field deleted successfully");
+			setOpen(false);
+			context.client.invalidateQueries({
+				queryKey: getOrganizationCustomFieldsQuery().queryKey,
+			});
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
 
 	return (
-		<div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
-			{data?.data.map((field) => (
-				<Item key={field.id} className="w-full" variant="outline">
-					<ItemContent>
-						<ItemTitle aria-label="Field Label">{field.label}</ItemTitle>
-						<ItemDescription aria-label="Field Type" className="capitalize">
-							{field.type}
-						</ItemDescription>
-					</ItemContent>
-					<ItemActions>
-						<Button variant="outline" size="sm" onClick={() => onDeleteField(field.id)}>
-							<Trash2 />
-							Delete
-						</Button>
-					</ItemActions>
-				</Item>
-			))}
+		<AlertDialog open={open} onOpenChange={setOpen}>
+			<AlertDialogTrigger asChild>
+				<Button variant="destructive" size="icon-sm">
+					<Trash2 className="size-4" />
+					<span className="sr-only">Delete field</span>
+				</Button>
+			</AlertDialogTrigger>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Delete field?</AlertDialogTitle>
+					<AlertDialogDescription>
+						This will permanently delete this field. This action cannot be undone.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+					<AlertDialogAction
+						variant="destructive"
+						disabled={isDeleting}
+						onClick={(e) => {
+							e.preventDefault();
+							deleteField({ data: { fieldId: id } });
+						}}
+					>
+						{isDeleting ? "Deleting..." : "Delete"}
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+}
+
+function FieldsTable() {
+	const { data } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
+
+	const fields = data?.data ?? [];
+
+	return (
+		<div className="w-full overflow-x-auto rounded-lg border">
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead>Label</TableHead>
+						<TableHead>Type</TableHead>
+						<TableHead className="text-right">Actions</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{fields.length === 0 ? (
+						<TableRow>
+							<TableCell colSpan={3} className="text-center text-muted-foreground">
+								No fields yet. Add one to get started.
+							</TableCell>
+						</TableRow>
+					) : (
+						fields.map((field) => (
+							<TableRow key={field.id}>
+								<TableCell aria-label="Field Label">{field.label}</TableCell>
+								<TableCell aria-label="Field Type" className="capitalize">
+									{field.type}
+								</TableCell>
+								<TableCell className="text-right">
+									<DeleteFieldDialog id={field.id} />
+								</TableCell>
+							</TableRow>
+						))
+					)}
+				</TableBody>
+			</Table>
 		</div>
 	);
 }
@@ -191,11 +305,16 @@ function RouteComponent() {
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
 			<PageHeader />
-			<AddFieldForm />
-			<div className="w-full">
-				<h3 className="mb-2 text-lg font-medium">Existing Fields</h3>
-				<FieldsList />
+			<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<h2 className="text-lg font-medium">Custom Fields</h2>
+					<p className="text-sm text-muted-foreground">
+						Manage the extra fields captured on every community member's profile.
+					</p>
+				</div>
+				<AddFieldDrawer />
 			</div>
+			<FieldsTable />
 		</div>
 	);
 }
