@@ -4,76 +4,74 @@
 
 ## Explanation
 
-Streaming SSR sends HTML chunks to the browser as they're ready, rather than waiting for all data to
-load. This improves Time to First Byte (TTFB) and perceived performance by showing content
-progressively.
+Streaming SSR sends HTML chunks to the browser as they're ready, rather than waiting for all data to load. This improves Time to First Byte (TTFB) and perceived performance by showing content progressively.
 
 ## Bad Example
 
 ```tsx
 // Blocking SSR - waits for everything
-export const Route = createFileRoute("/dashboard")({
-	loader: async ({ context: { queryClient } }) => {
-		// All of these must complete before ANY HTML is sent
-		await Promise.all([
-			queryClient.ensureQueryData(userQueries.profile()), // 200ms
-			queryClient.ensureQueryData(dashboardQueries.stats()), // 500ms
-			queryClient.ensureQueryData(activityQueries.recent()), // 300ms
-			queryClient.ensureQueryData(notificationQueries.all()), // 400ms
-		]);
-		// TTFB: 500ms (slowest query)
-	},
-});
+export const Route = createFileRoute('/dashboard')({
+  loader: async ({ context: { queryClient } }) => {
+    // All of these must complete before ANY HTML is sent
+    await Promise.all([
+      queryClient.ensureQueryData(userQueries.profile()),      // 200ms
+      queryClient.ensureQueryData(dashboardQueries.stats()),   // 500ms
+      queryClient.ensureQueryData(activityQueries.recent()),   // 300ms
+      queryClient.ensureQueryData(notificationQueries.all()),  // 400ms
+    ])
+    // TTFB: 500ms (slowest query)
+  },
+})
 ```
 
 ## Good Example: Stream Non-Critical Content
 
 ```tsx
 // routes/dashboard.tsx
-export const Route = createFileRoute("/dashboard")({
-	loader: async ({ context: { queryClient } }) => {
-		// Only await critical above-the-fold data
-		await queryClient.ensureQueryData(userQueries.profile());
+export const Route = createFileRoute('/dashboard')({
+  loader: async ({ context: { queryClient } }) => {
+    // Only await critical above-the-fold data
+    await queryClient.ensureQueryData(userQueries.profile())
 
-		// Start fetching but don't await
-		queryClient.prefetchQuery(dashboardQueries.stats());
-		queryClient.prefetchQuery(activityQueries.recent());
-		queryClient.prefetchQuery(notificationQueries.all());
+    // Start fetching but don't await
+    queryClient.prefetchQuery(dashboardQueries.stats())
+    queryClient.prefetchQuery(activityQueries.recent())
+    queryClient.prefetchQuery(notificationQueries.all())
 
-		// HTML starts streaming immediately after profile loads
-		// TTFB: 200ms
-	},
-	component: DashboardPage,
-});
+    // HTML starts streaming immediately after profile loads
+    // TTFB: 200ms
+  },
+  component: DashboardPage,
+})
 
 function DashboardPage() {
-	// Critical data - ready immediately (from loader)
-	const { data: user } = useSuspenseQuery(userQueries.profile());
+  // Critical data - ready immediately (from loader)
+  const { data: user } = useSuspenseQuery(userQueries.profile())
 
-	return (
-		<div>
-			<Header user={user} />
+  return (
+    <div>
+      <Header user={user} />
 
-			{/* Non-critical - streams in with Suspense */}
-			<Suspense fallback={<StatsSkeleton />}>
-				<DashboardStats />
-			</Suspense>
+      {/* Non-critical - streams in with Suspense */}
+      <Suspense fallback={<StatsSkeleton />}>
+        <DashboardStats />
+      </Suspense>
 
-			<Suspense fallback={<ActivitySkeleton />}>
-				<RecentActivity />
-			</Suspense>
+      <Suspense fallback={<ActivitySkeleton />}>
+        <RecentActivity />
+      </Suspense>
 
-			<Suspense fallback={<NotificationsSkeleton />}>
-				<NotificationsList />
-			</Suspense>
-		</div>
-	);
+      <Suspense fallback={<NotificationsSkeleton />}>
+        <NotificationsList />
+      </Suspense>
+    </div>
+  )
 }
 
 // Each section loads independently and streams when ready
 function DashboardStats() {
-	const { data: stats } = useSuspenseQuery(dashboardQueries.stats());
-	return <StatsDisplay stats={stats} />;
+  const { data: stats } = useSuspenseQuery(dashboardQueries.stats())
+  return <StatsDisplay stats={stats} />
 }
 ```
 
@@ -81,76 +79,76 @@ function DashboardStats() {
 
 ```tsx
 function DashboardPage() {
-	const { data: user } = useSuspenseQuery(userQueries.profile());
+  const { data: user } = useSuspenseQuery(userQueries.profile())
 
-	return (
-		<div>
-			<Header user={user} />
+  return (
+    <div>
+      <Header user={user} />
 
-			<div className="grid grid-cols-2 gap-4">
-				{/* Left column streams together */}
-				<Suspense fallback={<LeftColumnSkeleton />}>
-					<LeftColumn />
-				</Suspense>
+      <div className="grid grid-cols-2 gap-4">
+        {/* Left column streams together */}
+        <Suspense fallback={<LeftColumnSkeleton />}>
+          <LeftColumn />
+        </Suspense>
 
-				{/* Right column streams independently */}
-				<Suspense fallback={<RightColumnSkeleton />}>
-					<RightColumn />
-				</Suspense>
-			</div>
-		</div>
-	);
+        {/* Right column streams independently */}
+        <Suspense fallback={<RightColumnSkeleton />}>
+          <RightColumn />
+        </Suspense>
+      </div>
+    </div>
+  )
 }
 
 function LeftColumn() {
-	// These load together (same Suspense boundary)
-	const { data: stats } = useSuspenseQuery(dashboardQueries.stats());
-	const { data: chart } = useSuspenseQuery(dashboardQueries.chartData());
+  // These load together (same Suspense boundary)
+  const { data: stats } = useSuspenseQuery(dashboardQueries.stats())
+  const { data: chart } = useSuspenseQuery(dashboardQueries.chartData())
 
-	return (
-		<div>
-			<StatsCard stats={stats} />
-			<ChartDisplay data={chart} />
-		</div>
-	);
+  return (
+    <div>
+      <StatsCard stats={stats} />
+      <ChartDisplay data={chart} />
+    </div>
+  )
 }
 ```
 
 ## Good Example: Progressive Enhancement
 
 ```tsx
-export const Route = createFileRoute("/posts/$postId")({
-	loader: async ({ params, context: { queryClient } }) => {
-		// Critical: post content (await)
-		await queryClient.ensureQueryData(postQueries.detail(params.postId));
+export const Route = createFileRoute('/posts/$postId')({
+  loader: async ({ params, context: { queryClient } }) => {
+    // Critical: post content (await)
+    await queryClient.ensureQueryData(postQueries.detail(params.postId))
 
-		// Start but don't block: comments, related posts
-		queryClient.prefetchQuery(commentQueries.forPost(params.postId));
-		queryClient.prefetchQuery(postQueries.related(params.postId));
-	},
-	component: PostPage,
-});
+    // Start but don't block: comments, related posts
+    queryClient.prefetchQuery(commentQueries.forPost(params.postId))
+    queryClient.prefetchQuery(postQueries.related(params.postId))
+  },
+  component: PostPage,
+})
 
 function PostPage() {
-	const { postId } = Route.useParams();
-	const { data: post } = useSuspenseQuery(postQueries.detail(postId));
+  const { postId } = Route.useParams()
+  const { data: post } = useSuspenseQuery(postQueries.detail(postId))
 
-	return (
-		<article>
-			{/* Streams immediately */}
-			<PostHeader post={post} />
-			<PostContent content={post.content} />
+  return (
+    <article>
+      {/* Streams immediately */}
+      <PostHeader post={post} />
+      <PostContent content={post.content} />
 
-			{/* Streams when ready */}
-			<Suspense fallback={<CommentsSkeleton />}>
-				<CommentsSection postId={postId} />
-			</Suspense>
+      {/* Streams when ready */}
+      <Suspense fallback={<CommentsSkeleton />}>
+        <CommentsSection postId={postId} />
+      </Suspense>
 
-			<Suspense fallback={<RelatedSkeleton />}>
-				<RelatedPosts postId={postId} />
-			</Suspense>
-		</article>
-	);
+      <Suspense fallback={<RelatedSkeleton />}>
+        <RelatedPosts postId={postId} />
+      </Suspense>
+    </article>
+  )
 }
 ```
 
@@ -158,24 +156,24 @@ function PostPage() {
 
 ```tsx
 function DashboardPage() {
-	return (
-		<div>
-			<Header />
+  return (
+    <div>
+      <Header />
 
-			{/* Each section handles its own errors */}
-			<ErrorBoundary fallback={<StatsError />}>
-				<Suspense fallback={<StatsSkeleton />}>
-					<DashboardStats />
-				</Suspense>
-			</ErrorBoundary>
+      {/* Each section handles its own errors */}
+      <ErrorBoundary fallback={<StatsError />}>
+        <Suspense fallback={<StatsSkeleton />}>
+          <DashboardStats />
+        </Suspense>
+      </ErrorBoundary>
 
-			<ErrorBoundary fallback={<ActivityError />}>
-				<Suspense fallback={<ActivitySkeleton />}>
-					<RecentActivity />
-				</Suspense>
-			</ErrorBoundary>
-		</div>
-	);
+      <ErrorBoundary fallback={<ActivityError />}>
+        <Suspense fallback={<ActivitySkeleton />}>
+          <RecentActivity />
+        </Suspense>
+      </ErrorBoundary>
+    </div>
+  )
 }
 ```
 
