@@ -19,6 +19,7 @@ import { authClient } from "@/lib/auth-client";
 
 export function AuthUser() {
 	const { data: session } = authClient.useSession();
+	const {data: currentRole} = authClient.useActiveMemberRole();
 	const { isMobile } = useSidebar();
 
 	return (
@@ -40,7 +41,7 @@ export function AuthUser() {
 								<span className="truncate font-medium">
 									{session?.user?.name ?? session?.user?.email}
 								</span>
-								<span className="truncate text-xs">{session?.user?.email}</span>
+								<span className="truncate text-xs capitalize">{currentRole?.role}</span>
 							</div>
 							<ChevronsUpDown className="ml-auto size-4" />
 						</SidebarMenuButton>
