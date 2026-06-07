@@ -8,15 +8,7 @@ import {
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import {
-	Item,
-	ItemActions,
-	ItemContent,
-	ItemDescription,
-	ItemMedia,
-	ItemTitle,
-} from "@/components/ui/item";
-import { BookKeyIcon, CrownIcon, DeleteIcon, UserIcon } from "lucide-react";
+import { BookKeyIcon, CrownIcon, DeleteIcon, Plus, UserIcon } from "lucide-react";
 import * as z from "zod";
 import { ORGANIZATION_ROLES } from "@/db/constants";
 import { useForm } from "react-hook-form";
@@ -29,7 +21,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { Card, CardAction, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -38,8 +29,17 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useEffect, useId } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -103,8 +103,8 @@ const formSchema = z.object({
 	role: z.enum([ORGANIZATION_ROLES.admin, ORGANIZATION_ROLES.member]),
 });
 
-function AddOrganizationMemberForm() {
-	const formId = useId();
+function AddMemberDrawer() {
+	const [open, setOpen] = useState(false);
 	const posthog = usePostHog();
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -136,66 +136,81 @@ function AddOrganizationMemberForm() {
 			description: "Member invited successfully",
 		});
 		form.reset();
+		setOpen(false);
 	});
 
 	return (
-		<Form {...form}>
-			<form onSubmit={onSubmit} className="w-full max-w-md" id={formId}>
-				<Card>
-					<CardContent>
-						<div className="flex flex-col items-start justify-start gap-2">
-							<FormField
-								control={form.control}
-								name="email"
-								render={({ field }) => (
-									<FormItem className="w-full">
-										<FormLabel>Email</FormLabel>
+		<Sheet open={open} onOpenChange={setOpen}>
+			<SheetTrigger asChild>
+				<Button size="sm">
+					<Plus className="size-4" />
+					Add Member
+				</Button>
+			</SheetTrigger>
+			<SheetContent side="right" className="overflow-y-auto">
+				<SheetHeader>
+					<SheetTitle>Invite Member</SheetTitle>
+					<SheetDescription>Invite a new member to your organization by email.</SheetDescription>
+				</SheetHeader>
+				<Form {...form}>
+					<form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-6">
+						<FormField
+							control={form.control}
+							name="email"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Email</FormLabel>
+									<FormControl>
+										<Input placeholder="Email" {...field} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="role"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Role</FormLabel>
+									<Select onValueChange={field.onChange} defaultValue={field.value}>
 										<FormControl>
-											<Input placeholder="Email" {...field} />
+											<SelectTrigger>
+												<SelectValue placeholder="Select a role" />
+											</SelectTrigger>
 										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="role"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Role</FormLabel>
-										<FormControl>
-											<Select onValueChange={field.onChange} defaultValue={field.value}>
-												<SelectTrigger>
-													<SelectValue placeholder="Select a role" />
-												</SelectTrigger>
-												<SelectContent>
-													<SelectItem value={ORGANIZATION_ROLES.admin}>Admin</SelectItem>
-													<SelectItem value={ORGANIZATION_ROLES.member}>Member</SelectItem>
-												</SelectContent>
-											</Select>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						</div>
-					</CardContent>
-					<CardFooter>
-						<CardAction>
-							<Button type="submit" disabled={form.formState.isSubmitting} form={formId}>
-								Add Member
+										<SelectContent>
+											<SelectItem value={ORGANIZATION_ROLES.admin}>Admin</SelectItem>
+											<SelectItem value={ORGANIZATION_ROLES.member}>Member</SelectItem>
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<SheetFooter className="px-0">
+							<Button type="submit" disabled={form.formState.isSubmitting}>
+								{form.formState.isSubmitting ? "Inviting..." : "Invite"}
 							</Button>
-						</CardAction>
-					</CardFooter>
-				</Card>
-			</form>
-		</Form>
+							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
+								Cancel
+							</Button>
+						</SheetFooter>
+					</form>
+				</Form>
+			</SheetContent>
+		</Sheet>
 	);
 }
 
 function OrganizationMemberList() {
 	const { data: activeOrganization } = authClient.useActiveOrganization();
+	const { data: session } = authClient.useSession();
 	const posthog = usePostHog();
+
+	const currentUserId = session?.user?.id;
+	const currentRole = activeOrganization?.members?.find((m) => m.user.id === currentUserId)?.role;
+	const canRemove = currentRole === "owner";
 
 	const handleRemoveFromOrg = async (memberId: string) => {
 		const { error } = await authClient.organization.removeMember({
@@ -215,49 +230,82 @@ function OrganizationMemberList() {
 		});
 	};
 
+	const members = activeOrganization?.members ?? [];
+
 	return (
-		<div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-			{activeOrganization?.members?.map((member) => (
-				<Item key={member.id} variant={"outline"}>
-					<ItemMedia variant="icon" title={member.role}>
-						{member.role === "owner" ? <CrownIcon aria-label="Owner" /> : null}
-						{member.role === "admin" ? <BookKeyIcon aria-label="Manager" /> : null}
-						{member.role === "member" ? <UserIcon aria-label="Member" /> : null}
-					</ItemMedia>
-					<ItemContent>
-						<ItemTitle>{member.user?.name}</ItemTitle>
-						<ItemDescription>{member?.user?.email}</ItemDescription>
-					</ItemContent>
-					<ItemActions>
-						<AlertDialog>
-							<AlertDialogTrigger asChild>
-								<Button variant="outline" size="sm" type="button">
-									Remove
-								</Button>
-							</AlertDialogTrigger>
-							<AlertDialogContent>
-								<AlertDialogHeader>
-									<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-									<AlertDialogDescription>
-										This action cannot be undone. This will permanently remove member from our
-										organization.
-									</AlertDialogDescription>
-								</AlertDialogHeader>
-								<AlertDialogFooter>
-									<AlertDialogCancel>Cancel</AlertDialogCancel>
-									<AlertDialogAction
-										onClick={() => {
-											handleRemoveFromOrg(member.id);
-										}}
-									>
-										Continue
-									</AlertDialogAction>
-								</AlertDialogFooter>
-							</AlertDialogContent>
-						</AlertDialog>
-					</ItemActions>
-				</Item>
-			))}
+		<div className="w-full overflow-x-auto rounded-lg border">
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead>Member</TableHead>
+						<TableHead>Email</TableHead>
+						<TableHead>Role</TableHead>
+						<TableHead className="text-right">Actions</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{members.length === 0 ? (
+						<TableRow>
+							<TableCell colSpan={4} className="text-center text-muted-foreground">
+								No members yet.
+							</TableCell>
+						</TableRow>
+					) : (
+						members.map((member) => (
+							<TableRow key={member.id}>
+								<TableCell>{member.user?.name}</TableCell>
+								<TableCell>{member.user?.email}</TableCell>
+								<TableCell>
+									<span className="flex items-center gap-2 capitalize">
+										{member.role === "owner" ? (
+											<CrownIcon className="size-4" aria-label="Owner" />
+										) : null}
+										{member.role === "admin" ? (
+											<BookKeyIcon className="size-4" aria-label="Manager" />
+										) : null}
+										{member.role === "member" ? (
+											<UserIcon className="size-4" aria-label="Member" />
+										) : null}
+										{member.role}
+									</span>
+								</TableCell>
+								<TableCell className="text-right">
+									{canRemove && member.user.id !== currentUserId ? (
+										<AlertDialog>
+											<AlertDialogTrigger asChild>
+												<Button variant="outline" size="sm" type="button">
+													Remove
+												</Button>
+											</AlertDialogTrigger>
+											<AlertDialogContent>
+												<AlertDialogHeader>
+													<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+													<AlertDialogDescription>
+														This action cannot be undone. This will permanently remove member from
+														our organization.
+													</AlertDialogDescription>
+												</AlertDialogHeader>
+												<AlertDialogFooter>
+													<AlertDialogCancel>Cancel</AlertDialogCancel>
+													<AlertDialogAction
+														onClick={() => {
+															handleRemoveFromOrg(member.id);
+														}}
+													>
+														Continue
+													</AlertDialogAction>
+												</AlertDialogFooter>
+											</AlertDialogContent>
+										</AlertDialog>
+									) : (
+										<span className="text-muted-foreground">-</span>
+									)}
+								</TableCell>
+							</TableRow>
+						))
+					)}
+				</TableBody>
+			</Table>
 		</div>
 	);
 }
@@ -342,9 +390,11 @@ function OrganizationInviteList() {
 		);
 	}
 
+	const invites = data ?? [];
+
 	return (
-		<div className="w-full">
-			<Table className="w-fit">
+		<div className="w-full overflow-x-auto rounded-lg border">
+			<Table>
 				<TableHeader>
 					<TableRow>
 						<TableHead>Email</TableHead>
@@ -357,50 +407,58 @@ function OrganizationInviteList() {
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{data?.map((i) => (
-						<TableRow key={i.id}>
-							<TableCell>{i.email}</TableCell>
-							<TableCell className="capitalize">{i.role}</TableCell>
-							<TableCell className="capitalize">{i.status}</TableCell>
-							<TableCell>
-								{activeOrg?.members?.find((m) => m.user.id === i.inviterId)?.user?.name ?? "-"}
-							</TableCell>
-							<TableCell title={new Date(i.expiresAt).toString()}>
-								{new Date(i.expiresAt).toDateString()}
-							</TableCell>
-							<TableCell title={new Date(i.createdAt).toString()}>
-								{new Date(i.createdAt).toDateString()}
-							</TableCell>
-							<TableCell>
-								{i.status === "pending" ? (
-									<Button
-										type="button"
-										variant={"ghost"}
-										size={"icon-sm"}
-										onClick={() => {
-											deleteInvite(i.id);
-										}}
-										title="Cancel Invite"
-									>
-										<DeleteIcon />
-									</Button>
-								) : null}{" "}
-								{i.status === "pending" ? (
-									<Button
-										type="button"
-										variant={"ghost"}
-										size={"icon-sm"}
-										onClick={() => {
-											resendInvite(i.id);
-										}}
-										title="Resend Invite"
-									>
-										<IconReload />
-									</Button>
-								) : null}
+					{invites.length === 0 ? (
+						<TableRow>
+							<TableCell colSpan={7} className="text-center text-muted-foreground">
+								No pending invites.
 							</TableCell>
 						</TableRow>
-					))}
+					) : (
+						invites.map((i) => (
+							<TableRow key={i.id}>
+								<TableCell>{i.email}</TableCell>
+								<TableCell className="capitalize">{i.role}</TableCell>
+								<TableCell className="capitalize">{i.status}</TableCell>
+								<TableCell>
+									{activeOrg?.members?.find((m) => m.user.id === i.inviterId)?.user?.name ?? "-"}
+								</TableCell>
+								<TableCell title={new Date(i.expiresAt).toString()}>
+									{new Date(i.expiresAt).toDateString()}
+								</TableCell>
+								<TableCell title={new Date(i.createdAt).toString()}>
+									{new Date(i.createdAt).toDateString()}
+								</TableCell>
+								<TableCell className="text-right">
+									{i.status === "pending" ? (
+										<Button
+											type="button"
+											variant={"ghost"}
+											size={"icon-sm"}
+											onClick={() => {
+												deleteInvite(i.id);
+											}}
+											title="Cancel Invite"
+										>
+											<DeleteIcon />
+										</Button>
+									) : null}{" "}
+									{i.status === "pending" ? (
+										<Button
+											type="button"
+											variant={"ghost"}
+											size={"icon-sm"}
+											onClick={() => {
+												resendInvite(i.id);
+											}}
+											title="Resend Invite"
+										>
+											<IconReload />
+										</Button>
+									) : null}
+								</TableCell>
+							</TableRow>
+						))
+					)}
 				</TableBody>
 			</Table>
 		</div>
@@ -411,7 +469,15 @@ function RouteComponent() {
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
 			<PageHeader />
-			<AddOrganizationMemberForm />
+			<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<h2 className="text-lg font-medium">Members</h2>
+					<p className="text-sm text-muted-foreground">
+						Manage your organization members and pending invitations.
+					</p>
+				</div>
+				<AddMemberDrawer />
+			</div>
 			<Tabs defaultValue="members" className="w-full">
 				<TabsList className="w-full">
 					<TabsTrigger value="members">Members</TabsTrigger>
