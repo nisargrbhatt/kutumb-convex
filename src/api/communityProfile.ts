@@ -50,7 +50,7 @@ export const getMyCommunityProfileQuery = () =>
 
 export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			firstName: z.string().min(1, "First name is required"),
 			middleName: z.string().optional(),
@@ -199,7 +199,7 @@ export const getCommunityProfileListQuery = () =>
 
 export const getCommunityMembers = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			search: z.string().optional(),
 			status: z
@@ -354,7 +354,7 @@ export const getCommunityTreeQuery = () =>
 	});
 
 export const getCommunityMemberById = createServerFn({ method: "GET" })
-	.inputValidator(
+	.validator(
 		z.object({
 			id: z.string().describe("Community Profile Id"),
 		})
@@ -412,7 +412,7 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 	});
 
 export const acceptCommunityProfile = createServerFn({ method: "POST" })
-	.inputValidator(
+	.validator(
 		z.object({
 			memberId: z.string().describe("Community Profile Id"),
 		})
@@ -467,7 +467,7 @@ export const acceptCommunityProfile = createServerFn({ method: "POST" })
 	});
 
 export const rejectCommunityProfile = createServerFn({ method: "POST" })
-	.inputValidator(
+	.validator(
 		z.object({
 			memberId: z.string().describe("Community Profile Id"),
 		})
@@ -523,7 +523,7 @@ export const rejectCommunityProfile = createServerFn({ method: "POST" })
 
 export const reassignProfileToUser = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			memberId: z.string(),
 			userId: z.string(),
@@ -594,7 +594,7 @@ export const reassignProfileToUser = createServerFn({ method: "POST" })
 
 export const addMissingMember = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			firstName: z.string().min(1, "First name is required"),
 			middleName: z.string().optional(),

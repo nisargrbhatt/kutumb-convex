@@ -61,7 +61,7 @@ export const getMyCommunityRelationshipsQuery = () =>
 
 export const addMyCommunityRelationship = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			type: z.enum([
 				COMMUNITY_RELATION_TYPE.brother,
@@ -147,7 +147,7 @@ export const addMyCommunityRelationship = createServerFn({ method: "POST" })
 
 export const deleteMyCommunityRelationship = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			id: z.string().trim().min(1, "Relationship ID is required"),
 		})

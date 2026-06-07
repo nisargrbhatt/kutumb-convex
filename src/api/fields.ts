@@ -49,7 +49,7 @@ export const getOrganizationCustomFields = createServerFn({ method: "GET" })
 
 export const addOrganizationCustomField = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			label: z.string().min(1, "Label is required"),
 			type: z.enum([
@@ -94,7 +94,7 @@ export const addOrganizationCustomField = createServerFn({ method: "POST" })
 
 export const deleteOrganizationCustomField = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			fieldId: z.string().min(1, "fieldId is required"),
 		})

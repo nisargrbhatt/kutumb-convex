@@ -50,7 +50,7 @@ export const getMyCommunityAddressesQuery = () =>
 
 export const addMyCommunityAddress = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			line1: z.string().min(1, "Line 1 is required"),
 			line2: z.string().optional(),
@@ -112,7 +112,7 @@ export const addMyCommunityAddress = createServerFn({ method: "POST" })
 
 export const deleteMyCommunityAddress = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
-	.inputValidator(
+	.validator(
 		z.object({
 			id: z.string().trim().min(1, "Address ID is required"),
 		})
