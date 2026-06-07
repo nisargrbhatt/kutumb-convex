@@ -1,6 +1,8 @@
 # Triage Labels
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual status strings used in this repo's issue tracker (local markdown — recorded as a `Status:` line in each issue file).
+The skills speak in terms of five canonical triage roles. This file maps those roles to the actual
+status strings used in this repo's issue tracker (local markdown — recorded as a `Status:` line in
+each issue file).
 
 | Label in mattpocock/skills | Status in our tracker | Meaning                                  |
 | -------------------------- | --------------------- | ---------------------------------------- |
@@ -10,6 +12,7 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 | `ready-for-human`          | `ready-for-human`     | Requires human implementation            |
 | `wontfix`                  | `wontfix`             | Will not be actioned                     |
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding status string from this table.
+When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding status
+string from this table.
 
 Edit the right-hand column to match whatever vocabulary you actually use.

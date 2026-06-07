@@ -19,7 +19,7 @@ import { authClient } from "@/lib/auth-client";
 
 export function AuthUser() {
 	const { data: session } = authClient.useSession();
-	const {data: currentRole} = authClient.useActiveMemberRole();
+	const { data: currentRole } = authClient.useActiveMemberRole();
 	const { isMobile } = useSidebar();
 
 	return (

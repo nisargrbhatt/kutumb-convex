@@ -58,7 +58,8 @@ Standard pattern: `createServerFn({ method }).middleware([authMiddleware]).handl
 if absent, and injects `context.session` / `context.userId`. The active tenant is always
 `context.session.session.activeOrganizationId` — most queries scope by this org id.
 
-For any other reference, lookout for `/tanstack-start-best-practices`, `/tanstack-query-best-practices` skill for better planning and reasoning.
+For any other reference, lookout for `/tanstack-start-best-practices`,
+`/tanstack-query-best-practices` skill for better planning and reasoning.
 
 ### Auth & multi-tenancy (`src/lib/auth.ts`)
 
@@ -72,7 +73,8 @@ stores `paymentSetup` and the Polar `customerId`.
 The better-auth HTTP handler is mounted at the catch-all route `src/routes/api/auth/$.ts`. Org
 lifecycle hooks (e.g. `afterAddMember`) and invitation emails are wired inside the `auth` config.
 
-For any other reference, lookout for `/better-auth-best-practices`, `/better-auth-security-best-practices` skill for better planning and reasoning.
+For any other reference, lookout for `/better-auth-best-practices`,
+`/better-auth-security-best-practices` skill for better planning and reasoning.
 
 ### Routing (file-based, TanStack Router)
 
@@ -87,7 +89,8 @@ segments:
   instead of the app shell until the org completes Polar payment setup. Feature routes (dashboard,
   members, profile, settings, community-tree, memories) live under here.
 
-For any other reference, lookout for `/tanstack-start-best-practices`, `/tanstack-query-best-practices` skill for better planning and reasoning.
+For any other reference, lookout for `/tanstack-start-best-practices`,
+`/tanstack-query-best-practices` skill for better planning and reasoning.
 
 ### Billing & analytics
 
@@ -129,7 +132,8 @@ inline. `db` (`src/db/index.ts`) is the Drizzle client bound to the `D1` Cloudfl
 
 ## Page Design
 
-- [IMPORTANT] All pages must be fully responsive across all the breakpoints. Mobile, Tablet, Desktop, Ultrawide every device should be able to see the application properly.
+- [IMPORTANT] All pages must be fully responsive across all the breakpoints. Mobile, Tablet,
+  Desktop, Ultrawide every device should be able to see the application properly.
 - Page must have breadcrumbs in the top part. Every part of UI should be accessible.
 - Use Tailwind for styling the components and elements.
 
@@ -141,11 +145,13 @@ inline. `db` (`src/db/index.ts`) is the Drizzle client bound to the `D1` Cloudfl
 
 ### Issue tracker
 
-Issues and PRDs live as local markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+Issues and PRDs live as local markdown files under `.scratch/<feature>/`. See
+`docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Five canonical triage roles recorded as `Status:` lines (default vocabulary). See `docs/agents/triage-labels.md`.
+Five canonical triage roles recorded as `Status:` lines (default vocabulary). See
+`docs/agents/triage-labels.md`.
 
 ### Domain docs
 
