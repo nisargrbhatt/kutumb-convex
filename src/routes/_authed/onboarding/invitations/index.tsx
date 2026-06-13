@@ -12,7 +12,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { authClient } from "@/lib/auth-client";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
@@ -29,6 +29,7 @@ export const Route = createFileRoute("/_authed/onboarding/invitations/")({
 function AcceptInvitationAction(props: { invitationId: string; organizationName?: string }) {
 	const [isPending, startTransition] = useTransition();
 	const posthog = usePostHog();
+	const router = useRouter();
 
 	const handleAccept = async () => {
 		startTransition(async () => {
@@ -49,6 +50,7 @@ function AcceptInvitationAction(props: { invitationId: string; organizationName?
 			toast.success("Invitation", {
 				description: "Invitation accepted successfully",
 			});
+			router.invalidate();
 		});
 	};
 
@@ -62,6 +64,7 @@ function AcceptInvitationAction(props: { invitationId: string; organizationName?
 function RejectInvitationAction(props: { invitationId: string; organizationName?: string }) {
 	const [isPending, startTransition] = useTransition();
 	const posthog = usePostHog();
+	const router = useRouter();
 
 	const handleReject = async () => {
 		startTransition(async () => {
@@ -82,6 +85,7 @@ function RejectInvitationAction(props: { invitationId: string; organizationName?
 			toast.success("Invitation", {
 				description: "Invitation rejected successfully",
 			});
+			router.invalidate();
 		});
 	};
 

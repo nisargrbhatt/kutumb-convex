@@ -103,6 +103,10 @@ const formSchema = z.object({
 	role: z.enum([ORGANIZATION_ROLES.admin, ORGANIZATION_ROLES.member]),
 });
 
+const changeRoleSchema = z.object({
+	role: z.enum([ORGANIZATION_ROLES.owner, ORGANIZATION_ROLES.admin, ORGANIZATION_ROLES.member]),
+});
+
 function AddMemberDrawer() {
 	const [open, setOpen] = useState(false);
 	const posthog = usePostHog();
@@ -141,12 +145,14 @@ function AddMemberDrawer() {
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<Button size="sm">
-					<Plus className="size-4" />
-					Add Member
-				</Button>
-			</SheetTrigger>
+			<SheetTrigger
+				render={
+					<Button size="sm">
+						<Plus className="size-4" />
+						Add Member
+					</Button>
+				}
+			></SheetTrigger>
 			<SheetContent side="right" className="overflow-y-auto">
 				<SheetHeader>
 					<SheetTitle>Invite Member</SheetTitle>
@@ -191,6 +197,105 @@ function AddMemberDrawer() {
 						<SheetFooter className="px-0">
 							<Button type="submit" disabled={form.formState.isSubmitting}>
 								{form.formState.isSubmitting ? "Inviting..." : "Invite"}
+							</Button>
+							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
+								Cancel
+							</Button>
+						</SheetFooter>
+					</form>
+				</Form>
+			</SheetContent>
+		</Sheet>
+	);
+}
+
+type OrganizationMember = NonNullable<
+	ReturnType<typeof authClient.useActiveOrganization>["data"]
+>["members"][number];
+
+function ChangeRoleDrawer({ member }: { member: OrganizationMember }) {
+	const [open, setOpen] = useState(false);
+	const posthog = usePostHog();
+
+	const form = useForm<z.infer<typeof changeRoleSchema>>({
+		resolver: zodResolver(changeRoleSchema),
+		defaultValues: {
+			role: member.role as z.infer<typeof changeRoleSchema>["role"],
+		},
+	});
+
+	useEffect(() => {
+		if (open) {
+			form.reset({ role: member.role as z.infer<typeof changeRoleSchema>["role"] });
+		}
+	}, [open, member.role, form]);
+
+	const onSubmit = form.handleSubmit(async (values) => {
+		const { error } = await authClient.organization.updateMemberRole({
+			memberId: member.id,
+			role: values.role,
+		});
+
+		if (error) {
+			console.error(error);
+			toast.error("Member", {
+				description: error?.message ?? "Role could not be changed",
+			});
+			return;
+		}
+		posthog.capture("org_member_role_changed", {
+			member_id: member.id,
+			role: values.role,
+		});
+		toast.success("Member", {
+			description: "Role changed successfully",
+		});
+		setOpen(false);
+	});
+
+	return (
+		<Sheet open={open} onOpenChange={setOpen}>
+			<SheetTrigger
+				render={
+					<Button variant="outline" size="sm" type="button">
+						Change Role
+					</Button>
+				}
+			></SheetTrigger>
+			<SheetContent side="right" className="overflow-y-auto">
+				<SheetHeader>
+					<SheetTitle>Change Role</SheetTitle>
+					<SheetDescription>
+						Update the role for {member.user?.name ?? member.user?.email}.
+					</SheetDescription>
+				</SheetHeader>
+				<Form {...form}>
+					<form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-6">
+						<FormField
+							control={form.control}
+							name="role"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Role</FormLabel>
+									<Select onValueChange={field.onChange} value={field.value}>
+										<FormControl>
+											<SelectTrigger>
+												<SelectValue placeholder="Select a role" />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent>
+											<SelectItem value={ORGANIZATION_ROLES.owner}>Owner</SelectItem>
+											<SelectItem value={ORGANIZATION_ROLES.admin}>Admin</SelectItem>
+											<SelectItem value={ORGANIZATION_ROLES.member}>Member</SelectItem>
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<SheetFooter className="px-0">
+							<Button type="submit" disabled={form.formState.isSubmitting}>
+								{form.formState.isSubmitting ? "Saving..." : "Save"}
 							</Button>
 							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
 								Cancel
@@ -271,32 +376,35 @@ function OrganizationMemberList() {
 								</TableCell>
 								<TableCell className="text-right">
 									{canRemove && member.user.id !== currentUserId ? (
-										<AlertDialog>
-											<AlertDialogTrigger asChild>
-												<Button variant="outline" size="sm" type="button">
-													Remove
-												</Button>
-											</AlertDialogTrigger>
-											<AlertDialogContent>
-												<AlertDialogHeader>
-													<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-													<AlertDialogDescription>
-														This action cannot be undone. This will permanently remove member from
-														our organization.
-													</AlertDialogDescription>
-												</AlertDialogHeader>
-												<AlertDialogFooter>
-													<AlertDialogCancel>Cancel</AlertDialogCancel>
-													<AlertDialogAction
-														onClick={() => {
-															handleRemoveFromOrg(member.id);
-														}}
-													>
-														Continue
-													</AlertDialogAction>
-												</AlertDialogFooter>
-											</AlertDialogContent>
-										</AlertDialog>
+										<div className="flex items-center justify-end gap-2">
+											<ChangeRoleDrawer member={member} />
+											<AlertDialog>
+												<AlertDialogTrigger asChild>
+													<Button variant="outline" size="sm" type="button">
+														Remove
+													</Button>
+												</AlertDialogTrigger>
+												<AlertDialogContent>
+													<AlertDialogHeader>
+														<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+														<AlertDialogDescription>
+															This action cannot be undone. This will permanently remove member from
+															our organization.
+														</AlertDialogDescription>
+													</AlertDialogHeader>
+													<AlertDialogFooter>
+														<AlertDialogCancel>Cancel</AlertDialogCancel>
+														<AlertDialogAction
+															onClick={() => {
+																handleRemoveFromOrg(member.id);
+															}}
+														>
+															Continue
+														</AlertDialogAction>
+													</AlertDialogFooter>
+												</AlertDialogContent>
+											</AlertDialog>
+										</div>
 									) : (
 										<span className="text-muted-foreground">-</span>
 									)}

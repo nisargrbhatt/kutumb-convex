@@ -611,7 +611,7 @@ function RouteComponent() {
 			<PageHeader />
 
 			<div className="flex w-full flex-col pt-4">
-				<h2 className="text-lg font-medium">Family Tree</h2>
+				<h2 className="text-lg font-medium">Community Tree</h2>
 				<p className="text-sm text-muted-foreground">
 					Explore your community. Click a member for details, the dot to expand, or double-click to
 					recenter.
