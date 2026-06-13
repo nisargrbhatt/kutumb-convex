@@ -6,7 +6,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { COMMUNITY_PROFILE_STATUS, COMMUNITY_RELATION_TYPE } from "@/db/constants";
 import { communityRelation } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { invalidateOrgGraph } from "@/lib/communityGraphCache";
 import { auth } from "@/lib/auth";
 import { getRequestHeaders } from "@tanstack/react-start/server";
@@ -74,6 +74,88 @@ export const getMyCommunityRelationshipsQuery = () =>
 		queryKey: ["get-my-community-relationships"],
 		queryFn: async () => {
 			const result = await getMyCommunityRelationships();
+			return result;
+		},
+	});
+
+export const getMyIncomingRelationCount = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.handler(async ({ context }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const profile = await db.query.communityProfile.findFirst({
+			where: (fields, operators) =>
+				operators.and(
+					operators.eq(fields.organizationId, organizationId),
+					operators.eq(fields.userId, context.userId)
+				),
+			columns: {
+				id: true,
+			},
+		});
+
+		if (!profile) {
+			return 0;
+		}
+
+		const [result] = await db
+			.select({ total: count() })
+			.from(communityRelation)
+			.where(eq(communityRelation.toId, profile.id));
+
+		return result?.total ?? 0;
+	});
+
+export const getMyIncomingRelationCountQuery = () =>
+	queryOptions({
+		queryKey: ["get-my-incoming-relation-count"],
+		queryFn: async () => {
+			const result = await getMyIncomingRelationCount();
+			return result;
+		},
+	});
+
+export const getMyOutgoingRelationCount = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.handler(async ({ context }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const profile = await db.query.communityProfile.findFirst({
+			where: (fields, operators) =>
+				operators.and(
+					operators.eq(fields.organizationId, organizationId),
+					operators.eq(fields.userId, context.userId)
+				),
+			columns: {
+				id: true,
+			},
+		});
+
+		if (!profile) {
+			return 0;
+		}
+
+		const [result] = await db
+			.select({ total: count() })
+			.from(communityRelation)
+			.where(eq(communityRelation.fromId, profile.id));
+
+		return result?.total ?? 0;
+	});
+
+export const getMyOutgoingRelationCountQuery = () =>
+	queryOptions({
+		queryKey: ["get-my-outgoing-relation-count"],
+		queryFn: async () => {
+			const result = await getMyOutgoingRelationCount();
 			return result;
 		},
 	});

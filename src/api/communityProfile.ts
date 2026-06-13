@@ -55,6 +55,37 @@ export const getMyCommunityProfileQuery = () =>
 		gcTime: 0,
 	});
 
+export const getActiveMemberCount = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.handler(async ({ context }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const [result] = await db
+			.select({ total: count() })
+			.from(communityProfile)
+			.where(
+				and(
+					eq(communityProfile.organizationId, organizationId),
+					eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active)
+				)
+			);
+
+		return result?.total ?? 0;
+	});
+
+export const getActiveMemberCountQuery = () =>
+	queryOptions({
+		queryKey: ["get-active-member-count"],
+		queryFn: async () => {
+			const result = await getActiveMemberCount();
+			return result;
+		},
+	});
+
 export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
 	.validator(
