@@ -10,6 +10,13 @@ import { and, count, eq, like, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { safeAsync } from "@/lib/safe";
+import {
+	extractSubgraph,
+	getOrgGraphBlob,
+	invalidateOrgGraph,
+	resolveAnchorId,
+	searchProfiles,
+} from "@/lib/communityGraphCache";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -160,6 +167,8 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 				.where(eq(communityProfile.id, communityProfileId));
 		}
 
+		await invalidateOrgGraph(organizationId);
+
 		return {
 			message: "Community Profile updated successfully",
 		};
@@ -193,6 +202,48 @@ export const getCommunityProfileListQuery = () =>
 		queryKey: ["get-community-profile-list"],
 		queryFn: async () => {
 			const result = await getCommunityProfileList();
+			return result;
+		},
+	});
+
+export const getActiveProfilesForRelation = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.validator(
+		z.object({
+			subjectId: z.string().min(1, "Subject profile is required"),
+		})
+	)
+	.handler(async ({ context, data }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const communityProfiles = await db.query.communityProfile.findMany({
+			where: (fields, operators) =>
+				operators.and(
+					operators.eq(fields.organizationId, organizationId),
+					operators.eq(fields.status, COMMUNITY_PROFILE_STATUS.active),
+					operators.ne(fields.id, data.subjectId)
+				),
+			columns: {
+				id: true,
+				firstName: true,
+				lastName: true,
+				middleName: true,
+				nickName: true,
+			},
+		});
+
+		return communityProfiles;
+	});
+
+export const getActiveProfilesForRelationQuery = (subjectId: string) =>
+	queryOptions({
+		queryKey: ["get-active-profiles-for-relation", subjectId],
+		queryFn: async () => {
+			const result = await getActiveProfilesForRelation({ data: { subjectId } });
 			return result;
 		},
 	});
@@ -302,55 +353,73 @@ export const getCommunityMembersQuery = (props: {
 		},
 	});
 
-export const getCommunityTree = createServerFn({ method: "GET" })
+export const getFocusedCommunityGraph = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
-	.handler(async ({ context }) => {
+	.validator(
+		z.object({
+			focusId: z.string().optional(),
+			depth: z.number().int().min(1).max(3).default(2),
+		})
+	)
+	.handler(async ({ context, data }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
 
 		if (typeof organizationId !== "string") {
 			throw new Error("No Organization Id found");
 		}
 
-		const [profiles, relations] = await Promise.all([
-			db.query.communityProfile.findMany({
-				where: (fields, operators) => operators.eq(fields.organizationId, organizationId),
-				columns: {
-					id: true,
-					firstName: true,
-					middleName: true,
-					lastName: true,
-					nickName: true,
-					email: true,
-					gender: true,
-					status: true,
-				},
-			}),
-			db.query.communityRelation.findMany({
-				where: (fields, operators) => operators.eq(fields.organizationId, organizationId),
-				columns: {
-					id: true,
-					fromId: true,
-					toId: true,
-					type: true,
-					note: true,
-					bloodRelation: true,
-				},
-			}),
-		]);
+		const blob = await getOrgGraphBlob(organizationId);
 
-		return {
-			profiles,
-			relations,
-		};
+		// Resolve anchor: requested focus → own profile (if active & connected) → most-connected node.
+		let preferredId = data.focusId;
+		if (!preferredId) {
+			const ownProfile = await db.query.communityProfile.findFirst({
+				where: (fields, ops) =>
+					ops.and(
+						ops.eq(fields.organizationId, organizationId),
+						ops.eq(fields.userId, context.userId)
+					),
+				columns: { id: true },
+			});
+			if (ownProfile && blob.profiles.some((p) => p.id === ownProfile.id)) {
+				preferredId = ownProfile.id;
+			}
+		}
+
+		const anchorId = resolveAnchorId(blob, preferredId);
+		return extractSubgraph(blob, anchorId, data.depth);
 	});
 
-export const getCommunityTreeQuery = () =>
+export const getFocusedCommunityGraphQuery = (props?: { focusId?: string; depth?: number }) =>
 	queryOptions({
-		queryKey: ["get-community-tree"],
-		queryFn: async () => {
-			const result = await getCommunityTree();
-			return result;
-		},
+		queryKey: ["community-graph", props?.focusId ?? "__default__", props?.depth ?? 2],
+		queryFn: async () =>
+			getFocusedCommunityGraph({
+				data: { focusId: props?.focusId, depth: props?.depth ?? 2 },
+			}),
+		staleTime: 5 * 60 * 1000,
+	});
+
+export const searchCommunityProfilesLite = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.validator(z.object({ query: z.string() }))
+	.handler(async ({ context, data }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const blob = await getOrgGraphBlob(organizationId);
+		return searchProfiles(blob, data.query, 20);
+	});
+
+export const searchCommunityProfilesLiteQuery = (query: string) =>
+	queryOptions({
+		queryKey: ["community-profile-search", query],
+		queryFn: async () => searchCommunityProfilesLite({ data: { query } }),
+		staleTime: 60 * 1000,
+		enabled: query.trim().length > 0,
 	});
 
 export const getCommunityMemberById = createServerFn({ method: "GET" })
@@ -393,21 +462,38 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 			},
 		});
 
-		// const profileRelations = await db.query.communityRelation.findMany({
-		// 	where: (fields, ops) =>
-		// 		ops.or(
-		// 			ops.eq(fields.fromId, communityProfile.id),
-		// 			ops.eq(fields.toId, communityProfile.id)
-		// 		),
-		// 	columns: {
-		// 		organizationId: false,
-		// 	},
-		// });
+		const counterpartColumns = {
+			id: true,
+			firstName: true,
+			middleName: true,
+			lastName: true,
+			nickName: true,
+		} as const;
+
+		// Outgoing: subject is the `from`. Type read subject-centric.
+		const outgoingRelations = await db.query.communityRelation.findMany({
+			where: (fields, ops) => ops.eq(fields.fromId, communityProfile.id),
+			columns: { organizationId: false },
+			with: {
+				toCommunityProfile: { columns: counterpartColumns },
+			},
+		});
+
+		// Incoming: subject is the `to`. Type shown as stored (no inversion — ADR 0001).
+		const incomingRelations = await db.query.communityRelation.findMany({
+			where: (fields, ops) => ops.eq(fields.toId, communityProfile.id),
+			columns: { organizationId: false },
+			with: {
+				fromCommunityProfile: { columns: counterpartColumns },
+			},
+		});
 
 		return {
 			profile: communityProfile,
 			addresses: profileAddresses,
 			customFields: customFields?.map((i) => i.label),
+			outgoingRelations,
+			incomingRelations,
 		};
 	});
 
@@ -460,6 +546,8 @@ export const acceptCommunityProfile = createServerFn({ method: "POST" })
 				status: COMMUNITY_PROFILE_STATUS.active,
 			})
 			.where(eq(communityProfile.id, data.memberId));
+
+		await invalidateOrgGraph(organizationId);
 
 		return {
 			message: "Community Profile accepted successfully",
@@ -515,6 +603,8 @@ export const rejectCommunityProfile = createServerFn({ method: "POST" })
 				status: COMMUNITY_PROFILE_STATUS.inactive,
 			})
 			.where(eq(communityProfile.id, data.memberId));
+
+		await invalidateOrgGraph(organizationId);
 
 		return {
 			message: "Community Profile rejected successfully",
@@ -586,6 +676,8 @@ export const reassignProfileToUser = createServerFn({ method: "POST" })
 				userId: user.id,
 			})
 			.where(eq(communityProfile.id, memberProfile.id));
+
+		await invalidateOrgGraph(organizationId);
 
 		return {
 			message: "Profile reassigned successfully",
@@ -664,6 +756,8 @@ export const addMissingMember = createServerFn({ method: "POST" })
 			console.error(result.error);
 			throw new Error("Failed to add member");
 		}
+
+		await invalidateOrgGraph(organizationId);
 
 		return {
 			message: "Member added successfully",

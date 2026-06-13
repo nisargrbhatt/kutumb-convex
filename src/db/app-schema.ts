@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, blob } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, blob, index } from "drizzle-orm/sqlite-core";
 import {
 	COMMUNITY_ADDRESS_TYPE,
 	COMMUNITY_PROFILE_BLOOD_GROUP,
@@ -31,52 +31,56 @@ export const communityProfileCustomField = sqliteTable("communityProfileCustomFi
 		.notNull(),
 });
 
-export const communityProfile = sqliteTable("communityProfile", {
-	id: text("id").primaryKey(),
-	firstName: text("firstName").notNull(),
-	middleName: text("middleName"),
-	lastName: text("lastName").notNull(),
-	nickName: text("nickName"),
-	gender: text("gender", {
-		mode: "text",
-		enum: [GENDERS.male, GENDERS.female, GENDERS.other],
-	}),
-	email: text("email"),
-	status: text("status", {
-		mode: "text",
-		enum: [
-			COMMUNITY_PROFILE_STATUS.active,
-			COMMUNITY_PROFILE_STATUS.inactive,
-			COMMUNITY_PROFILE_STATUS.draft,
-		],
-	}).notNull(),
-	bloodGroup: text("bloodGroup", {
-		mode: "text",
-		enum: [
-			COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
-		],
-	}),
-	mobileNumber: text("mobileNumber"),
-	dateOfBirth: text("dateOfBirth"),
-	dateOfDeath: text("dateOfDeath"),
-	comment: text("comment"),
-	userId: text("userId").references(() => user.id, {
-		onDelete: "cascade",
-	}),
-	organizationId: text("organizationId")
-		.references(() => organization.id, {
+export const communityProfile = sqliteTable(
+	"communityProfile",
+	{
+		id: text("id").primaryKey(),
+		firstName: text("firstName").notNull(),
+		middleName: text("middleName"),
+		lastName: text("lastName").notNull(),
+		nickName: text("nickName"),
+		gender: text("gender", {
+			mode: "text",
+			enum: [GENDERS.male, GENDERS.female, GENDERS.other],
+		}),
+		email: text("email"),
+		status: text("status", {
+			mode: "text",
+			enum: [
+				COMMUNITY_PROFILE_STATUS.active,
+				COMMUNITY_PROFILE_STATUS.inactive,
+				COMMUNITY_PROFILE_STATUS.draft,
+			],
+		}).notNull(),
+		bloodGroup: text("bloodGroup", {
+			mode: "text",
+			enum: [
+				COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
+				COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
+				COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
+				COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
+				COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
+				COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
+				COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
+				COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
+			],
+		}),
+		mobileNumber: text("mobileNumber"),
+		dateOfBirth: text("dateOfBirth"),
+		dateOfDeath: text("dateOfDeath"),
+		comment: text("comment"),
+		userId: text("userId").references(() => user.id, {
 			onDelete: "cascade",
-		})
-		.notNull(),
-	customFieldData: blob({ mode: "json" }).$type<Record<string, any>>(),
-});
+		}),
+		organizationId: text("organizationId")
+			.references(() => organization.id, {
+				onDelete: "cascade",
+			})
+			.notNull(),
+		customFieldData: blob({ mode: "json" }).$type<Record<string, any>>(),
+	},
+	(table) => [index("communityProfile_org_status_idx").on(table.organizationId, table.status)]
+);
 
 export const communityProfileRelations = relations(communityProfile, ({ one, many }) => ({
 	user: one(user, {
@@ -116,38 +120,45 @@ export const communityAddressRelations = relations(communityAddress, ({ one }) =
 	}),
 }));
 
-export const communityRelation = sqliteTable("communityRelation", {
-	id: text("id").primaryKey(),
-	fromId: text("fromId").references(() => communityProfile.id, {
-		onDelete: "cascade",
-	}),
-	toId: text("toId").references(() => communityProfile.id, {
-		onDelete: "cascade",
-	}),
-	organizationId: text("organizationId").references(() => organization.id, {
-		onDelete: "cascade",
-	}),
-	type: text("type", {
-		mode: "text",
-		enum: [
-			COMMUNITY_RELATION_TYPE.brother,
-			COMMUNITY_RELATION_TYPE.brother_in_law,
-			COMMUNITY_RELATION_TYPE.child,
-			COMMUNITY_RELATION_TYPE.father,
-			COMMUNITY_RELATION_TYPE.father_in_law,
-			COMMUNITY_RELATION_TYPE.mother,
-			COMMUNITY_RELATION_TYPE.mother_in_law,
-			COMMUNITY_RELATION_TYPE.sister,
-			COMMUNITY_RELATION_TYPE.sister_in_law,
-			COMMUNITY_RELATION_TYPE.wife,
-			COMMUNITY_RELATION_TYPE.husband,
-			COMMUNITY_RELATION_TYPE.uncle,
-			COMMUNITY_RELATION_TYPE.aunt,
-		],
-	}),
-	note: text("note"),
-	bloodRelation: integer({ mode: "boolean" }).default(false),
-});
+export const communityRelation = sqliteTable(
+	"communityRelation",
+	{
+		id: text("id").primaryKey(),
+		fromId: text("fromId").references(() => communityProfile.id, {
+			onDelete: "cascade",
+		}),
+		toId: text("toId").references(() => communityProfile.id, {
+			onDelete: "cascade",
+		}),
+		organizationId: text("organizationId").references(() => organization.id, {
+			onDelete: "cascade",
+		}),
+		type: text("type", {
+			mode: "text",
+			enum: [
+				COMMUNITY_RELATION_TYPE.brother,
+				COMMUNITY_RELATION_TYPE.brother_in_law,
+				COMMUNITY_RELATION_TYPE.child,
+				COMMUNITY_RELATION_TYPE.father,
+				COMMUNITY_RELATION_TYPE.father_in_law,
+				COMMUNITY_RELATION_TYPE.mother,
+				COMMUNITY_RELATION_TYPE.mother_in_law,
+				COMMUNITY_RELATION_TYPE.sister,
+				COMMUNITY_RELATION_TYPE.sister_in_law,
+				COMMUNITY_RELATION_TYPE.wife,
+				COMMUNITY_RELATION_TYPE.husband,
+				COMMUNITY_RELATION_TYPE.uncle,
+				COMMUNITY_RELATION_TYPE.aunt,
+			],
+		}),
+		note: text("note"),
+		bloodRelation: integer({ mode: "boolean" }).default(false),
+	},
+	(table) => [
+		index("communityRelation_org_from_idx").on(table.organizationId, table.fromId),
+		index("communityRelation_org_to_idx").on(table.organizationId, table.toId),
+	]
+);
 
 export const communityRelationRelations = relations(communityRelation, ({ one }) => ({
 	fromCommunityProfile: one(communityProfile, {
