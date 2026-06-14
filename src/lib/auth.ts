@@ -52,52 +52,16 @@ export const auth = betterAuth({
 				}
 			},
 			organizationHooks: {
-				afterAddMember: async (payload) => {
-					const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
-					if (!parsedPayloadResult.success) {
-						console.error("Payload parsing failed for", payload.organization.id);
-						return;
-					}
-
-					const parsedPayload = parsedPayloadResult.data;
-					const orgCustomerId = parsedPayload?.customerId;
-
-					if (typeof orgCustomerId !== "string") {
-						console.error("No Organization Customer Id found for", payload.organization.id);
-					}
-
-					const eventIngestResult = await safeAsync(
-						polarClient.events.ingest({
-							events: [
-								{
-									customerId: orgCustomerId,
-									name: "user_added",
-									metadata: {
-										user_count: 1,
-										organizationMemberId: payload.member.id,
-										organizationId: payload.organization.id,
-										userId: payload.user.id,
-									},
-									externalMemberId: payload.member.id,
-									externalCustomerId: payload.organization.id,
-								},
-							],
-						})
-					);
-
-					if (!eventIngestResult.success) {
-						console.error(
-							"Event Ingest failed for ",
-							payload.organization.id,
-							eventIngestResult.error
-						);
-					}
-				},
 				afterRemoveMember: async (payload) => {
+					console.log("afterRemoveMember hook called for", payload);
 					const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
 					if (!parsedPayloadResult.success) {
-						console.error("Payload parsing failed for", payload.organization.id);
-						return;
+						console.error(
+							"Payload parsing failed for",
+							payload.organization.id,
+							payload.organization?.metadata
+						);
+						throw new Error("Payload parsing failed");
 					}
 
 					const parsedPayload = parsedPayloadResult.data;
@@ -105,6 +69,7 @@ export const auth = betterAuth({
 
 					if (typeof orgCustomerId !== "string") {
 						console.error("No Organization Customer Id found for", payload.organization.id);
+						throw new Error("No Organization Customer Id found");
 					}
 
 					const eventIngestResult = await safeAsync(
@@ -112,7 +77,7 @@ export const auth = betterAuth({
 							events: [
 								{
 									customerId: orgCustomerId,
-									name: "user_removed",
+									name: "org_seat",
 									metadata: {
 										user_count: -1,
 										organizationMemberId: payload.member.id,
@@ -132,6 +97,108 @@ export const auth = betterAuth({
 							payload.organization.id,
 							eventIngestResult.error
 						);
+						throw new Error("Event Ingest failed");
+					}
+				},
+				// Don't know why but afterAddMember hook is not working, so added afterAcceptInvitation hook which is working fine and is called after a user accepts an invitation
+				// afterAddMember: async (payload) => {
+				// 	console.log("afterAddMember hook called for", payload);
+				// 	const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
+				// 	if (!parsedPayloadResult.success) {
+				// 		console.error(
+				// 			"Payload parsing failed for",
+				// 			payload.organization.id,
+				// 			payload.organization?.metadata
+				// 		);
+				// 		throw new Error("Payload parsing failed");
+				// 	}
+
+				// 	const parsedPayload = parsedPayloadResult.data;
+				// 	const orgCustomerId = parsedPayload?.customerId;
+
+				// 	if (typeof orgCustomerId !== "string") {
+				// 		console.error("No Organization Customer Id found for", payload.organization.id);
+				// 		throw new Error("No Organization Customer Id found");
+				// 	}
+
+				// 	const eventIngestResult = await safeAsync(
+				// 		polarClient.events.ingest({
+				// 			events: [
+				// 				{
+				// 					customerId: orgCustomerId,
+				// 					name: "org_seat",
+				// 					metadata: {
+				// 						user_count: 1,
+				// 						organizationMemberId: payload.member.id,
+				// 						organizationId: payload.organization.id,
+				// 						userId: payload.user.id,
+				// 					},
+				// 					externalMemberId: payload.member.id,
+				// 					externalCustomerId: payload.organization.id,
+				// 				},
+				// 			],
+				// 		})
+				// 	);
+
+				// 	console.log("Event Ingest result for", payload.organization.id, eventIngestResult);
+
+				// 	if (!eventIngestResult.success) {
+				// 		console.error(
+				// 			"Event Ingest failed for ",
+				// 			payload.organization.id,
+				// 			eventIngestResult.error
+				// 		);
+				// 		throw new Error("Event Ingest failed");
+				// 	}
+				// },
+				afterAcceptInvitation: async (payload) => {
+					console.log("afterAcceptInvitation hook called for", payload);
+					const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
+					if (!parsedPayloadResult.success) {
+						console.error(
+							"Payload parsing failed for",
+							payload.organization.id,
+							payload.organization?.metadata
+						);
+						throw new Error("Payload parsing failed");
+					}
+
+					const parsedPayload = parsedPayloadResult.data;
+					const orgCustomerId = parsedPayload?.customerId;
+
+					if (typeof orgCustomerId !== "string") {
+						console.error("No Organization Customer Id found for", payload.organization.id);
+						throw new Error("No Organization Customer Id found");
+					}
+
+					const eventIngestResult = await safeAsync(
+						polarClient.events.ingest({
+							events: [
+								{
+									customerId: orgCustomerId,
+									name: "org_seat",
+									metadata: {
+										user_count: 1,
+										organizationMemberId: payload.member.id,
+										organizationId: payload.organization.id,
+										userId: payload.user.id,
+									},
+									externalMemberId: payload.member.id,
+									externalCustomerId: payload.organization.id,
+								},
+							],
+						})
+					);
+
+					console.log("Event Ingest result for", payload.organization.id, eventIngestResult);
+
+					if (!eventIngestResult.success) {
+						console.error(
+							"Event Ingest failed for ",
+							payload.organization.id,
+							eventIngestResult.error
+						);
+						throw new Error("Event Ingest failed");
 					}
 				},
 			},
@@ -229,4 +296,13 @@ export const auth = betterAuth({
 		},
 	},
 	baseURL: env.BETTER_AUTH_URL,
+	logger: {
+		disabled: false,
+		disableColors: false,
+		level: "debug",
+		log: (level, message, ...args) => {
+			// Custom logging implementation
+			console.log(`[${level}] ${message}`, ...args);
+		},
+	},
 });
