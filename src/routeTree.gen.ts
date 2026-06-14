@@ -11,8 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as publicRouteRouteImport } from './routes/(public)/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community'
+import { Route as publicTermOfServiceIndexRouteImport } from './routes/(public)/term-of-service/index'
+import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/privacy-policy/index'
+import { Route as publicAboutIndexRouteImport } from './routes/(public)/about/index'
 import { Route as ApiPolarPortalRouteImport } from './routes/api/polar/portal'
 import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -41,6 +45,10 @@ const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const publicRouteRoute = publicRouteRouteImport.update({
+  id: '/(public)',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,6 +57,23 @@ const IndexRoute = IndexRouteImport.update({
 const AuthedCommunityRoute = AuthedCommunityRouteImport.update({
   id: '/_community',
   getParentRoute: () => AuthedRoute,
+} as any)
+const publicTermOfServiceIndexRoute =
+  publicTermOfServiceIndexRouteImport.update({
+    id: '/term-of-service/',
+    path: '/term-of-service/',
+    getParentRoute: () => publicRouteRoute,
+  } as any)
+const publicPrivacyPolicyIndexRoute =
+  publicPrivacyPolicyIndexRouteImport.update({
+    id: '/privacy-policy/',
+    path: '/privacy-policy/',
+    getParentRoute: () => publicRouteRoute,
+  } as any)
+const publicAboutIndexRoute = publicAboutIndexRouteImport.update({
+  id: '/about/',
+  path: '/about/',
+  getParentRoute: () => publicRouteRoute,
 } as any)
 const ApiPolarPortalRoute = ApiPolarPortalRouteImport.update({
   id: '/api/polar/portal',
@@ -163,6 +188,9 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
+  '/about/': typeof publicAboutIndexRoute
+  '/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
+  '/term-of-service/': typeof publicTermOfServiceIndexRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
@@ -185,6 +213,9 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
+  '/about': typeof publicAboutIndexRoute
+  '/privacy-policy': typeof publicPrivacyPolicyIndexRoute
+  '/term-of-service': typeof publicTermOfServiceIndexRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
@@ -203,6 +234,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/(public)': typeof publicRouteRouteWithChildren
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
@@ -210,6 +242,9 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
+  '/(public)/about/': typeof publicAboutIndexRoute
+  '/(public)/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
+  '/(public)/term-of-service/': typeof publicTermOfServiceIndexRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
@@ -234,6 +269,9 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/ph/$'
     | '/api/polar/portal'
+    | '/about/'
+    | '/privacy-policy/'
+    | '/term-of-service/'
     | '/community-tree/'
     | '/dashboard/'
     | '/members/'
@@ -256,6 +294,9 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/ph/$'
     | '/api/polar/portal'
+    | '/about'
+    | '/privacy-policy'
+    | '/term-of-service'
     | '/community-tree'
     | '/dashboard'
     | '/members'
@@ -273,6 +314,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/(public)'
     | '/_authed'
     | '/login'
     | '/_authed/_community'
@@ -280,6 +322,9 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/ph/$'
     | '/api/polar/portal'
+    | '/(public)/about/'
+    | '/(public)/privacy-policy/'
+    | '/(public)/term-of-service/'
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
@@ -298,6 +343,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  publicRouteRoute: typeof publicRouteRouteWithChildren
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -321,6 +367,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(public)': {
+      id: '/(public)'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof publicRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -334,6 +387,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthedCommunityRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/(public)/term-of-service/': {
+      id: '/(public)/term-of-service/'
+      path: '/term-of-service'
+      fullPath: '/term-of-service/'
+      preLoaderRoute: typeof publicTermOfServiceIndexRouteImport
+      parentRoute: typeof publicRouteRoute
+    }
+    '/(public)/privacy-policy/': {
+      id: '/(public)/privacy-policy/'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy/'
+      preLoaderRoute: typeof publicPrivacyPolicyIndexRouteImport
+      parentRoute: typeof publicRouteRoute
+    }
+    '/(public)/about/': {
+      id: '/(public)/about/'
+      path: '/about'
+      fullPath: '/about/'
+      preLoaderRoute: typeof publicAboutIndexRouteImport
+      parentRoute: typeof publicRouteRoute
     }
     '/api/polar/portal': {
       id: '/api/polar/portal'
@@ -464,6 +538,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface publicRouteRouteChildren {
+  publicAboutIndexRoute: typeof publicAboutIndexRoute
+  publicPrivacyPolicyIndexRoute: typeof publicPrivacyPolicyIndexRoute
+  publicTermOfServiceIndexRoute: typeof publicTermOfServiceIndexRoute
+}
+
+const publicRouteRouteChildren: publicRouteRouteChildren = {
+  publicAboutIndexRoute: publicAboutIndexRoute,
+  publicPrivacyPolicyIndexRoute: publicPrivacyPolicyIndexRoute,
+  publicTermOfServiceIndexRoute: publicTermOfServiceIndexRoute,
+}
+
+const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
+  publicRouteRouteChildren,
+)
+
 interface AuthedCommunityRouteChildren {
   AuthedCommunityMemoriesRouteRoute: typeof AuthedCommunityMemoriesRouteRoute
   AuthedCommunityCommunityTreeIndexRoute: typeof AuthedCommunityCommunityTreeIndexRoute
@@ -524,6 +614,7 @@ const AuthedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  publicRouteRoute: publicRouteRouteWithChildren,
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

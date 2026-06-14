@@ -4,8 +4,53 @@ import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, Globe, Heart, Shield, Users, Zap } from "lucide-react";
 import { RootLayout } from "@/components/RootLayout";
+import heroImage from "@/assets/hero.png";
+
+const SITE_URL = "https://kutumb.nisargbhatt.org";
 
 export const Route = createFileRoute("/")({
+	head: () => ({
+		meta: [
+			{ title: "Kutumb — The operating system for your community" },
+			{
+				name: "description",
+				content:
+					"Kutumb brings people together. Manage your member directory, visualize relationships, and share memories in one beautiful, privacy-first space.",
+			},
+			{ property: "og:type", content: "website" },
+			{ property: "og:url", content: SITE_URL },
+			{ property: "og:title", content: "Kutumb — The operating system for your community" },
+			{
+				property: "og:description",
+				content:
+					"Manage your member directory, visualize relationships, and share memories in one beautiful, privacy-first space.",
+			},
+			{ property: "og:image", content: `${SITE_URL}${heroImage}` },
+			{ name: "twitter:card", content: "summary_large_image" },
+			{ name: "twitter:title", content: "Kutumb — The operating system for your community" },
+			{
+				name: "twitter:description",
+				content:
+					"Manage your member directory, visualize relationships, and share memories in one beautiful, privacy-first space.",
+			},
+			{ name: "twitter:image", content: `${SITE_URL}${heroImage}` },
+		],
+		links: [{ rel: "canonical", href: SITE_URL }],
+		scripts: [
+			{
+				type: "application/ld+json",
+				children: JSON.stringify({
+					"@context": "https://schema.org",
+					"@type": "Organization",
+					name: "Kutumb",
+					url: SITE_URL,
+					logo: `${SITE_URL}/favicon.png`,
+					description:
+						"Kutumb is a community-management platform to manage your member directory, visualize relationships, and share memories.",
+				}),
+			},
+		],
+	}),
 	component: App,
 });
 
@@ -51,9 +96,11 @@ function Hero() {
 							<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
 						</Button>
 					</Route.Link>
-					<Button variant="ghost" size="lg" className="rounded-full px-8 text-base">
-						Learn More
-					</Button>
+					<Route.Link to="/about">
+						<Button variant="ghost" size="lg" className="rounded-full px-8 text-base">
+							Learn More
+						</Button>
+					</Route.Link>
 				</div>
 			</div>
 		</section>
@@ -158,9 +205,11 @@ function App() {
 							<p className="mb-8 text-muted-foreground">
 								Join thousands of communities already using Kutumb to stay connected.
 							</p>
-							<Button size="lg" className="rounded-full px-8 font-medium">
-								Join Now
-							</Button>
+							<Route.Link to="/dashboard">
+								<Button size="lg" className="rounded-full px-8 font-medium">
+									Join Now
+								</Button>
+							</Route.Link>
 						</div>
 					</div>
 				</section>
