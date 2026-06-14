@@ -42,13 +42,15 @@ function Hero() {
 				</p>
 
 				<div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-					<Button
-						size="lg"
-						className="group rounded-full px-8 text-base font-medium shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40"
-					>
-						Get Started
-						<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-					</Button>
+					<Route.Link to="/dashboard">
+						<Button
+							size="lg"
+							className="group rounded-full px-8 text-base font-medium shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40"
+						>
+							Get Started
+							<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+						</Button>
+					</Route.Link>
 					<Button variant="ghost" size="lg" className="rounded-full px-8 text-base">
 						Learn More
 					</Button>

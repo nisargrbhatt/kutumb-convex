@@ -312,6 +312,16 @@ function RouteComponent() {
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
 			<PageHeader />
 
+			<div className="flex items-center justify-between">
+				<div>
+					<h2 className="text-lg font-medium">Profile</h2>
+					<p className="text-sm text-muted-foreground">
+						Add your community profile information. This will be visible to other members of the
+						community.
+					</p>
+				</div>
+			</div>
+
 			<CommunityProfileForm
 				customFields={customFieldsResponse?.data ?? []}
 				defaultValues={

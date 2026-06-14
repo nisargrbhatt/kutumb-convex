@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community'
+import { Route as ApiPolarPortalRouteImport } from './routes/api/polar/portal'
 import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
@@ -48,6 +49,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthedCommunityRoute = AuthedCommunityRouteImport.update({
   id: '/_community',
   getParentRoute: () => AuthedRoute,
+} as any)
+const ApiPolarPortalRoute = ApiPolarPortalRouteImport.update({
+  id: '/api/polar/portal',
+  path: '/api/polar/portal',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPhSplatRoute = ApiPhSplatRouteImport.update({
   id: '/api/ph/$',
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
+  '/api/polar/portal': typeof ApiPolarPortalRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
+  '/api/polar/portal': typeof ApiPolarPortalRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
@@ -201,6 +209,7 @@ export interface FileRoutesById {
   '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
+  '/api/polar/portal': typeof ApiPolarPortalRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
+    | '/api/polar/portal'
     | '/community-tree/'
     | '/dashboard/'
     | '/members/'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
+    | '/api/polar/portal'
     | '/community-tree'
     | '/dashboard'
     | '/members'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/_authed/_community/memories'
     | '/api/auth/$'
     | '/api/ph/$'
+    | '/api/polar/portal'
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
@@ -290,6 +302,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPhSplatRoute: typeof ApiPhSplatRoute
+  ApiPolarPortalRoute: typeof ApiPolarPortalRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -321,6 +334,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthedCommunityRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/api/polar/portal': {
+      id: '/api/polar/portal'
+      path: '/api/polar/portal'
+      fullPath: '/api/polar/portal'
+      preLoaderRoute: typeof ApiPolarPortalRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/ph/$': {
       id: '/api/ph/$'
@@ -508,6 +528,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPhSplatRoute: ApiPhSplatRoute,
+  ApiPolarPortalRoute: ApiPolarPortalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
