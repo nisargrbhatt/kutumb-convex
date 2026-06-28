@@ -12,7 +12,6 @@ import {
 	pixelBasedPreset,
 	Section,
 } from "@react-email/components";
-import React from "react";
 
 interface InviteEmailProps {
 	organizationName: string;

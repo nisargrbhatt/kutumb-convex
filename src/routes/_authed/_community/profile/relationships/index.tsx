@@ -69,15 +69,11 @@ function PageHeader() {
 			<Breadcrumb>
 				<BreadcrumbList>
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/dashboard"}>Home</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/profile/info"}>Profile</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/profile/info"} />}>Profile</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
@@ -251,11 +247,9 @@ function RelationshipFormModal({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogTrigger asChild>
-				<Button size="sm">
-					<Users className="mr-2 size-4" />
-					Add Relationship
-				</Button>
+			<DialogTrigger render={<Button size="sm" />}>
+				<Users className="mr-2 size-4" />
+				Add Relationship
 			</DialogTrigger>
 			<DialogContent className="h-[90vh] max-w-2xl overflow-y-auto sm:max-w-[500px] md:h-auto">
 				<div className="flex flex-col space-y-1.5 p-6 pb-2">
@@ -272,7 +266,18 @@ function RelationshipFormModal({
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Relative</FormLabel>
-											<Select onValueChange={field.onChange} defaultValue={field.value}>
+											<Select
+												items={Object.fromEntries(
+													profiles.map((profile) => [
+														profile.id,
+														`${[profile.firstName, profile.middleName, profile.lastName]
+															.filter(Boolean)
+															.join(" ")}${profile.nickName ? ` (${profile.nickName})` : ""}`,
+													])
+												)}
+												onValueChange={field.onChange}
+												defaultValue={field.value}
+											>
 												<FormControl>
 													<SelectTrigger>
 														<SelectValue placeholder="Select a community member" />

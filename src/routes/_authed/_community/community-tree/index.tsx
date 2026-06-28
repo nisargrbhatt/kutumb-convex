@@ -74,9 +74,7 @@ function PageHeader() {
 			<Breadcrumb>
 				<BreadcrumbList>
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/dashboard"}>Home</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
@@ -253,11 +251,9 @@ function SearchBox(props: { onSelect: (id: string) => void }) {
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
-			<PopoverTrigger asChild>
-				<Button variant="outline" size="sm" className="gap-2">
-					<IconSearch className="size-4" />
-					Search
-				</Button>
+			<PopoverTrigger render={<Button variant="outline" size="sm" className="gap-2" />}>
+				<IconSearch className="size-4" />
+				Search
 			</PopoverTrigger>
 			<PopoverContent className="w-72 p-0" align="end">
 				<Command shouldFilter={false}>

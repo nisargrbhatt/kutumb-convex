@@ -29,16 +29,18 @@ export function SettingNav() {
 						}
 					}}
 				>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/settings/overview"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<IconAffiliate />
-							<span>Overview</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/settings/overview"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconAffiliate />
+						<span>Overview</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 				<SidebarMenuItem
@@ -48,16 +50,18 @@ export function SettingNav() {
 						}
 					}}
 				>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/settings/fields"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<IconInputSearch />
-							<span>Fields</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/settings/fields"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconInputSearch />
+						<span>Fields</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 				<SidebarMenuItem
@@ -67,16 +71,18 @@ export function SettingNav() {
 						}
 					}}
 				>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/settings/members"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<IconUser />
-							<span>Members</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/settings/members"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconUser />
+						<span>Members</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 			</SidebarMenu>

@@ -78,14 +78,12 @@ function PageHeader() {
 			<Breadcrumb>
 				<BreadcrumbList>
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/dashboard"}>Home</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/settings/overview"}>Settings</Route.Link>
+						<BreadcrumbLink render={<Route.Link to={"/settings/overview"} />}>
+							Settings
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -179,7 +177,14 @@ function AddMemberDrawer() {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Role</FormLabel>
-									<Select onValueChange={field.onChange} defaultValue={field.value}>
+									<Select
+										items={{
+											[ORGANIZATION_ROLES.admin]: "Admin",
+											[ORGANIZATION_ROLES.member]: "Member",
+										}}
+										onValueChange={field.onChange}
+										defaultValue={field.value}
+									>
 										<FormControl>
 											<SelectTrigger>
 												<SelectValue placeholder="Select a role" />
@@ -277,7 +282,15 @@ function ChangeRoleDrawer({ member }: { member: OrganizationMember }) {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Role</FormLabel>
-									<Select onValueChange={field.onChange} value={field.value}>
+									<Select
+										items={{
+											[ORGANIZATION_ROLES.owner]: "Owner",
+											[ORGANIZATION_ROLES.admin]: "Admin",
+											[ORGANIZATION_ROLES.member]: "Member",
+										}}
+										onValueChange={field.onChange}
+										value={field.value}
+									>
 										<FormControl>
 											<SelectTrigger>
 												<SelectValue placeholder="Select a role" />
@@ -379,10 +392,10 @@ function OrganizationMemberList() {
 										<div className="flex items-center justify-end gap-2">
 											<ChangeRoleDrawer member={member} />
 											<AlertDialog>
-												<AlertDialogTrigger asChild>
-													<Button variant="outline" size="sm" type="button">
-														Remove
-													</Button>
+												<AlertDialogTrigger
+													render={<Button variant="outline" size="sm" type="button" />}
+												>
+													Remove
 												</AlertDialogTrigger>
 												<AlertDialogContent>
 													<AlertDialogHeader>

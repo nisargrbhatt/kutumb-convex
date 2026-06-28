@@ -81,14 +81,12 @@ function PageHeader() {
 			<Breadcrumb>
 				<BreadcrumbList>
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/dashboard"}>Home</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/settings/overview"}>Settings</Route.Link>
+						<BreadcrumbLink render={<Route.Link to={"/settings/overview"} />}>
+							Settings
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -143,11 +141,9 @@ function AddFieldDrawer() {
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<Button size="sm">
-					<Plus className="size-4" />
-					Add Field
-				</Button>
+			<SheetTrigger render={<Button size="sm" />}>
+				<Plus className="size-4" />
+				Add Field
 			</SheetTrigger>
 			<SheetContent side="right" className="overflow-y-auto">
 				<SheetHeader>
@@ -229,11 +225,9 @@ function DeleteFieldDialog({ id }: { id: string }) {
 
 	return (
 		<AlertDialog open={open} onOpenChange={setOpen}>
-			<AlertDialogTrigger asChild>
-				<Button variant="destructive" size="icon-sm">
-					<Trash2 className="size-4" />
-					<span className="sr-only">Delete field</span>
-				</Button>
+			<AlertDialogTrigger render={<Button variant="destructive" size="icon-sm" />}>
+				<Trash2 className="size-4" />
+				<span className="sr-only">Delete field</span>
 			</AlertDialogTrigger>
 			<AlertDialogContent>
 				<AlertDialogHeader>

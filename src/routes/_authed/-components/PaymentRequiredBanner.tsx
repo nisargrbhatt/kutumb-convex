@@ -54,7 +54,11 @@ export function PaymentRequiredBanner() {
 								</Button>
 								{organizations && organizations?.length > 0 ? (
 									<Select
+										items={Object.fromEntries(
+											(organizations ?? []).map((org) => [org.id, org.name])
+										)}
 										onValueChange={async (value) => {
+											if (!value) return;
 											await authClient.organization.setActive({
 												organizationId: value,
 											});

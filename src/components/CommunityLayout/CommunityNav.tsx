@@ -25,16 +25,18 @@ export function CommunityNav() {
 						}
 					}}
 				>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/dashboard"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<LayoutDashboard />
-							<span>Dashboard</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/dashboard"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<LayoutDashboard />
+						<span>Dashboard</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 				<SidebarMenuItem
@@ -44,16 +46,18 @@ export function CommunityNav() {
 						}
 					}}
 				>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/members"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<LayoutList />
-							<span>Members</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/members"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<LayoutList />
+						<span>Members</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 				<SidebarMenuItem
@@ -63,29 +67,33 @@ export function CommunityNav() {
 						}
 					}}
 				>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/community-tree"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<IconBinaryTree />
-							<span>Community Tree</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/community-tree"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconBinaryTree />
+						<span>Community Tree</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 				<SidebarMenuItem>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/memories"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<IconPhoto />
-							<span>Memories</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/memories"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconPhoto />
+						<span>Memories</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 			</SidebarMenu>

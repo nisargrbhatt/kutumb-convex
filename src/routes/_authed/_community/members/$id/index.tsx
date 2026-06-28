@@ -135,15 +135,11 @@ function PageHeader({ name }: { name: string }) {
 			<Breadcrumb>
 				<BreadcrumbList>
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Link to={"/dashboard"}>Home</Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Link to={"/dashboard"} />}>Home</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Link to={"/members"}>Members</Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Link to={"/members"} />}>Members</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
@@ -292,9 +288,7 @@ function MemberActions() {
 	return (
 		<>
 			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button variant="outline">Actions</Button>
-				</DropdownMenuTrigger>
+				<DropdownMenuTrigger render={<Button variant="outline" />}>Actions</DropdownMenuTrigger>
 				<DropdownMenuContent>
 					{showProfileActions ? (
 						<DropdownMenuGroup>
@@ -1002,10 +996,8 @@ function DeleteRelationDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button variant="ghost" size="icon" aria-label="Delete relation">
-					<Trash2 className="size-4 text-destructive" />
-				</Button>
+			<DialogTrigger render={<Button variant="ghost" size="icon" aria-label="Delete relation" />}>
+				<Trash2 className="size-4 text-destructive" />
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>

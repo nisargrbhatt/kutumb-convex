@@ -55,15 +55,11 @@ function PageHeader() {
 			<Breadcrumb>
 				<BreadcrumbList>
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/dashboard"}>Home</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/profile/info"}>Profile</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/profile/info"} />}>Profile</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>

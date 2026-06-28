@@ -64,6 +64,7 @@ export function CustomFieldsForm({
 								)}
 								{field.type === CUSTOM_FIELD_TYPE.boolean && (
 									<Select
+										items={{ yes: "Yes", no: "No" }}
 										onValueChange={(val) => formField.onChange(val === "yes")}
 										value={
 											formField.value === true

@@ -20,8 +20,8 @@ export function CtaCard({ title, description, actionLabel, to, icon: Icon }: Cta
 				<CardDescription>{description}</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<Button asChild size="sm">
-					<Link to={to}>{actionLabel}</Link>
+				<Button render={<Link to={to} />} nativeButton={false} size="sm">
+					{actionLabel}
 				</Button>
 			</CardContent>
 		</Card>

@@ -23,16 +23,18 @@ export function ProfileNav() {
 						}
 					}}
 				>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/profile/info"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<IconClipboardList />
-							<span>Info</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/profile/info"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconClipboardList />
+						<span>Info</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 				<SidebarMenuItem
@@ -42,16 +44,18 @@ export function ProfileNav() {
 						}
 					}}
 				>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/profile/addresses"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<IconAddressBook />
-							<span>Addresses</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/profile/addresses"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconAddressBook />
+						<span>Addresses</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 				<SidebarMenuItem
@@ -61,16 +65,18 @@ export function ProfileNav() {
 						}
 					}}
 				>
-					<SidebarMenuButton asChild>
-						<Link
-							to={"/profile/relationships"}
-							activeProps={{
-								className: "bg-muted",
-							}}
-						>
-							<IconConnection />
-							<span>Relationships</span>
-						</Link>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/profile/relationships"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconConnection />
+						<span>Relationships</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 			</SidebarMenu>

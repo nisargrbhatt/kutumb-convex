@@ -62,9 +62,7 @@ function PageHeader() {
 			<Breadcrumb>
 				<BreadcrumbList>
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/dashboard"}>Home</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
@@ -168,10 +166,12 @@ const columns: ColumnDef<CommunityMember>[] = [
 				return (
 					<TooltipProvider>
 						<Tooltip>
-							<TooltipTrigger asChild>
-								<span className="cursor-help underline decoration-dotted underline-offset-2">
-									{formattedDate}
-								</span>
+							<TooltipTrigger
+								render={
+									<span className="cursor-help underline decoration-dotted underline-offset-2" />
+								}
+							>
+								{formattedDate}
 							</TooltipTrigger>
 							<TooltipContent>
 								<p>{isoDate}</p>
@@ -223,14 +223,14 @@ function MembersFilters() {
 					navigate({
 						search: (prev: MembersSearch) => ({
 							...prev,
-							status: value === "all" ? undefined : value,
+							status: value && value !== "all" ? value : undefined,
 							page: 1,
 						}),
 					});
 				}}
 			>
 				<SelectTrigger className="w-full sm:w-35">
-					<SelectValue placeholder="Status" />
+					<SelectValue>{(v: string | null) => (v && v !== "all" ? v : "All Status")}</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
 					<SelectItem value="all">All Status</SelectItem>
@@ -247,14 +247,14 @@ function MembersFilters() {
 					navigate({
 						search: (prev: MembersSearch) => ({
 							...prev,
-							gender: value === "all" ? undefined : value,
+							gender: value && value !== "all" ? value : undefined,
 							page: 1,
 						}),
 					});
 				}}
 			>
 				<SelectTrigger className="w-full sm:w-35">
-					<SelectValue placeholder="Gender" />
+					<SelectValue>{(v: string | null) => (v && v !== "all" ? v : "All Genders")}</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
 					<SelectItem value="all">All Genders</SelectItem>

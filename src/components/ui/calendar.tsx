@@ -111,9 +111,9 @@ function Calendar({
 				...classNames,
 			}}
 			components={{
-				Root: ({ className, rootRef, ...props }) => 
+				Root: ({ className, rootRef, ...props }) => (
 					<div data-slot="calendar" ref={rootRef} className={cn(className)} {...props} />
-				,
+				),
 				Chevron: ({ className, orientation, ...props }) => {
 					if (orientation === "left") {
 						return <RiArrowLeftSLine className={cn("size-4", className)} {...props} />;
@@ -126,15 +126,13 @@ function Calendar({
 					return <RiArrowDownSLine className={cn("size-4", className)} {...props} />;
 				},
 				DayButton: ({ ...props }) => <CalendarDayButton locale={locale} {...props} />,
-				WeekNumber: ({ children, ...props }) => 
-					(
-						<td {...props}>
-							<div className="flex size-(--cell-size) items-center justify-center text-center">
-								{children}
-							</div>
-						</td>
-					)
-				,
+				WeekNumber: ({ children, ...props }) => (
+					<td {...props}>
+						<div className="flex size-(--cell-size) items-center justify-center text-center">
+							{children}
+						</div>
+					</td>
+				),
 				...components,
 			}}
 			{...props}

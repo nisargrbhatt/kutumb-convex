@@ -75,15 +75,11 @@ function PageHeader() {
 			<Breadcrumb>
 				<BreadcrumbList>
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/dashboard"}>Home</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Route.Link to={"/profile/info"}>Profile</Route.Link>
-						</BreadcrumbLink>
+						<BreadcrumbLink render={<Route.Link to={"/profile/info"} />}>Profile</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
@@ -217,11 +213,9 @@ function DeleteAddressDialog({ id }: { id: string }) {
 
 	return (
 		<AlertDialog open={open} onOpenChange={setOpen}>
-			<AlertDialogTrigger asChild>
-				<Button variant="destructive" size="icon-sm">
-					<Trash2 className="size-4" />
-					<span className="sr-only">Delete address</span>
-				</Button>
+			<AlertDialogTrigger render={<Button variant="destructive" size="icon-sm" />}>
+				<Trash2 className="size-4" />
+				<span className="sr-only">Delete address</span>
 			</AlertDialogTrigger>
 			<AlertDialogContent>
 				<AlertDialogHeader>
@@ -293,11 +287,9 @@ function AddressFormModal({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogTrigger asChild>
-				<Button size="sm">
-					<MapPin className="size-4" />
-					Add Address
-				</Button>
+			<DialogTrigger render={<Button size="sm" />}>
+				<MapPin className="size-4" />
+				Add Address
 			</DialogTrigger>
 			<DialogContent className="h-[90vh] max-w-2xl overflow-y-auto sm:max-w-[700px] md:h-auto">
 				<div className="flex flex-col space-y-1.5 p-6 pb-2">

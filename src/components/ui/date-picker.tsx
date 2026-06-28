@@ -26,18 +26,20 @@ export function DatePicker({
 		<div className={cn("grid gap-2", className)} {...props}>
 			<Popover>
 				<div className="relative">
-					<PopoverTrigger asChild>
-						<Button
-							variant={"outline"}
-							className={cn(
-								"w-full justify-start text-left font-normal",
-								date && "pr-10",
-								!date && "text-muted-foreground"
-							)}
-						>
-							<CalendarIcon className="mr-2 size-4" />
-							<span className="truncate">{date ? format(date, "PPP") : placeholder}</span>
-						</Button>
+					<PopoverTrigger
+						render={
+							<Button
+								variant={"outline"}
+								className={cn(
+									"w-full justify-start text-left font-normal",
+									date && "pr-10",
+									!date && "text-muted-foreground"
+								)}
+							/>
+						}
+					>
+						<CalendarIcon className="mr-2 size-4" />
+						<span className="truncate">{date ? format(date, "PPP") : placeholder}</span>
 					</PopoverTrigger>
 					{date && (
 						<Button
