@@ -39,13 +39,13 @@ export function PaymentRequiredBanner() {
 					<div className={"flex flex-col gap-6"}>
 						<Card>
 							<CardHeader>
-								<CardTitle>Payment pending</CardTitle>
-								<CardDescription>Payment is pending for {activeOrg?.name}</CardDescription>
+								<CardTitle>Trial ended</CardTitle>
+								<CardDescription>Your free trial for {activeOrg?.name} has ended.</CardDescription>
 							</CardHeader>
 							<CardContent>
 								<p className="text-sm text-muted-foreground">
-									We have 7 days free trial period. Then we will start charging money according to
-									our <Link to={"/"}>Pricing</Link>.
+									Complete payment to continue using your community. See our{" "}
+									<Link to={"/"}>Pricing</Link> for details.
 								</p>
 							</CardContent>
 							<CardFooter className="w-full flex-row gap-2">

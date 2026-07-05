@@ -10,6 +10,11 @@ export const ORGANIZATION_ROLES = {
 	member: "member",
 } as const;
 
+export const ORGANIZATION_STATUS = {
+	active: "active",
+	pending: "pending",
+} as const;
+
 export const COMMUNITY_PROFILE_STATUS = {
 	active: "active",
 	inactive: "inactive",

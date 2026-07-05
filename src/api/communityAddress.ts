@@ -1,4 +1,4 @@
-import { authMiddleware } from "@/middleware/auth";
+import { paymentMiddleware } from "@/middleware/payment";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
@@ -9,7 +9,7 @@ import { generatePrimaryKey } from "@/lib/generate";
 import { eq } from "drizzle-orm";
 
 export const getMyCommunityAddresses = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.handler(async ({ context }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
 
@@ -49,7 +49,7 @@ export const getMyCommunityAddressesQuery = () =>
 	});
 
 export const addMyCommunityAddress = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.validator(
 		z.object({
 			line1: z.string().min(1, "Line 1 is required"),
@@ -111,7 +111,7 @@ export const addMyCommunityAddress = createServerFn({ method: "POST" })
 	});
 
 export const deleteMyCommunityAddress = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.validator(
 		z.object({
 			id: z.string().trim().min(1, "Address ID is required"),

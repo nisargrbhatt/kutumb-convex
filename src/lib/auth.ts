@@ -13,6 +13,23 @@ import { safeAsync, safeSync } from "./safe";
 import { resend } from "./resend";
 import InviteEmail from "@/emails/InviteEmail";
 import { EMAIL_CONFIG } from "./common";
+import { ORGANIZATION_STATUS } from "@/db/constants";
+import { getTrialDays, parseOrgMetadata } from "./org-status";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Merge a patch into an org's JSON metadata blob (never overwrites unrelated keys). */
+async function mergeOrgMetadata(orgId: string, patch: Record<string, unknown>) {
+	const org = await db.query.organization.findFirst({
+		where: (fields, op) => op.eq(fields.id, orgId),
+		columns: { metadata: true },
+	});
+	const merged = { ...parseOrgMetadata(org?.metadata), ...patch };
+	await db
+		.update(organizationTable)
+		.set({ metadata: JSON.stringify(merged) })
+		.where(eq(organizationTable.id, orgId));
+}
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -52,6 +69,39 @@ export const auth = betterAuth({
 				}
 			},
 			organizationHooks: {
+				// Stamp the trial on creation, server-side (authoritative clock).
+				beforeCreateOrganization: async (payload) => {
+					const trialEndsAt = Date.now() + getTrialDays() * DAY_MS;
+					return {
+						data: {
+							...payload.organization,
+							metadata: {
+								...(payload.organization.metadata ?? {}),
+								status: ORGANIZATION_STATUS.active,
+								trialEndsAt,
+							},
+						},
+					};
+				},
+				// Create the Polar customer up front so seat usage meters during the
+				// trial. Best-effort + idempotent (externalId): never blocks creation.
+				afterCreateOrganization: async (payload) => {
+					const orgId = payload.organization.id;
+					const customerResult = await safeAsync(
+						polarClient.customers.create({
+							email: payload.user.email,
+							externalId: orgId,
+							name: payload.organization.name,
+						})
+					);
+
+					if (!customerResult.success) {
+						console.error("Polar customer creation failed for", orgId, customerResult.error);
+						return;
+					}
+
+					await mergeOrgMetadata(orgId, { customerId: customerResult.data.id });
+				},
 				afterRemoveMember: async (payload) => {
 					console.log("afterRemoveMember hook called for", payload);
 					const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
@@ -222,28 +272,49 @@ export const auth = betterAuth({
 				usage(),
 				webhooks({
 					secret: env.POLAR_WEBHOOK_SECRET,
-					onSubscriptionCreated: async (payload) => {
+					// Subscription active -> paid. Clear trial, persist ids. Merge (keep customerId etc).
+					onSubscriptionActive: async (payload) => {
 						const organizationId = payload.data.metadata?.referenceId;
 						if (typeof organizationId !== "string") {
 							throw new Error("No Organization Id found");
 						}
 
-						const result = await db
-							.update(organizationTable)
-							.set({
-								metadata: JSON.stringify({
-									subscriptionId: payload.data.id,
-									customerId: payload.data.customerId,
-									paymentSetup: true,
-								}),
-							})
-							.where(eq(organizationTable.id, organizationId));
+						await mergeOrgMetadata(organizationId, {
+							status: ORGANIZATION_STATUS.active,
+							trialEndsAt: null,
+							subscriptionId: payload.data.id,
+							customerId: payload.data.customerId,
+						});
+					},
+					// Catch-all for status changes (past_due / unpaid -> pending, active -> active).
+					onSubscriptionUpdated: async (payload) => {
+						const organizationId = payload.data.metadata?.referenceId;
+						if (typeof organizationId !== "string") {
+							throw new Error("No Organization Id found");
+						}
 
-						if (!result.success) {
-							console.error(result.error);
-							throw new Error("Failed to update organization metadata");
+						const subStatus = payload.data.status;
+						if (subStatus === "past_due" || subStatus === "unpaid") {
+							await mergeOrgMetadata(organizationId, { status: ORGANIZATION_STATUS.pending });
+						} else if (subStatus === "active") {
+							await mergeOrgMetadata(organizationId, {
+								status: ORGANIZATION_STATUS.active,
+								trialEndsAt: null,
+								subscriptionId: payload.data.id,
+								customerId: payload.data.customerId,
+							});
 						}
 					},
+					// Access revoked (post-cancel / unpaid end) -> block, keep data.
+					onSubscriptionRevoked: async (payload) => {
+						const organizationId = payload.data.metadata?.referenceId;
+						if (typeof organizationId !== "string") {
+							throw new Error("No Organization Id found");
+						}
+
+						await mergeOrgMetadata(organizationId, { status: ORGANIZATION_STATUS.pending });
+					},
+					// Explicit cancellation -> hard-delete org (cascades all community data).
 					onSubscriptionCanceled: async (payload) => {
 						const organizationId = payload.data.metadata?.referenceId;
 						if (typeof organizationId !== "string") {

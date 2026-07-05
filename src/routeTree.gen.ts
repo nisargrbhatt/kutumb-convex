@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as publicRouteRouteImport } from './routes/(public)/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthedPaymentRequiredRouteImport } from './routes/_authed/payment-required'
 import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community'
 import { Route as publicTermOfServiceIndexRouteImport } from './routes/(public)/term-of-service/index'
 import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/privacy-policy/index'
@@ -53,6 +54,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedPaymentRequiredRoute = AuthedPaymentRequiredRouteImport.update({
+  id: '/payment-required',
+  path: '/payment-required',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCommunityRoute = AuthedCommunityRouteImport.update({
   id: '/_community',
@@ -184,6 +190,7 @@ const AuthedCommunityMembersIdIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/payment-required': typeof AuthedPaymentRequiredRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/payment-required': typeof AuthedPaymentRequiredRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
@@ -238,6 +246,7 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
+  '/_authed/payment-required': typeof AuthedPaymentRequiredRoute
   '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
@@ -265,6 +274,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/payment-required'
     | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/payment-required'
     | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/login'
     | '/_authed/_community'
+    | '/_authed/payment-required'
     | '/_authed/_community/memories'
     | '/api/auth/$'
     | '/api/ph/$'
@@ -380,6 +392,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/payment-required': {
+      id: '/_authed/payment-required'
+      path: '/payment-required'
+      fullPath: '/payment-required'
+      preLoaderRoute: typeof AuthedPaymentRequiredRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/_community': {
       id: '/_authed/_community'
@@ -597,6 +616,7 @@ const AuthedCommunityRouteWithChildren = AuthedCommunityRoute._addFileChildren(
 
 interface AuthedRouteChildren {
   AuthedCommunityRoute: typeof AuthedCommunityRouteWithChildren
+  AuthedPaymentRequiredRoute: typeof AuthedPaymentRequiredRoute
   AuthedOnboardingCreateIndexRoute: typeof AuthedOnboardingCreateIndexRoute
   AuthedOnboardingInvitationsIndexRoute: typeof AuthedOnboardingInvitationsIndexRoute
   AuthedOnboardingSuccessIndexRoute: typeof AuthedOnboardingSuccessIndexRoute
@@ -604,6 +624,7 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCommunityRoute: AuthedCommunityRouteWithChildren,
+  AuthedPaymentRequiredRoute: AuthedPaymentRequiredRoute,
   AuthedOnboardingCreateIndexRoute: AuthedOnboardingCreateIndexRoute,
   AuthedOnboardingInvitationsIndexRoute: AuthedOnboardingInvitationsIndexRoute,
   AuthedOnboardingSuccessIndexRoute: AuthedOnboardingSuccessIndexRoute,

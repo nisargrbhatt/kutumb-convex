@@ -1,4 +1,4 @@
-import { authMiddleware } from "@/middleware/auth";
+import { paymentMiddleware } from "@/middleware/payment";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
@@ -28,7 +28,7 @@ const relationTypeSchema = z.enum([
 ]);
 
 export const getMyCommunityRelationships = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.handler(async ({ context }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
 
@@ -79,7 +79,7 @@ export const getMyCommunityRelationshipsQuery = () =>
 	});
 
 export const getMyIncomingRelationCount = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.handler(async ({ context }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
 
@@ -120,7 +120,7 @@ export const getMyIncomingRelationCountQuery = () =>
 	});
 
 export const getMyOutgoingRelationCount = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.handler(async ({ context }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
 
@@ -161,7 +161,7 @@ export const getMyOutgoingRelationCountQuery = () =>
 	});
 
 export const addMyCommunityRelationship = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.validator(
 		z.object({
 			type: z.enum([
@@ -249,7 +249,7 @@ export const addMyCommunityRelationship = createServerFn({ method: "POST" })
 	});
 
 export const deleteMyCommunityRelationship = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.validator(
 		z.object({
 			id: z.string().trim().min(1, "Relationship ID is required"),
@@ -300,7 +300,7 @@ export const deleteMyCommunityRelationship = createServerFn({ method: "POST" })
 
 // Owner/admin add an outgoing relation on behalf of a userless, active profile.
 export const addCommunityRelationToProfile = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.validator(
 		z.object({
 			subjectId: z.string().trim().min(1, "Subject profile is required"),
@@ -414,7 +414,7 @@ export const addCommunityRelationToProfile = createServerFn({ method: "POST" })
 
 // Owner/admin delete an outgoing relation from a userless, active profile.
 export const deleteCommunityRelationFromProfile = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([paymentMiddleware])
 	.validator(
 		z.object({
 			subjectId: z.string().trim().min(1, "Subject profile is required"),

@@ -2,6 +2,7 @@ import { ChevronsUpDown, Plus, Building } from "lucide-react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -49,34 +50,36 @@ export function CommunityPicker() {
 						side={isMobile ? "bottom" : "right"}
 						sideOffset={4}
 					>
-						<DropdownMenuLabel className="text-xs text-muted-foreground">Teams</DropdownMenuLabel>
-						{organizations?.map((team) => (
-							<DropdownMenuItem
-								key={team.slug}
-								onClick={async () => {
-									await authClient.organization.setActive({
-										organizationId: team.id,
-										organizationSlug: team.slug,
-									});
-									window.location.reload();
-								}}
-								className="gap-2 p-2"
-							>
-								<div className="flex size-6 items-center justify-center rounded-md border">
-									<Building className="size-3.5 shrink-0" />
-								</div>
-								{team.name}
-							</DropdownMenuItem>
-						))}
-						<DropdownMenuSeparator />
-						<Link to={"/onboarding/create"}>
-							<DropdownMenuItem className="gap-2 p-2">
-								<div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-									<Plus className="size-4" />
-								</div>
-								<div className="font-medium text-muted-foreground">Add team</div>
-							</DropdownMenuItem>
-						</Link>
+						<DropdownMenuGroup>
+							<DropdownMenuLabel className="text-xs text-muted-foreground">Teams</DropdownMenuLabel>
+							{organizations?.map((team) => (
+								<DropdownMenuItem
+									key={team.slug}
+									onClick={async () => {
+										await authClient.organization.setActive({
+											organizationId: team.id,
+											organizationSlug: team.slug,
+										});
+										window.location.reload();
+									}}
+									className="gap-2 p-2"
+								>
+									<div className="flex size-6 items-center justify-center rounded-md border">
+										<Building className="size-3.5 shrink-0" />
+									</div>
+									{team.name}
+								</DropdownMenuItem>
+							))}
+							<DropdownMenuSeparator />
+							<Link to={"/onboarding/create"}>
+								<DropdownMenuItem className="gap-2 p-2">
+									<div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+										<Plus className="size-4" />
+									</div>
+									<div className="font-medium text-muted-foreground">Add team</div>
+								</DropdownMenuItem>
+							</Link>
+						</DropdownMenuGroup>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</SidebarMenuItem>

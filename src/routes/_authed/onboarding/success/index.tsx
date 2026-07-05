@@ -1,4 +1,5 @@
-import { checkCurrentOrgPaymentSetupQuery } from "@/api/organization";
+import { getOrgStatusQuery } from "@/api/organization";
+import { ORGANIZATION_STATUS } from "@/db/constants";
 import { RootLayout } from "@/components/RootLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/_authed/onboarding/success/")({
 		checkout_id: z.string(),
 	}),
 	beforeLoad: async ({ context }) => {
-		await safeAsync(context.queryClient.ensureQueryData(checkCurrentOrgPaymentSetupQuery()));
+		await safeAsync(context.queryClient.ensureQueryData(getOrgStatusQuery()));
 	},
 });
 
@@ -36,10 +37,10 @@ function RouteComponent() {
 	const navigate = Route.useNavigate();
 	const posthog = usePostHog();
 	const capturedRef = useRef(false);
-	const { data: paymentSetupData, refetch } = useQuery(checkCurrentOrgPaymentSetupQuery());
+	const { data: orgStatusData, refetch } = useQuery(getOrgStatusQuery());
 
 	useEffect(() => {
-		if (paymentSetupData?.paymentSetup === true && !capturedRef.current) {
+		if (orgStatusData?.status === ORGANIZATION_STATUS.active && !capturedRef.current) {
 			capturedRef.current = true;
 			posthog.capture("payment_completed", { checkout_id });
 			toast.success("Payment done successfully", {
@@ -49,7 +50,7 @@ function RouteComponent() {
 				to: "/dashboard",
 			});
 		}
-	}, [paymentSetupData]);
+	}, [orgStatusData]);
 
 	return (
 		<RootLayout>

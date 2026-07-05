@@ -1,26 +1,25 @@
 import { CommunityLayout } from "@/components/CommunityLayout/CommunityLayout";
-import { checkOrgPaymentDone } from "@/handler/organization";
-import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { PaymentRequiredBanner } from "./-components/PaymentRequiredBanner";
+import { getOrgStatus } from "@/api/organization";
+import { ORGANIZATION_STATUS } from "@/db/constants";
+import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authed/_community")({
 	beforeLoad: async () => {
-		const result = await checkOrgPaymentDone();
-		return result;
+		const orgStatus = await getOrgStatus();
+		if (orgStatus.status === ORGANIZATION_STATUS.pending) {
+			throw redirect({ to: "/payment-required" });
+		}
+		return { orgStatus };
 	},
-	loader: async ({ context }) => ({ paymentPending: context.paymentPending }),
+	loader: async ({ context }) => ({ orgStatus: context.orgStatus }),
 	component: CommunityLayoutComponent,
 });
 
 function CommunityLayoutComponent() {
-	const { paymentPending } = Route.useLoaderData();
-
-	if (paymentPending) {
-		return <PaymentRequiredBanner />;
-	}
+	const { orgStatus } = Route.useLoaderData();
 
 	return (
-		<CommunityLayout>
+		<CommunityLayout orgStatus={orgStatus}>
 			<Outlet />
 		</CommunityLayout>
 	);
