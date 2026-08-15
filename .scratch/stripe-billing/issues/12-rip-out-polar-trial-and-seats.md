@@ -1,6 +1,6 @@
 # 12 — Rip out Polar, the trial and seat metering
 
-Parent: [PRD.md](../PRD.md) §12 Label: `impl` Status: `ready-for-agent` Depends on:
+Parent: [PRD.md](../PRD.md) §12 Label: `impl` Status: `closed` Depends on:
 [11](11-stripe-plugin-and-schema.md)
 
 ## Goal

@@ -2,7 +2,6 @@ import { db } from "@/db";
 import { organization as organizationTable } from "@/db/schema";
 import { ORGANIZATION_STATUS } from "@/db/constants";
 import { eq } from "drizzle-orm";
-import { env } from "cloudflare:workers";
 import { safeSync } from "./safe";
 
 export type OrgStatus = (typeof ORGANIZATION_STATUS)[keyof typeof ORGANIZATION_STATUS];
@@ -23,11 +22,6 @@ export interface ResolvedOrgStatus {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-export function getTrialDays(): number {
-	const parsed = Number.parseInt(env.TRIAL_DAYS ?? "", 10);
-	return Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
-}
 
 export function parseOrgMetadata(metadata: string | null | undefined): OrgMetadata {
 	const result = safeSync(() => JSON.parse(metadata ?? "{}") as OrgMetadata);

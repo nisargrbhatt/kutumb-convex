@@ -18,7 +18,6 @@ import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community
 import { Route as publicTermOfServiceIndexRouteImport } from './routes/(public)/term-of-service/index'
 import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/privacy-policy/index'
 import { Route as publicAboutIndexRouteImport } from './routes/(public)/about/index'
-import { Route as ApiPolarPortalRouteImport } from './routes/api/polar/portal'
 import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
@@ -80,11 +79,6 @@ const publicAboutIndexRoute = publicAboutIndexRouteImport.update({
   id: '/about/',
   path: '/about/',
   getParentRoute: () => publicRouteRoute,
-} as any)
-const ApiPolarPortalRoute = ApiPolarPortalRouteImport.update({
-  id: '/api/polar/portal',
-  path: '/api/polar/portal',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPhSplatRoute = ApiPhSplatRouteImport.update({
   id: '/api/ph/$',
@@ -194,7 +188,6 @@ export interface FileRoutesByFullPath {
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
-  '/api/polar/portal': typeof ApiPolarPortalRoute
   '/about/': typeof publicAboutIndexRoute
   '/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
   '/term-of-service/': typeof publicTermOfServiceIndexRoute
@@ -220,7 +213,6 @@ export interface FileRoutesByTo {
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
-  '/api/polar/portal': typeof ApiPolarPortalRoute
   '/about': typeof publicAboutIndexRoute
   '/privacy-policy': typeof publicPrivacyPolicyIndexRoute
   '/term-of-service': typeof publicTermOfServiceIndexRoute
@@ -250,7 +242,6 @@ export interface FileRoutesById {
   '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
-  '/api/polar/portal': typeof ApiPolarPortalRoute
   '/(public)/about/': typeof publicAboutIndexRoute
   '/(public)/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
   '/(public)/term-of-service/': typeof publicTermOfServiceIndexRoute
@@ -278,7 +269,6 @@ export interface FileRouteTypes {
     | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
-    | '/api/polar/portal'
     | '/about/'
     | '/privacy-policy/'
     | '/term-of-service/'
@@ -304,7 +294,6 @@ export interface FileRouteTypes {
     | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
-    | '/api/polar/portal'
     | '/about'
     | '/privacy-policy'
     | '/term-of-service'
@@ -333,7 +322,6 @@ export interface FileRouteTypes {
     | '/_authed/_community/memories'
     | '/api/auth/$'
     | '/api/ph/$'
-    | '/api/polar/portal'
     | '/(public)/about/'
     | '/(public)/privacy-policy/'
     | '/(public)/term-of-service/'
@@ -360,7 +348,6 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPhSplatRoute: typeof ApiPhSplatRoute
-  ApiPolarPortalRoute: typeof ApiPolarPortalRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -427,13 +414,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/about/'
       preLoaderRoute: typeof publicAboutIndexRouteImport
       parentRoute: typeof publicRouteRoute
-    }
-    '/api/polar/portal': {
-      id: '/api/polar/portal'
-      path: '/api/polar/portal'
-      fullPath: '/api/polar/portal'
-      preLoaderRoute: typeof ApiPolarPortalRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/api/ph/$': {
       id: '/api/ph/$'
@@ -640,7 +620,6 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPhSplatRoute: ApiPhSplatRoute,
-  ApiPolarPortalRoute: ApiPolarPortalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

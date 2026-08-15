@@ -97,7 +97,7 @@ function PrivacyPolicyPage() {
 							storage, and caching.
 						</li>
 						<li>
-							<span className="font-medium text-foreground">Polar</span> — subscription billing and
+							<span className="font-medium text-foreground">Stripe</span> — subscription billing and
 							payments.
 						</li>
 						<li>
