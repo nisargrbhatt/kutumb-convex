@@ -6,9 +6,11 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "cloudflare:workers";
 import { ac, member, owner, admin } from "./permission";
 import { polar, checkout, portal, usage, webhooks } from "@polar-sh/better-auth";
+import { stripe } from "@better-auth/stripe";
 import { polar as polarClient } from "@/lib/polar";
-import { organization as organizationTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { stripe as stripeClient } from "@/lib/stripe";
+import { organization as organizationTable, member as memberTable } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { safeAsync, safeSync } from "./safe";
 import { resend } from "./resend";
 import InviteEmail from "@/emails/InviteEmail";
@@ -17,6 +19,13 @@ import { ORGANIZATION_STATUS } from "@/db/constants";
 import { getTrialDays, parseOrgMetadata } from "./org-status";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Look up a user's membership row in an org, for owner-only billing authorization checks. */
+async function getMember(userId: string, organizationId: string) {
+	return db.query.member.findFirst({
+		where: and(eq(memberTable.userId, userId), eq(memberTable.organizationId, organizationId)),
+	});
+}
 
 /** Merge a patch into an org's JSON metadata blob (never overwrites unrelated keys). */
 async function mergeOrgMetadata(orgId: string, patch: Record<string, unknown>) {
@@ -332,6 +341,25 @@ export const auth = betterAuth({
 					},
 				}),
 			],
+		}),
+		stripe({
+			stripeClient,
+			stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET,
+			createCustomerOnSignUp: false,
+			subscription: {
+				enabled: true,
+				plans: [
+					{
+						name: "org",
+						priceId: env.STRIPE_PRICE_ID,
+					},
+				],
+				authorizeReference: async ({ user, referenceId }) =>
+					(await getMember(user.id, referenceId))?.role === "owner",
+			},
+			organization: {
+				enabled: true,
+			},
 		}),
 	],
 	emailAndPassword: {
