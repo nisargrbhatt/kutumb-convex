@@ -21,9 +21,9 @@ import { Route as publicAboutIndexRouteImport } from './routes/(public)/about/in
 import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
-import { Route as AuthedOnboardingSuccessIndexRouteImport } from './routes/_authed/onboarding/success/index'
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
+import { Route as AuthedOnboardingCheckoutIndexRouteImport } from './routes/_authed/onboarding/checkout/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
 import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
@@ -96,12 +96,6 @@ const AuthedCommunityMemoriesRouteRoute =
     path: '/memories',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedOnboardingSuccessIndexRoute =
-  AuthedOnboardingSuccessIndexRouteImport.update({
-    id: '/onboarding/success/',
-    path: '/onboarding/success/',
-    getParentRoute: () => AuthedRoute,
-  } as any)
 const AuthedOnboardingInvitationsIndexRoute =
   AuthedOnboardingInvitationsIndexRouteImport.update({
     id: '/onboarding/invitations/',
@@ -112,6 +106,12 @@ const AuthedOnboardingCreateIndexRoute =
   AuthedOnboardingCreateIndexRouteImport.update({
     id: '/onboarding/create/',
     path: '/onboarding/create/',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedOnboardingCheckoutIndexRoute =
+  AuthedOnboardingCheckoutIndexRouteImport.update({
+    id: '/onboarding/checkout/',
+    path: '/onboarding/checkout/',
     getParentRoute: () => AuthedRoute,
   } as any)
 const AuthedCommunityMembersIndexRoute =
@@ -194,9 +194,9 @@ export interface FileRoutesByFullPath {
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
+  '/onboarding/checkout/': typeof AuthedOnboardingCheckoutIndexRoute
   '/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
-  '/onboarding/success/': typeof AuthedOnboardingSuccessIndexRoute
   '/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/members/create/': typeof AuthedCommunityMembersCreateIndexRoute
   '/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
@@ -219,9 +219,9 @@ export interface FileRoutesByTo {
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
+  '/onboarding/checkout': typeof AuthedOnboardingCheckoutIndexRoute
   '/onboarding/create': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
-  '/onboarding/success': typeof AuthedOnboardingSuccessIndexRoute
   '/members/$id': typeof AuthedCommunityMembersIdIndexRoute
   '/members/create': typeof AuthedCommunityMembersCreateIndexRoute
   '/profile/addresses': typeof AuthedCommunityProfileAddressesIndexRoute
@@ -248,9 +248,9 @@ export interface FileRoutesById {
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
+  '/_authed/onboarding/checkout/': typeof AuthedOnboardingCheckoutIndexRoute
   '/_authed/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
-  '/_authed/onboarding/success/': typeof AuthedOnboardingSuccessIndexRoute
   '/_authed/_community/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/_authed/_community/members/create/': typeof AuthedCommunityMembersCreateIndexRoute
   '/_authed/_community/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
@@ -275,9 +275,9 @@ export interface FileRouteTypes {
     | '/community-tree/'
     | '/dashboard/'
     | '/members/'
+    | '/onboarding/checkout/'
     | '/onboarding/create/'
     | '/onboarding/invitations/'
-    | '/onboarding/success/'
     | '/members/$id/'
     | '/members/create/'
     | '/profile/addresses/'
@@ -300,9 +300,9 @@ export interface FileRouteTypes {
     | '/community-tree'
     | '/dashboard'
     | '/members'
+    | '/onboarding/checkout'
     | '/onboarding/create'
     | '/onboarding/invitations'
-    | '/onboarding/success'
     | '/members/$id'
     | '/members/create'
     | '/profile/addresses'
@@ -328,9 +328,9 @@ export interface FileRouteTypes {
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
+    | '/_authed/onboarding/checkout/'
     | '/_authed/onboarding/create/'
     | '/_authed/onboarding/invitations/'
-    | '/_authed/onboarding/success/'
     | '/_authed/_community/members/$id/'
     | '/_authed/_community/members/create/'
     | '/_authed/_community/profile/addresses/'
@@ -436,13 +436,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityMemoriesRouteRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/onboarding/success/': {
-      id: '/_authed/onboarding/success/'
-      path: '/onboarding/success'
-      fullPath: '/onboarding/success/'
-      preLoaderRoute: typeof AuthedOnboardingSuccessIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/onboarding/invitations/': {
       id: '/_authed/onboarding/invitations/'
       path: '/onboarding/invitations'
@@ -455,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/create'
       fullPath: '/onboarding/create/'
       preLoaderRoute: typeof AuthedOnboardingCreateIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/onboarding/checkout/': {
+      id: '/_authed/onboarding/checkout/'
+      path: '/onboarding/checkout'
+      fullPath: '/onboarding/checkout/'
+      preLoaderRoute: typeof AuthedOnboardingCheckoutIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/_community/members/': {
@@ -597,17 +597,17 @@ const AuthedCommunityRouteWithChildren = AuthedCommunityRoute._addFileChildren(
 interface AuthedRouteChildren {
   AuthedCommunityRoute: typeof AuthedCommunityRouteWithChildren
   AuthedPaymentRequiredRoute: typeof AuthedPaymentRequiredRoute
+  AuthedOnboardingCheckoutIndexRoute: typeof AuthedOnboardingCheckoutIndexRoute
   AuthedOnboardingCreateIndexRoute: typeof AuthedOnboardingCreateIndexRoute
   AuthedOnboardingInvitationsIndexRoute: typeof AuthedOnboardingInvitationsIndexRoute
-  AuthedOnboardingSuccessIndexRoute: typeof AuthedOnboardingSuccessIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCommunityRoute: AuthedCommunityRouteWithChildren,
   AuthedPaymentRequiredRoute: AuthedPaymentRequiredRoute,
+  AuthedOnboardingCheckoutIndexRoute: AuthedOnboardingCheckoutIndexRoute,
   AuthedOnboardingCreateIndexRoute: AuthedOnboardingCreateIndexRoute,
   AuthedOnboardingInvitationsIndexRoute: AuthedOnboardingInvitationsIndexRoute,
-  AuthedOnboardingSuccessIndexRoute: AuthedOnboardingSuccessIndexRoute,
 }
 
 const AuthedRouteWithChildren =

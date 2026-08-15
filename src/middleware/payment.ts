@@ -1,13 +1,14 @@
 import { redirect } from "@tanstack/react-router";
 import { createMiddleware } from "@tanstack/react-start";
 import { authMiddleware } from "@/middleware/auth";
-import { resolveOrgStatus } from "@/lib/org-status";
-import { ORGANIZATION_STATUS } from "@/db/constants";
+import { resolveBillingStatus } from "@/lib/billing-status";
+import { BILLING_STATUS_ROUTE } from "@/lib/billing-status-map";
+import { BILLING_STATUS } from "@/db/constants";
 
 /**
  * Guards community feature server fns: blocks (read + write) any org whose
- * effective billing status is `pending` (trial elapsed or subscription lapsed).
- * Composes authMiddleware, so `context.session` / `context.userId` stay available.
+ * effective billing status is not `active`. Composes authMiddleware, so
+ * `context.session` / `context.userId` stay available.
  */
 export const paymentMiddleware = createMiddleware()
 	.middleware([authMiddleware])
@@ -17,9 +18,9 @@ export const paymentMiddleware = createMiddleware()
 			throw redirect({ to: "/onboarding/create" });
 		}
 
-		const { status } = await resolveOrgStatus(orgId);
-		if (status === ORGANIZATION_STATUS.pending) {
-			throw redirect({ to: "/payment-required" });
+		const status = await resolveBillingStatus(orgId);
+		if (status !== BILLING_STATUS.active) {
+			throw redirect({ to: BILLING_STATUS_ROUTE[status] });
 		}
 
 		return next();
