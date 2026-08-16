@@ -7,15 +7,16 @@ import { env } from "cloudflare:workers";
 import { ac, member, owner, admin } from "./permission";
 import { stripe } from "@better-auth/stripe";
 import { stripe as stripeClient } from "@/lib/stripe";
-import { organization as organizationTable, member as memberTable } from "@/db/schema";
+import { member as memberTable } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { createOrgStripeCustomer } from "@/lib/org-stripe-customer";
 import { safeAsync } from "./safe";
 import { resend } from "./resend";
 import InviteEmail from "@/emails/InviteEmail";
 import { EMAIL_CONFIG } from "./common";
 
 /** Look up a user's membership row in an org, for owner-only billing authorization checks. */
-async function getMember(userId: string, organizationId: string) {
+export async function getMember(userId: string, organizationId: string) {
 	return db.query.member.findFirst({
 		where: and(eq(memberTable.userId, userId), eq(memberTable.organizationId, organizationId)),
 	});
@@ -64,25 +65,12 @@ export const auth = betterAuth({
 				afterCreateOrganization: async (payload) => {
 					const orgId = payload.organization.id;
 					const customerResult = await safeAsync(
-						stripeClient.customers.create(
-							{
-								email: payload.user.email,
-								name: payload.organization.name,
-								metadata: { organizationId: orgId },
-							},
-							{ idempotencyKey: `org-customer:${orgId}` }
-						)
+						createOrgStripeCustomer(orgId, payload.user.email, payload.organization.name)
 					);
 
 					if (!customerResult.success) {
 						console.error("Stripe customer creation failed for", orgId, customerResult.error);
-						return;
 					}
-
-					await db
-						.update(organizationTable)
-						.set({ stripeCustomerId: customerResult.data.id })
-						.where(eq(organizationTable.id, orgId));
 				},
 			},
 		}),

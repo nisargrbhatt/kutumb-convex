@@ -1,6 +1,6 @@
 # 14 — `createCheckoutSession` and the duplicate guard
 
-Parent: [PRD.md](../PRD.md) §7.1, §7.2 Label: `impl` Status: `ready-for-agent` Depends on:
+Parent: [PRD.md](../PRD.md) §7.1, §7.2 Label: `impl` Status: `closed` Depends on:
 [11](11-stripe-plugin-and-schema.md), [13](13-billing-status-and-gates.md)
 
 ## Goal
@@ -82,3 +82,31 @@ dist, not its docs.
 The metadata contract is **undocumented**. A `@better-auth/stripe` bump means re-reading its dist —
 the unit test catches our regressions, not theirs ([01](01-better-auth-stripe-plugin-audit.md),
 [05](05-checkout-architecture.md)).
+
+## Comments
+
+Done. `buildCheckoutSessionParams` extracted to `src/lib/checkout-session-params.ts`, not left inline
+in `src/api/billing.ts` — same `cloudflare:workers`-poisons-vitest reason ticket 13 hit with
+`billing-status-map.ts`; `billing.ts` imports `db`, so a co-located pure fn would be untestable
+without a DB. 7 vitest cases cover the five contract points plus `customer`/`line_items`/`return_url`.
+
+`ensureOrgStripeCustomer`'s Stripe-customer-creation call was near-duplicating
+`afterCreateOrganization`'s (`src/lib/auth.ts`) — same `customers.create` + `stripeCustomerId`
+persist, only the email/name lookup and failure handling differ (hook has the payload already and
+swallows; the lazy fallback re-queries the owner via `member`→`user` and throws). Extracted the
+shared create-and-persist step to `src/lib/org-stripe-customer.ts`, called from both.
+
+`getMember` (`src/lib/auth.ts`) exported — was already exactly the owner-lookup §7.4 specifies,
+just private; `createCheckoutSession` reuses it rather than re-querying `member` itself.
+
+Duplicate guard: `BLOCKING_SUBSCRIPTION_STATUSES = active | trialing | past_due | unpaid` → 409;
+anything else (no row, `incomplete`, `incomplete_expired`, `canceled`, and unlisted statuses like
+`paused`) reuses/creates the row and mints a session — matches the guard table, and unlisted statuses
+fall through to "reuse," matching the plugin's own `isActiveOrTrialing`-only gate on its upgrade path.
+
+Server fn returns the bare `client_secret` string (not `{ clientSecret }`) — that's what
+`@stripe/react-stripe-js`'s `fetchClientSecret` wants directly (ticket 15's job to wire up).
+
+409 uses `setResponseStatus(409)` then `throw new Error(...)` — no `AppError`-style class exists in
+this repo yet, and every other `src/api/*.ts` error path is a plain thrown `Error`, so kept it
+consistent rather than introducing one for a single call site.
