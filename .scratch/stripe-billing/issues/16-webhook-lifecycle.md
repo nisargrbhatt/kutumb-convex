@@ -1,6 +1,6 @@
 # 16 — Webhook lifecycle, org deletion and the `onEvent` guards
 
-Parent: [PRD.md](../PRD.md) §7.3 Label: `impl` Status: `ready-for-agent` Depends on:
+Parent: [PRD.md](../PRD.md) §7.3 Label: `impl` Status: `closed` Depends on:
 [13](13-billing-status-and-gates.md), [14](14-create-checkout-session.md)
 
 ## Goal
@@ -75,3 +75,54 @@ Via `stripe listen` / `stripe trigger` (test mode):
 - Replaying any event lands the same end state.
 - An event for an already-deleted org → logged **200**, no retry storm.
 - `pause_collection` set from the dashboard → org **stays usable**.
+
+## Comments
+
+Implemented:
+
+- `src/lib/subscription-from-stripe.ts` — pure, no `db` import (mirrors
+  `checkout-session-params.ts`'s convention so it stays plain-Vitest-testable): `fromStripe(sub)`
+  maps a retrieved `Stripe.Subscription` to the plugin's verbatim row columns
+  (`periodStart`/`periodEnd`/`billingInterval` come off `sub.items.data[0]`, not the subscription
+  top level — Stripe SDK v22's flexible billing mode moved them there); `requireReferenceId(sub)`
+  reads `sub.metadata.referenceId`, throwing if absent. Unit-tested in the sibling `.test.ts`.
+- `src/lib/billing-webhook.ts` — `syncSubscriptionFromStripe(stripeSubscriptionId)` (retrieve +
+  `db.update(...).where(eq(subscription.referenceId, orgId))`),
+  `deleteOrganizationCompletely(orgId)` (bare `db.delete(organization)`), and
+  `resolveOrgIdOrGone(sub, eventType)`, the `onEvent` guard: throws via `requireReferenceId` if the
+  subscription carries no `referenceId` metadata (resolution failure → Stripe retries), otherwise
+  checks the org still exists and warns + returns `null` if not (terminal, expected, no retry).
+- `src/lib/auth.ts` — `onStripeEvent` wired as `onEvent` in the `stripe()` plugin block. Dispatches
+  `created`/`updated`/`paused`/`resumed`/`pending_update_applied`/`pending_update_expired` through
+  the guard then `syncSubscriptionFromStripe`; `deleted` through the guard then
+  `deleteOrganizationCompletely`. `checkout.session.completed` has no case — the plugin's own
+  built-in handler already re-retrieves and writes current truth, so there's nothing left to do.
+
+Org resolution mechanism (left open by 07/16's pseudocode): every subscription created through our
+checkout carries `metadata.referenceId` (`checkout-session-params.ts`'s
+`subscription_data.metadata`), and Stripe keeps that metadata for the subscription's whole lifecycle
+including on `customer.subscription.deleted`. Reading it off the retrieved (or, for `.deleted`, the
+event's own) subscription object is the resolution step — no separate customer→org lookup needed. A
+subscription missing that metadata (e.g. created by hand in the Stripe dashboard) is treated as a
+genuine resolution failure and throws, per spec.
+
+No migration needed — the `session.active_organization_id` FK with `onDelete: "set null"` already
+landed in [11](11-stripe-plugin-and-schema.md) (`migrations/0002_icy_blue_blade.sql`), so the
+"nulled on delete" acceptance criterion was already satisfied before this ticket started.
+
+Not done here: the `stripe listen`/`stripe trigger` manual verification pass and the Stripe
+Dashboard webhook endpoint's event-type selection (§4) — both are external/account-side steps
+outside this repo, left for the user to run against a test-mode endpoint.
+
+`/code-review` found two real gaps, both fixed:
+
+- `deleteOrganizationCompletely` left `subscription` orphaned. `subscription.referenceId` carries
+  **no FK** — it's the plugin's polymorphic user-or-org reference column, and [04](04-org-delete-cascade-audit.md)'s
+  cascade audit predates this table (Polar era) so never covered it. Scope item 2's "zero tables by
+  hand" claim doesn't hold for this one table. Fixed with an explicit
+  `db.delete(subscription).where(eq(subscription.referenceId, orgId))` before the org delete.
+- `syncSubscriptionFromStripe` was a bare `UPDATE ... WHERE referenceId = orgId`, which silently
+  no-ops if no local row exists yet (a subscription created outside our checkout, e.g. by hand in
+  the dashboard for an org with an existing Stripe customer). Changed to an upsert (find-then-update-
+  or-insert) so the "stateless and idempotent by construction" goal holds for every subscription
+  event, not just checkout-originated ones.
