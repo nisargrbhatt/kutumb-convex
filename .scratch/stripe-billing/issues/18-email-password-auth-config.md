@@ -1,7 +1,7 @@
 # 18 — Email/password auth config, rate limiting and the two emails
 
-Parent: [PRD.md](../PRD.md) §9, §10 Label: `impl` Status: `ready-for-agent` Depends on: _nothing in
-the billing chain — can run in parallel from_ [12](12-rip-out-polar-trial-and-seats.md)
+Parent: [PRD.md](../PRD.md) §9, §10 Label: `impl` Status: `closed` Depends on: _nothing in the
+billing chain — can run in parallel from_ [12](12-rip-out-polar-trial-and-seats.md)
 
 ## Precondition — do this first
 
@@ -71,3 +71,29 @@ shipping**, not after.
 ## Out of scope
 
 Pages and error copy ([19](19-auth-pages.md)), the verify nag ([20](20-verify-email-nag.md)).
+
+## Comments
+
+Done. `emailAndPassword`/`emailVerification` wired verbatim per §1; account-linking left untouched
+(no auto-link code, `trustedProviders` unset, `requireLocalEmailVerified` left at its default with
+the required upgrade-watch comment above `emailAndPassword` in `auth.ts`). No password hashing code
+added.
+
+Rate limiting: `rateLimit: { customStorage: createKvRateLimitStorage(env.KV) }` in
+`src/lib/auth.ts`, shim in new `src/lib/rate-limit-kv.ts` (get/set only, no `consume` — legacy
+non-atomic path per better-auth source, matches the "accepted: a few extra tries across colos" cost
+in the spec). Namespaced `rate-limit:` prefix, 300s KV TTL (KV floor is 60s; comfortably outlives
+better-auth's widest built-in window of 60s). `secondaryStorage` untouched. Unit-tested with a fake
+KV (`src/lib/rate-limit-kv.test.ts`) — TDD red→green.
+
+Two new templates, `VerifyEmail.tsx` / `ResetPasswordEmail.tsx`, copied from `InviteEmail.tsx`'s
+shape with copy verbatim from PRD §10, URL also rendered as plain text under the button.
+`auth-client.ts` untouched, as expected.
+
+Deployed scrypt timing test (the precondition) is a live-Worker ops step, not something this session
+can run — flagging it back to the user before this ships, per the ticket's own instruction.
+
+`/code-review` (Standards + Spec, parallel): both clean. Standards axis noted the new
+`sendResetPassword`/`sendVerificationEmail` try/catch blocks duplicate the shape of the existing
+`sendInvitationEmail` block (three call sites now) — judgement call, not fixed, since it exactly
+follows existing sibling-code precedent rather than introducing a new pattern.
