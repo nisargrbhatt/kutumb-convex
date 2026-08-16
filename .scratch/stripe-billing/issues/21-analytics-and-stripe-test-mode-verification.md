@@ -1,6 +1,6 @@
 # 21 — Analytics pass and end-to-end Stripe test-mode verification
 
-Parent: [PRD.md](../PRD.md) §11, §13, §14 Label: `impl` Status: `ready-for-agent` Depends on:
+Parent: [PRD.md](../PRD.md) §11, §13, §14 Label: `impl` Status: `ready-for-human` Depends on:
 [15](15-checkout-page.md), [16](16-webhook-lifecycle.md),
 [17](17-payment-required-and-portal-link.md), [19](19-auth-pages.md), [20](20-verify-email-nag.md)
 
@@ -46,3 +46,36 @@ answer.
 
 All eleven rows pass and are recorded. Every PRD §14 limitation is written down somewhere a future
 maintainer will find it.
+
+## Comments
+
+Analytics sweep (item 1) done in code, found two real mismatches against PRD §11:
+
+- `sign_in_initiated`/`sign_up_initiated` sent `provider: "email"`, spec says `"password"`
+  (`src/routes/login.tsx`, `src/routes/signup.tsx`). Fixed.
+- `checkout_started` fired with no props at all; spec says `{ organization_id }`
+  (`EmbeddedCheckoutSection.tsx`). Fixed — pulls `activeOrg?.id` via
+  `authClient.useActiveOrganization()`, same pattern as `ConfirmingCheckout`.
+
+Rest of the surface checked clean: `payment_completed` (ref-guarded, fires once, no `checkout_id`),
+`password_reset_requested`/`_completed`, `verification_email_resent`, `billing_portal_opened` (both
+`source`s). Member/profile/organization events untouched, all present.
+
+Items 4–5 done: known limitations (PRD §14, all five) written up as
+[docs/adr/0002-billing-known-limitations.md](../../../docs/adr/0002-billing-known-limitations.md);
+billing vocabulary (billing status, subscription row, pending, past due) added to `CONTEXT.md`.
+
+Item 2–3 (the eleven-row manual `stripe listen`/`stripe trigger` run) **not run this session** — no
+Stripe CLI in this environment, and it needs live Stripe test-dashboard interaction. User opted to
+run it themselves and report back. `Status` left `ready-for-human` until that table is filled in and
+this ticket can close.
+
+Typecheck, lint, format, full test suite (28/28) all pass on the above.
+
+Code review (Standards + Spec) caught two worth fixing: `EmbeddedCheckoutSection`'s `useCallback`
+deps held the whole `activeOrg` object rather than `.id`, risking a re-fired checkout-session POST
+on an unrelated reference change — narrowed to `activeOrg?.id`. `CONTEXT.md`'s new entries had
+drifted into implementation detail (caching policy, CTAs) past the file's own "definitions only"
+rule — trimmed back to vocabulary. Left the ADR-not-README location as-is (follows
+`docs/agents/domain.md`'s documented structure) and the single bundled ADR file as-is (five tightly
+related, PRD-grouped limitations; splitting into five near-empty files seemed worse).

@@ -5,6 +5,7 @@ import { useRouter } from "@tanstack/react-router";
 import { usePostHog } from "@posthog/react";
 import { createCheckoutSession } from "@/api/billing";
 import { DUPLICATE_SUBSCRIPTION_ERROR_MESSAGE } from "@/lib/checkout-session-params";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -24,13 +25,14 @@ type SessionState =
 export function EmbeddedCheckoutSection() {
 	const router = useRouter();
 	const posthog = usePostHog();
+	const { data: activeOrg } = authClient.useActiveOrganization();
 	const [session, setSession] = useState<SessionState>({ status: "loading" });
 
 	const startCheckout = useCallback(async () => {
 		setSession({ status: "loading" });
 		try {
 			const clientSecret = await createCheckoutSession();
-			posthog.capture("checkout_started");
+			posthog.capture("checkout_started", { organization_id: activeOrg?.id });
 			setSession({ status: "ready", clientSecret });
 		} catch (error) {
 			if (error instanceof Error && error.message === DUPLICATE_SUBSCRIPTION_ERROR_MESSAGE) {
@@ -40,7 +42,7 @@ export function EmbeddedCheckoutSection() {
 			}
 			setSession({ status: "error" });
 		}
-	}, [posthog, router]);
+	}, [posthog, router, activeOrg?.id]);
 
 	useEffect(() => {
 		startCheckout();

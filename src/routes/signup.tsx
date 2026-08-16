@@ -83,7 +83,7 @@ function RouteComponent() {
 
 	const onSubmit = form.handleSubmit(async (values) => {
 		setEmailCollision(false);
-		posthog.capture("sign_up_initiated", { provider: "email" });
+		posthog.capture("sign_up_initiated", { provider: "password" });
 
 		const { error: signUpError } = await authClient.signUp.email({
 			name: values.name,

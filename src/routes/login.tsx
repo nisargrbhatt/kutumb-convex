@@ -61,7 +61,7 @@ function RouteComponent() {
 	const destination = redirectTo || "/dashboard";
 
 	const onSubmit = form.handleSubmit(async (values) => {
-		posthog.capture("sign_in_initiated", { provider: "email" });
+		posthog.capture("sign_in_initiated", { provider: "password" });
 
 		const { error: signInError } = await authClient.signIn.email({
 			email: values.email,

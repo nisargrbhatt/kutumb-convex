@@ -43,3 +43,21 @@ A relation is unique across a pair regardless of direction (no duplicate A–B /
 
 The owner/admin capability to add/remove a Userless (and `active`) Community Profile's outgoing
 relations on its behalf. Distinct from a user editing their own relations on their own profile.
+
+## Billing status
+
+An organization's usability, derived from its **subscription row**, never stored. One of `active`
+(usable), `pending`, or `past_due`.
+
+## Subscription row
+
+The single source of truth for an organization's billing state: one row per org, written only by the
+webhook and by checkout creation.
+
+## Pending (billing status)
+
+Never completed a payment.
+
+## Past due
+
+Paid once, payment now failing.
