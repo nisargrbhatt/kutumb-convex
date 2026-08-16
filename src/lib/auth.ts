@@ -83,7 +83,7 @@ export const auth = betterAuth({
 				member: member,
 			},
 			sendInvitationEmail: async (payload) => {
-				const inviteLink = `${env.BETTER_AUTH_URL}/onboarding/invitations`;
+				const inviteLink = `${env.BETTER_AUTH_URL}/login?redirectTo=${encodeURIComponent("/onboarding/invitations")}&invitation=${encodeURIComponent(payload.id)}`;
 
 				try {
 					const { error } = await resend.emails.send({
