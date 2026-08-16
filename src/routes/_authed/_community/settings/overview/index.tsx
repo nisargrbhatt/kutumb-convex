@@ -1,4 +1,15 @@
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
 	Breadcrumb,
 	BreadcrumbItem,
 	BreadcrumbLink,
@@ -20,7 +31,8 @@ import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
@@ -131,17 +143,105 @@ function OrganizationForm(props: { name: string; slug: string; organizationId: s
 	);
 }
 
+function DeleteOrganizationDialog(props: { organizationId: string; name: string }) {
+	const posthog = usePostHog();
+	const router = useRouter();
+	const [open, setOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+
+	const handleDelete = async () => {
+		setIsDeleting(true);
+		const { error } = await authClient.organization.delete({
+			organizationId: props.organizationId,
+		});
+
+		if (error) {
+			console.error(error);
+			toast.error("Failed to delete organization", {
+				description: "Please try again later.",
+			});
+			setIsDeleting(false);
+			return;
+		}
+
+		posthog.capture("organization_deleted", {
+			organization_id: props.organizationId,
+		});
+		toast.success("Organization", {
+			description: "Organization deleted successfully",
+		});
+		setOpen(false);
+		await router.invalidate();
+		router.navigate({ to: "/onboarding/create" });
+	};
+
+	return (
+		<AlertDialog open={open} onOpenChange={setOpen}>
+			<AlertDialogTrigger render={<Button variant="destructive" />}>
+				Delete Organization
+			</AlertDialogTrigger>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Delete {props.name}?</AlertDialogTitle>
+					<AlertDialogDescription>
+						This will permanently delete this organization and all its data, including members,
+						profiles, and billing records. This action cannot be undone.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+					<AlertDialogAction
+						variant="destructive"
+						disabled={isDeleting}
+						onClick={(e) => {
+							e.preventDefault();
+							handleDelete();
+						}}
+					>
+						{isDeleting ? "Deleting..." : "Delete"}
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+}
+
+function DangerZone(props: { organizationId: string; name: string }) {
+	const { data: activeMemberRole } = authClient.useActiveMemberRole();
+
+	if (activeMemberRole?.role !== "owner") {
+		return null;
+	}
+
+	return (
+		<div className="flex w-full flex-col gap-2 rounded-lg border border-destructive/50 p-4">
+			<div>
+				<h2 className="text-lg font-medium text-destructive">Danger Zone</h2>
+				<p className="text-sm text-muted-foreground">
+					Deleting the organization is permanent and cannot be undone.
+				</p>
+			</div>
+			<div>
+				<DeleteOrganizationDialog organizationId={props.organizationId} name={props.name} />
+			</div>
+		</div>
+	);
+}
+
 function RouteComponent() {
 	const { data: activeOrg } = authClient.useActiveOrganization();
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
 			<PageHeader />
 			{activeOrg ? (
-				<OrganizationForm
-					name={activeOrg?.name}
-					slug={activeOrg?.slug}
-					organizationId={activeOrg.id}
-				/>
+				<>
+					<OrganizationForm
+						name={activeOrg?.name}
+						slug={activeOrg?.slug}
+						organizationId={activeOrg.id}
+					/>
+					<DangerZone organizationId={activeOrg.id} name={activeOrg.name} />
+				</>
 			) : null}
 		</div>
 	);

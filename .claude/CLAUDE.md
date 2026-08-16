@@ -1,8 +1,5 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this
-repository.
-
 - In all interactions and commit messages, be extremely consice and sacrifice grammar for the sake
   of concision.
 
@@ -14,33 +11,6 @@ does **not** use Convex — persistence is **Cloudflare D1** (SQLite) via **Driz
 **Cloudflare KV** for caching. Auth is **better-auth** (with its organization plugin for
 multi-tenancy), billing is **Polar**, analytics is **PostHog**, and transactional email is
 **Resend** + **react-email**.
-
-## Commands
-
-```bash
-npm run dev            # Vite dev server on :3000 (README's "npm run start" is wrong; there is no start script)
-npm run build          # Production build
-npm run test           # Run Vitest once
-npx vitest <pattern>   # Run a single test file / watch mode
-npm run lint           # oxlint
-npm run lint:fix       # oxlint --fix
-npm run format         # oxfmt --check
-npm run format:fix     # oxfmt (writes)
-npm run email:dev      # Preview react-email templates on :3001
-npm run deploy         # build + wrangler deploy
-```
-
-### Database / migrations (Drizzle + D1)
-
-```bash
-npm run migration:generate        # generate SQL from src/db/schema.ts into ./migrations
-npm run migration:migrate:local   # apply to local D1
-npm run migration:migrate:prod    # apply to remote D1 (wrangler d1 migrations apply D1 --remote)
-```
-
-`drizzle-kit generate` (migration:generate) needs `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`,
-and `CLOUDFLARE_D1_TOKEN` in `.env` (see `drizzle.config.ts`). After editing the schema, always
-generate a migration — the schema file alone does not change the database.
 
 ## Architecture
 
@@ -94,9 +64,6 @@ For any other reference, lookout for `/tanstack-start-best-practices`,
 
 ### Billing & analytics
 
-- **Polar** (`src/lib/polar.ts`) — sandbox vs production switched by `POLAR_MODE`. Integrated into
-  better-auth via `@polar-sh/better-auth` (checkout, portal, usage, webhooks); usage events are
-  ingested in org hooks.
 - **PostHog** is proxied to avoid ad-blockers: client sends to `/api/ph`, and
   `src/routes/api/ph/$.ts` reverse-proxies to `VITE_PUBLIC_POSTHOG_HOST`. Server-side capture lives
   in `src/lib/posthog-server.ts`.

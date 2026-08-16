@@ -1,8 +1,8 @@
 # 20 — Verify-email nag in `CommunityLayout`
 
 Parent: [PRD.md](../PRD.md) §8.6 · wireframe:
-[prototypes/09-screens.md](../prototypes/09-screens.md) Label: `impl` Status: `closed`
-Depends on: [18](18-email-password-auth-config.md)
+[prototypes/09-screens.md](../prototypes/09-screens.md) Label: `impl` Status: `closed` Depends on:
+[18](18-email-password-auth-config.md)
 
 ## Goal
 
@@ -36,9 +36,9 @@ this anywhere else re-opens a problem that is currently impossible
 
 ## Comments
 
-Done. New `VerifyEmailNag.tsx` in `CommunityLayout/`, mounted at top of `CommunityLayout`'s `<main>`.
-No exclusion logic needed for checkout/payment-required — structurally outside `CommunityLayout`
-already, per 09.
+Done. New `VerifyEmailNag.tsx` in `CommunityLayout/`, mounted at top of `CommunityLayout`'s
+`<main>`. No exclusion logic needed for checkout/payment-required — structurally outside
+`CommunityLayout` already, per 09.
 
 `dismissed` state read via a lazy `useState` initializer off `sessionStorage`, not an effect — safe
 because `authClient.useSession()` itself returns `undefined` through SSR and the first hydration

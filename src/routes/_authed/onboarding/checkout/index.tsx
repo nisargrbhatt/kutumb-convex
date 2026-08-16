@@ -22,7 +22,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 export const Route = createFileRoute("/_authed/onboarding/checkout/")({
 	validateSearch: z.object({
-		confirming: z.literal("1").optional(),
+		confirming: z.coerce.string().optional(),
 	}),
 	beforeLoad: async ({ search }) => {
 		const status = await getBillingStatus();

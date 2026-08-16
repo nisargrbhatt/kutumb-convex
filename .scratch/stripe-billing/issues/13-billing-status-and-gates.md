@@ -71,14 +71,15 @@ covering every row of the §6 table, plus a `vitest.config.ts` since none existe
 Old shape didn't stay buildable once `ORGANIZATION_STATUS`/`getOrgStatus`/`ResolvedOrgStatus` were
 deleted, so both `payment-required.tsx` and the redirect targets needed real fixes, not stubs:
 
-- `payment-required.tsx` — patched to the new API with the full inverse guard from §8.2
-  (`past_due` stays, everything else redirects out) rather than the old active-only check. Page
-  content/copy is still [17](17-payment-required-and-portal-link.md)'s job.
+- `payment-required.tsx` — patched to the new API with the full inverse guard from §8.2 (`past_due`
+  stays, everything else redirects out) rather than the old active-only check. Page content/copy is
+  still [17](17-payment-required-and-portal-link.md)'s job.
 - `onboarding/checkout/index.tsx` — didn't exist yet, so it's a real stub route (inverse guard +
-  `?confirming=1` exception wired per §8.2, no Stripe iframe) so `redirect({ to: "/onboarding/checkout" })`
-  type-checks. [15](15-checkout-page.md) fills in the actual page.
-- `onboarding/success/index.tsx` — deleted now, not left for [15]. Nothing referenced it, and the PRD
-  already calls it superseded by the checkout page's confirming state.
+  `?confirming=1` exception wired per §8.2, no Stripe iframe) so
+  `redirect({ to: "/onboarding/checkout" })` type-checks. [15](15-checkout-page.md) fills in the
+  actual page.
+- `onboarding/success/index.tsx` — deleted now, not left for [15]. Nothing referenced it, and the
+  PRD already calls it superseded by the checkout page's confirming state.
 - `TrialBanner.tsx` deleted with its `CommunityLayout` usage — no trial exists post-[12].
 
 Added `BILLING_STATUS_ROUTE` (in `billing-status-map.ts`, same cloudflare:workers reason) after

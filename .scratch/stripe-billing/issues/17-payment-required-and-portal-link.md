@@ -1,8 +1,8 @@
 # 17 — `/payment-required` rewrite and the billing portal link
 
 Parent: [PRD.md](../PRD.md) §8.5 · wireframe:
-[prototypes/09-screens.md](../prototypes/09-screens.md) Label: `impl` Status: `closed`
-Depends on: [13](13-billing-status-and-gates.md)
+[prototypes/09-screens.md](../prototypes/09-screens.md) Label: `impl` Status: `closed` Depends on:
+[13](13-billing-status-and-gates.md)
 
 ## Goal
 
@@ -40,22 +40,22 @@ Stripe's portal.
 
 ## Comments
 
-Done. Inverse guard already correct from 13, untouched. `payment-required.tsx` rewritten inline
-(no `-components` split — single consumer) with the `past_due` copy, single portal CTA, org switcher
+Done. Inverse guard already correct from 13, untouched. `payment-required.tsx` rewritten inline (no
+`-components` split — single consumer) with the `past_due` copy, single portal CTA, org switcher
 kept.
 
 Portal endpoint has no typed client action — `@better-auth/stripe`'s client plugin's
-`$InferServerPlugin` is a literal `{}` (checked its dist, not just docs, same as 14's contract-reading
-pattern). Called via `authClient.$fetch("/subscription/billing-portal", ...)` instead of a
-`authClient.subscription.billingPortal(...)` call the types don't support. Extracted to
+`$InferServerPlugin` is a literal `{}` (checked its dist, not just docs, same as 14's
+contract-reading pattern). Called via `authClient.$fetch("/subscription/billing-portal", ...)`
+instead of a `authClient.subscription.billingPortal(...)` call the types don't support. Extracted to
 `src/lib/billing-portal-client.ts` since both entry points (this page + `AuthUser.tsx`) hit it
 identically (`customerType: "organization"`, differing only in `returnUrl`).
 
 `AuthUser.tsx`: `/api/polar/portal` → owner-only "Manage billing" `DropdownMenuItem`, gated on
 `useActiveMemberRole()?.role === "owner"` client-side (server-side enforcement is the plugin's own
-`authorizeReference` owner check, 14). Code review caught a double-separator regression for non-owner
-members (item was conditional, its two flanking separators weren't) — fixed by wrapping item +
-trailing separator in one conditional.
+`authorizeReference` owner check, 14). Code review caught a double-separator regression for
+non-owner members (item was conditional, its two flanking separators weren't) — fixed by wrapping
+item + trailing separator in one conditional.
 
 `billing_portal_opened` fires with `{ source: "payment_required" | "auth_user" }` before the fetch
 resolves (click-intent tracking, not success tracking — PRD doesn't specify either way).

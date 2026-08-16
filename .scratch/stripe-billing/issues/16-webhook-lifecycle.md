@@ -117,12 +117,13 @@ outside this repo, left for the user to run against a test-mode endpoint.
 `/code-review` found two real gaps, both fixed:
 
 - `deleteOrganizationCompletely` left `subscription` orphaned. `subscription.referenceId` carries
-  **no FK** — it's the plugin's polymorphic user-or-org reference column, and [04](04-org-delete-cascade-audit.md)'s
-  cascade audit predates this table (Polar era) so never covered it. Scope item 2's "zero tables by
-  hand" claim doesn't hold for this one table. Fixed with an explicit
-  `db.delete(subscription).where(eq(subscription.referenceId, orgId))` before the org delete.
+  **no FK** — it's the plugin's polymorphic user-or-org reference column, and
+  [04](04-org-delete-cascade-audit.md)'s cascade audit predates this table (Polar era) so never
+  covered it. Scope item 2's "zero tables by hand" claim doesn't hold for this one table. Fixed with
+  an explicit `db.delete(subscription).where(eq(subscription.referenceId, orgId))` before the org
+  delete.
 - `syncSubscriptionFromStripe` was a bare `UPDATE ... WHERE referenceId = orgId`, which silently
   no-ops if no local row exists yet (a subscription created outside our checkout, e.g. by hand in
-  the dashboard for an org with an existing Stripe customer). Changed to an upsert (find-then-update-
-  or-insert) so the "stateless and idempotent by construction" goal holds for every subscription
-  event, not just checkout-originated ones.
+  the dashboard for an org with an existing Stripe customer). Changed to an upsert
+  (find-then-update- or-insert) so the "stateless and idempotent by construction" goal holds for
+  every subscription event, not just checkout-originated ones.
