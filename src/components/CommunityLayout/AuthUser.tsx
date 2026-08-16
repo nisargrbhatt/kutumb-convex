@@ -86,13 +86,15 @@ export function AuthUser() {
 							<DropdownMenuSeparator />
 
 							{currentRole?.role === "owner" ? (
-								<DropdownMenuItem onClick={handleManageBilling}>
-									<CreditCard />
-									Manage billing
-								</DropdownMenuItem>
+								<>
+									<DropdownMenuItem onClick={handleManageBilling}>
+										<CreditCard />
+										Manage billing
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+								</>
 							) : null}
 
-							<DropdownMenuSeparator />
 							<DropdownMenuItem
 								onClick={async () => {
 									await authClient.signOut();
