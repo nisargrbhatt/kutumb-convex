@@ -1,7 +1,7 @@
 # 20 — Verify-email nag in `CommunityLayout`
 
 Parent: [PRD.md](../PRD.md) §8.6 · wireframe:
-[prototypes/09-screens.md](../prototypes/09-screens.md) Label: `impl` Status: `ready-for-agent`
+[prototypes/09-screens.md](../prototypes/09-screens.md) Label: `impl` Status: `closed`
 Depends on: [18](18-email-password-auth-config.md)
 
 ## Goal
@@ -33,3 +33,18 @@ this anywhere else re-opens a problem that is currently impossible
 - Dismiss survives navigation within the session and returns on next login.
 - `[Resend]` is disabled for 60s after a send.
 - It cannot appear on `/onboarding/checkout` or `/payment-required`.
+
+## Comments
+
+Done. New `VerifyEmailNag.tsx` in `CommunityLayout/`, mounted at top of `CommunityLayout`'s `<main>`.
+No exclusion logic needed for checkout/payment-required — structurally outside `CommunityLayout`
+already, per 09.
+
+`dismissed` state read via a lazy `useState` initializer off `sessionStorage`, not an effect — safe
+because `authClient.useSession()` itself returns `undefined` through SSR and the first hydration
+pass, so the nag already renders `null` until session resolves client-side; no hydration mismatch
+risk from reading `sessionStorage` synchronously at that point.
+
+Code review flagged `posthog.capture("verification_email_resent")` firing before the send call
+resolved (would fire even on failure) — moved after the `error` check so it only fires on confirmed
+send, matching the rest of `handleResend`'s success-gating.
