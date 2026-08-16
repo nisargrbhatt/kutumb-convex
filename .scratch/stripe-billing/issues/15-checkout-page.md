@@ -1,8 +1,8 @@
 # 15 — `/onboarding/checkout`: embedded checkout and the confirming state
 
 Parent: [PRD.md](../PRD.md) §8.3, §8.4 · wireframes:
-[prototypes/09-screens.md](../prototypes/09-screens.md) Label: `impl` Status: `ready-for-agent`
-Depends on: [14](14-create-checkout-session.md)
+[prototypes/09-screens.md](../prototypes/09-screens.md) Label: `impl` Status: `closed` Depends on:
+[14](14-create-checkout-session.md)
 
 ## Goal
 
@@ -59,3 +59,38 @@ itself as `?confirming=1`, which swaps the iframe for a spinner that polls until
 
 Until [16](16-webhook-lifecycle.md) lands, the confirming screen will poll forever — that is correct
 behaviour, not a bug in this slice.
+
+## Comments
+
+Done. `/onboarding/success` was already gone (deleted in 13's stub work) — nothing to delete here.
+
+Route split into `RouteComponent` → `PageHeader` + `CheckoutCard`/`ConfirmingCheckout` on
+`search.confirming`, with the two Stripe-facing pieces as sibling `-components`:
+`EmbeddedCheckoutSection.tsx` (mount + error state) and `ConfirmingCheckout.tsx` (poll + flip).
+
+`fetchClientSecret` stability: rather than a `useCallback` that calls `createCheckoutSession()`
+directly (Stripe's own doc pattern, but gives no hook for a custom error UI), the section does its
+own fetch in a `startCheckout` effect, gates rendering `EmbeddedCheckoutProvider` on
+`session.status === "ready"`, and `fetchClientSecret` just resolves the already-fetched secret.
+Since the provider only mounts once `ready`, and nothing flips `session` back afterward, the
+callback's identity is stable post-mount — satisfies the "no changed options" warning without
+needing an internal-vs-external distinction Stripe's own pattern doesn't give you.
+
+409 detection: `DUPLICATE_SUBSCRIPTION_ERROR_MESSAGE` moved from an inline string in 14's throw into
+`checkout-session-params.ts` (same cloudflare:workers-poisons-the-client-bundle reason as
+`BILLING_STATUS_ROUTE`), so the client can `error.message ===` compare it without importing
+`billing.ts`. No structured error/status code crosses the server-fn boundary today (14's own
+comment), so string-matching the thrown message is what's available — on match,
+`router.invalidate()` reruns the route's own `beforeLoad`, which is the gate; no separate redirect
+logic needed.
+
+Copy's `₹X` — the spec's copy string doesn't say where the amount comes from. Hardcoding it would
+drift from whatever's actually configured against `STRIPE_PRICE_ID`, so added
+`getCheckoutPriceDisplay` (`src/api/billing.ts`) reading `stripe.prices.retrieve` live and
+formatting via `Intl.NumberFormat`, paired with a `checkoutPriceQuery` matching
+`billingStatusQuery`'s shape. Fetched with a plain `useQuery` inside `CheckoutCard` (not a route
+loader) specifically so it never runs on the `?confirming=1` branch, which doesn't render the card —
+review caught an earlier version that loader-fetched it unconditionally.
+
+Copy split into `CardTitle`/`CardDescription` rather than the spec's single em-dash sentence, to
+match this repo's existing Card idiom (`OnboardingForm`, `PaymentRequiredBanner`).

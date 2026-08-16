@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseStatus } from "@tanstack/react-start/server";
+import { queryOptions } from "@tanstack/react-query";
 import { and, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { db } from "@/db";
@@ -11,7 +12,10 @@ import {
 import { stripe as stripeClient } from "@/lib/stripe";
 import { getMember } from "@/lib/auth";
 import { generatePrimaryKey } from "@/lib/generate";
-import { buildCheckoutSessionParams } from "@/lib/checkout-session-params";
+import {
+	buildCheckoutSessionParams,
+	DUPLICATE_SUBSCRIPTION_ERROR_MESSAGE,
+} from "@/lib/checkout-session-params";
 import { createOrgStripeCustomer } from "@/lib/org-stripe-customer";
 import { authMiddleware } from "@/middleware/auth";
 
@@ -69,7 +73,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
 		if (existing?.status && BLOCKING_SUBSCRIPTION_STATUSES.has(existing.status)) {
 			setResponseStatus(409);
-			throw new Error("Organization already has a subscription in progress");
+			throw new Error(DUPLICATE_SUBSCRIPTION_ERROR_MESSAGE);
 		}
 
 		let subscriptionId: string;
@@ -102,4 +106,28 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 		}
 
 		return session.client_secret;
+	});
+
+/** Formatted monthly price for the checkout copy — read live off Stripe, not duplicated into env. */
+export const getCheckoutPriceDisplay = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.handler(async () => {
+		const price = await stripeClient.prices.retrieve(env.STRIPE_PRICE_ID);
+
+		if (typeof price.unit_amount !== "number") {
+			throw new Error("Checkout price has no unit amount");
+		}
+
+		return new Intl.NumberFormat("en-IN", {
+			style: "currency",
+			currency: price.currency,
+			maximumFractionDigits: 0,
+		}).format(price.unit_amount / 100);
+	});
+
+export const checkoutPriceQuery = () =>
+	queryOptions({
+		queryKey: ["checkout-price"],
+		queryFn: async ({ signal }) => getCheckoutPriceDisplay({ signal }),
+		staleTime: Infinity,
 	});

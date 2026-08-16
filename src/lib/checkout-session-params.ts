@@ -1,6 +1,14 @@
 import type Stripe from "stripe";
 
 /**
+ * Shared with src/api/billing.ts's 409 throw and the checkout route's client-side error handling —
+ * kept here (not billing.ts) for the same cloudflare:workers-poisons-the-client-bundle reason as
+ * BILLING_STATUS_ROUTE (ticket 13).
+ */
+export const DUPLICATE_SUBSCRIPTION_ERROR_MESSAGE =
+	"Organization already has a subscription in progress";
+
+/**
  * Reproduces @better-auth/stripe's undocumented metadata contract exactly — read off its dist,
  * not its docs (ticket 14). Every field here is load-bearing:
  * - ui_mode "embedded_page" (not "embedded", renamed in API 2026-03-25.dahlia).
