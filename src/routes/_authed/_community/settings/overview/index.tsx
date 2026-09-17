@@ -184,8 +184,8 @@ function DeleteOrganizationDialog(props: { organizationId: string; name: string 
 				<AlertDialogHeader>
 					<AlertDialogTitle>Delete {props.name}?</AlertDialogTitle>
 					<AlertDialogDescription>
-						This will permanently delete this organization and all its data, including members,
-						profiles, and billing records. This action cannot be undone.
+						This will permanently delete this organization and all its data, including members and
+						profiles. This action cannot be undone.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

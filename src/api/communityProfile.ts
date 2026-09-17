@@ -1,4 +1,4 @@
-import { paymentMiddleware } from "@/middleware/payment";
+import { authMiddleware } from "@/middleware/auth";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
@@ -19,7 +19,7 @@ import {
 } from "@/lib/communityGraphCache";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 
 	.handler(async ({ context }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
@@ -56,7 +56,7 @@ export const getMyCommunityProfileQuery = () =>
 	});
 
 export const getActiveMemberCount = createServerFn({ method: "GET" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.handler(async ({ context }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
 
@@ -87,7 +87,7 @@ export const getActiveMemberCountQuery = () =>
 	});
 
 export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.validator(
 		z.object({
 			firstName: z.string().min(1, "First name is required"),
@@ -206,7 +206,7 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 	});
 
 export const getCommunityProfileList = createServerFn({ method: "GET" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.handler(async ({ context }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
 
@@ -238,7 +238,7 @@ export const getCommunityProfileListQuery = () =>
 	});
 
 export const getActiveProfilesForRelation = createServerFn({ method: "GET" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.validator(
 		z.object({
 			subjectId: z.string().min(1, "Subject profile is required"),
@@ -280,7 +280,7 @@ export const getActiveProfilesForRelationQuery = (subjectId: string) =>
 	});
 
 export const getCommunityMembers = createServerFn({ method: "GET" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.validator(
 		z.object({
 			search: z.string().optional(),
@@ -385,7 +385,7 @@ export const getCommunityMembersQuery = (props: {
 	});
 
 export const getFocusedCommunityGraph = createServerFn({ method: "GET" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.validator(
 		z.object({
 			focusId: z.string().optional(),
@@ -432,7 +432,7 @@ export const getFocusedCommunityGraphQuery = (props?: { focusId?: string; depth?
 	});
 
 export const searchCommunityProfilesLite = createServerFn({ method: "GET" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.validator(z.object({ query: z.string() }))
 	.handler(async ({ context, data }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
@@ -459,7 +459,7 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 			id: z.string().describe("Community Profile Id"),
 		})
 	)
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		const organizationId = context?.session?.session?.activeOrganizationId;
 
@@ -534,7 +534,7 @@ export const acceptCommunityProfile = createServerFn({ method: "POST" })
 			memberId: z.string().describe("Community Profile Id"),
 		})
 	)
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.handler(async ({ data, context }) => {
 		const canApproveCommunityProfile = await auth.api.hasPermission({
 			headers: getRequestHeaders(),
@@ -591,7 +591,7 @@ export const rejectCommunityProfile = createServerFn({ method: "POST" })
 			memberId: z.string().describe("Community Profile Id"),
 		})
 	)
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.handler(async ({ data, context }) => {
 		const canRejectCommunityProfile = await auth.api.hasPermission({
 			headers: getRequestHeaders(),
@@ -643,7 +643,7 @@ export const rejectCommunityProfile = createServerFn({ method: "POST" })
 	});
 
 export const reassignProfileToUser = createServerFn({ method: "POST" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.validator(
 		z.object({
 			memberId: z.string(),
@@ -716,7 +716,7 @@ export const reassignProfileToUser = createServerFn({ method: "POST" })
 	});
 
 export const addMissingMember = createServerFn({ method: "POST" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.validator(
 		z.object({
 			firstName: z.string().min(1, "First name is required"),

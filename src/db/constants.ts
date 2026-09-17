@@ -10,12 +10,6 @@ export const ORGANIZATION_ROLES = {
 	member: "member",
 } as const;
 
-export const BILLING_STATUS = {
-	active: "active",
-	pending: "pending",
-	past_due: "past_due",
-} as const;
-
 export const COMMUNITY_PROFILE_STATUS = {
 	active: "active",
 	inactive: "inactive",

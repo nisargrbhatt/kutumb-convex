@@ -1,6 +1,4 @@
-import { CreditCard, ChevronsUpDown, LogOut } from "lucide-react";
-import { usePostHog } from "@posthog/react";
-import { toast } from "sonner";
+import { ChevronsUpDown, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -18,21 +16,11 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
-import { openBillingPortal } from "@/lib/billing-portal-client";
 
 export function AuthUser() {
-	const posthog = usePostHog();
 	const { data: session } = authClient.useSession();
 	const { data: currentRole } = authClient.useActiveMemberRole();
 	const { isMobile } = useSidebar();
-
-	const handleManageBilling = async () => {
-		posthog.capture("billing_portal_opened", { source: "auth_user" });
-		const { error } = await openBillingPortal(window.location.pathname);
-		if (error) {
-			toast.error("Failed to open billing portal", { description: "Please try again later." });
-		}
-	};
 
 	return (
 		<SidebarMenu>
@@ -84,16 +72,6 @@ export function AuthUser() {
 								</div>
 							</DropdownMenuLabel>
 							<DropdownMenuSeparator />
-
-							{currentRole?.role === "owner" ? (
-								<>
-									<DropdownMenuItem onClick={handleManageBilling}>
-										<CreditCard />
-										Manage billing
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-								</>
-							) : null}
 
 							<DropdownMenuItem
 								onClick={async () => {

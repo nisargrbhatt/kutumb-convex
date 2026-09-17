@@ -73,17 +73,7 @@ function TermsOfServicePage() {
 				</section>
 
 				<section className="space-y-3">
-					<h2 className="text-2xl font-bold text-foreground">4. Subscriptions &amp; billing</h2>
-					<p>
-						Paid features are billed through our payment provider on a subscription basis. Fees are
-						charged in advance and are non-refundable except where required by law. You can manage
-						or cancel your subscription through your account; cancellation takes effect at the end
-						of the current billing period.
-					</p>
-				</section>
-
-				<section className="space-y-3">
-					<h2 className="text-2xl font-bold text-foreground">5. Your content</h2>
+					<h2 className="text-2xl font-bold text-foreground">4. Your content</h2>
 					<p>
 						You retain ownership of the content you submit. You grant us a limited license to host,
 						store, and display that content solely to operate and provide the Service. You are
@@ -92,7 +82,7 @@ function TermsOfServicePage() {
 				</section>
 
 				<section className="space-y-3">
-					<h2 className="text-2xl font-bold text-foreground">6. Intellectual property</h2>
+					<h2 className="text-2xl font-bold text-foreground">5. Intellectual property</h2>
 					<p>
 						The Service, including its software, design, and trademarks, is owned by us and
 						protected by applicable laws. These Terms do not grant you any right to our intellectual
@@ -101,7 +91,7 @@ function TermsOfServicePage() {
 				</section>
 
 				<section className="space-y-3">
-					<h2 className="text-2xl font-bold text-foreground">7. Termination</h2>
+					<h2 className="text-2xl font-bold text-foreground">6. Termination</h2>
 					<p>
 						You may stop using the Service at any time. We may suspend or terminate your access if
 						you violate these Terms or to protect the Service. Upon termination, your right to use
@@ -110,7 +100,7 @@ function TermsOfServicePage() {
 				</section>
 
 				<section className="space-y-3">
-					<h2 className="text-2xl font-bold text-foreground">8. Disclaimers</h2>
+					<h2 className="text-2xl font-bold text-foreground">7. Disclaimers</h2>
 					<p>
 						The Service is provided "as is" and "as available" without warranties of any kind,
 						whether express or implied, including fitness for a particular purpose and
@@ -119,7 +109,7 @@ function TermsOfServicePage() {
 				</section>
 
 				<section className="space-y-3">
-					<h2 className="text-2xl font-bold text-foreground">9. Limitation of liability</h2>
+					<h2 className="text-2xl font-bold text-foreground">8. Limitation of liability</h2>
 					<p>
 						To the maximum extent permitted by law, we will not be liable for any indirect,
 						incidental, special, or consequential damages, or for any loss of data, arising out of
@@ -128,7 +118,7 @@ function TermsOfServicePage() {
 				</section>
 
 				<section className="space-y-3">
-					<h2 className="text-2xl font-bold text-foreground">10. Governing law</h2>
+					<h2 className="text-2xl font-bold text-foreground">9. Governing law</h2>
 					<p>
 						These Terms are governed by the laws of the applicable jurisdiction.
 						{/* TODO: specify governing law / jurisdiction once the legal entity is established */}
@@ -136,7 +126,7 @@ function TermsOfServicePage() {
 				</section>
 
 				<section className="space-y-3">
-					<h2 className="text-2xl font-bold text-foreground">11. Changes to these terms</h2>
+					<h2 className="text-2xl font-bold text-foreground">10. Changes to these terms</h2>
 					<p>
 						We may update these Terms from time to time. Continued use of the Service after changes
 						take effect constitutes acceptance of the revised Terms.
@@ -144,7 +134,7 @@ function TermsOfServicePage() {
 				</section>
 
 				<section className="space-y-3">
-					<h2 className="text-2xl font-bold text-foreground">12. Contact us</h2>
+					<h2 className="text-2xl font-bold text-foreground">11. Contact us</h2>
 					<p>
 						Questions about these Terms? Reach out to us through the app.
 						{/* TODO: add contact email once available */}

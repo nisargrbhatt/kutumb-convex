@@ -66,11 +66,6 @@ function PrivacyPolicyPage() {
 							member profiles, addresses, relationships, photos, and memories you choose to add.
 						</li>
 						<li>
-							<span className="font-medium text-foreground">Billing data</span> — subscription and
-							payment details, processed by our payment provider; we store a customer reference, not
-							your full card details.
-						</li>
-						<li>
 							<span className="font-medium text-foreground">Usage &amp; device data</span> —
 							analytics about how you interact with the Service, collected to improve it.
 						</li>
@@ -82,7 +77,6 @@ function PrivacyPolicyPage() {
 					<ul className="list-disc space-y-2 pl-6">
 						<li>To provide, maintain, and improve the Service.</li>
 						<li>To authenticate you and secure your account.</li>
-						<li>To process subscriptions and payments.</li>
 						<li>To communicate with you about your account, including transactional emails.</li>
 						<li>To understand usage and improve features and performance.</li>
 					</ul>
@@ -95,10 +89,6 @@ function PrivacyPolicyPage() {
 						<li>
 							<span className="font-medium text-foreground">Cloudflare</span> — hosting, data
 							storage, and caching.
-						</li>
-						<li>
-							<span className="font-medium text-foreground">Stripe</span> — subscription billing and
-							payments.
 						</li>
 						<li>
 							<span className="font-medium text-foreground">PostHog</span> — product analytics.

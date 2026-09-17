@@ -16,7 +16,6 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as publicRouteRouteImport } from './routes/(public)/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthedPaymentRequiredRouteImport } from './routes/_authed/payment-required'
 import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community'
 import { Route as publicTermOfServiceIndexRouteImport } from './routes/(public)/term-of-service/index'
 import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/privacy-policy/index'
@@ -26,7 +25,6 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
-import { Route as AuthedOnboardingCheckoutIndexRouteImport } from './routes/_authed/onboarding/checkout/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
 import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
@@ -71,11 +69,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthedPaymentRequiredRoute = AuthedPaymentRequiredRouteImport.update({
-  id: '/payment-required',
-  path: '/payment-required',
-  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCommunityRoute = AuthedCommunityRouteImport.update({
   id: '/_community',
@@ -124,12 +117,6 @@ const AuthedOnboardingCreateIndexRoute =
   AuthedOnboardingCreateIndexRouteImport.update({
     id: '/onboarding/create/',
     path: '/onboarding/create/',
-    getParentRoute: () => AuthedRoute,
-  } as any)
-const AuthedOnboardingCheckoutIndexRoute =
-  AuthedOnboardingCheckoutIndexRouteImport.update({
-    id: '/onboarding/checkout/',
-    path: '/onboarding/checkout/',
     getParentRoute: () => AuthedRoute,
   } as any)
 const AuthedCommunityMembersIndexRoute =
@@ -205,7 +192,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/payment-required': typeof AuthedPaymentRequiredRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
@@ -215,7 +201,6 @@ export interface FileRoutesByFullPath {
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
-  '/onboarding/checkout/': typeof AuthedOnboardingCheckoutIndexRoute
   '/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
   '/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
@@ -233,7 +218,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/payment-required': typeof AuthedPaymentRequiredRoute
   '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
@@ -243,7 +227,6 @@ export interface FileRoutesByTo {
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
-  '/onboarding/checkout': typeof AuthedOnboardingCheckoutIndexRoute
   '/onboarding/create': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
   '/members/$id': typeof AuthedCommunityMembersIdIndexRoute
@@ -265,7 +248,6 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
-  '/_authed/payment-required': typeof AuthedPaymentRequiredRoute
   '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
@@ -275,7 +257,6 @@ export interface FileRoutesById {
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
-  '/_authed/onboarding/checkout/': typeof AuthedOnboardingCheckoutIndexRoute
   '/_authed/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
   '/_authed/_community/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
@@ -295,7 +276,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
-    | '/payment-required'
     | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
@@ -305,7 +285,6 @@ export interface FileRouteTypes {
     | '/community-tree/'
     | '/dashboard/'
     | '/members/'
-    | '/onboarding/checkout/'
     | '/onboarding/create/'
     | '/onboarding/invitations/'
     | '/members/$id/'
@@ -323,7 +302,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
-    | '/payment-required'
     | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
@@ -333,7 +311,6 @@ export interface FileRouteTypes {
     | '/community-tree'
     | '/dashboard'
     | '/members'
-    | '/onboarding/checkout'
     | '/onboarding/create'
     | '/onboarding/invitations'
     | '/members/$id'
@@ -354,7 +331,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authed/_community'
-    | '/_authed/payment-required'
     | '/_authed/_community/memories'
     | '/api/auth/$'
     | '/api/ph/$'
@@ -364,7 +340,6 @@ export interface FileRouteTypes {
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
-    | '/_authed/onboarding/checkout/'
     | '/_authed/onboarding/create/'
     | '/_authed/onboarding/invitations/'
     | '/_authed/_community/members/$id/'
@@ -440,13 +415,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/payment-required': {
-      id: '/_authed/payment-required'
-      path: '/payment-required'
-      fullPath: '/payment-required'
-      preLoaderRoute: typeof AuthedPaymentRequiredRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/_community': {
       id: '/_authed/_community'
       path: ''
@@ -508,13 +476,6 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/create'
       fullPath: '/onboarding/create/'
       preLoaderRoute: typeof AuthedOnboardingCreateIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/onboarding/checkout/': {
-      id: '/_authed/onboarding/checkout/'
-      path: '/onboarding/checkout'
-      fullPath: '/onboarding/checkout/'
-      preLoaderRoute: typeof AuthedOnboardingCheckoutIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/_community/members/': {
@@ -656,16 +617,12 @@ const AuthedCommunityRouteWithChildren = AuthedCommunityRoute._addFileChildren(
 
 interface AuthedRouteChildren {
   AuthedCommunityRoute: typeof AuthedCommunityRouteWithChildren
-  AuthedPaymentRequiredRoute: typeof AuthedPaymentRequiredRoute
-  AuthedOnboardingCheckoutIndexRoute: typeof AuthedOnboardingCheckoutIndexRoute
   AuthedOnboardingCreateIndexRoute: typeof AuthedOnboardingCreateIndexRoute
   AuthedOnboardingInvitationsIndexRoute: typeof AuthedOnboardingInvitationsIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCommunityRoute: AuthedCommunityRouteWithChildren,
-  AuthedPaymentRequiredRoute: AuthedPaymentRequiredRoute,
-  AuthedOnboardingCheckoutIndexRoute: AuthedOnboardingCheckoutIndexRoute,
   AuthedOnboardingCreateIndexRoute: AuthedOnboardingCreateIndexRoute,
   AuthedOnboardingInvitationsIndexRoute: AuthedOnboardingInvitationsIndexRoute,
 }

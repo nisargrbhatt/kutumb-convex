@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
 import { communityProfileCustomField } from "@/db/app-schema";
-import { paymentMiddleware } from "@/middleware/payment";
+import { authMiddleware } from "@/middleware/auth";
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { generatePrimaryKey } from "@/lib/generate";
 
 export const getOrganizationCustomFields = createServerFn({ method: "GET" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.handler(async ({ context }) => {
 		const canReadCustomFields = await auth.api.hasPermission({
 			headers: getRequestHeaders(),
@@ -48,7 +48,7 @@ export const getOrganizationCustomFields = createServerFn({ method: "GET" })
 	});
 
 export const addOrganizationCustomField = createServerFn({ method: "POST" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.validator(
 		z.object({
 			label: z.string().min(1, "Label is required"),
@@ -93,7 +93,7 @@ export const addOrganizationCustomField = createServerFn({ method: "POST" })
 	});
 
 export const deleteOrganizationCustomField = createServerFn({ method: "POST" })
-	.middleware([paymentMiddleware])
+	.middleware([authMiddleware])
 	.validator(
 		z.object({
 			fieldId: z.string().min(1, "fieldId is required"),
