@@ -1,13 +1,7 @@
-# Billing known limitations — accepted tradeoffs, not bugs
+# Auth known limitations — accepted tradeoffs, not bugs
 
-Five behaviors in the Stripe billing/auth surface are deliberate. Listed here so a future maintainer
-filing them as bugs finds the reasoning first.
-
-- **Org deletion on `customer.subscription.deleted` is unconditional, irreversible, and silent.**
-  The webhook cascades all children and nulls every member's `session.activeOrganizationId` with no
-  grace period, confirmation, or notice. Accepted because Stripe only sends this event once a
-  subscription is truly gone (after retries/grace periods it already manages); adding our own delay
-  on top would just duplicate Stripe's.
+Four behaviors in the auth surface are deliberate. Listed here so a future maintainer filing them as
+bugs finds the reasoning first.
 
 - **Email enumeration is accepted on signup.** Signup errors reveal whether an email is already
   registered. Generic ("if this exists…") copy is used only on password reset, where the leak is
@@ -28,3 +22,6 @@ filing them as bugs finds the reasoning first.
   nominal rate limit if requests land on different Cloudflare colos before KV replicates. Accepted:
   the limiter's purpose is abuse deterrence, not a hard cap, and D1-backed strict limiting was
   judged not worth the extra write on every auth request.
+
+_Amended 2026-09-17: the Stripe org-deletion bullet was removed with the billing rip
+(`.scratch/free-tier`). Remaining bullets unchanged._

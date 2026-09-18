@@ -1,6 +1,6 @@
 # 10 — Docs: CLAUDE.md, ADR 0002 amend, ADR 0003, CONTEXT.md
 
-Parent: [PRD.md](../PRD.md) §9, §10 Label: `impl` Status: `ready-for-agent` Depends on:
+Parent: [PRD.md](../PRD.md) §9, §10 Label: `impl` Status: `closed` Depends on:
 [08](08-limits-lib-and-enforcement.md)
 
 ## Goal
@@ -55,3 +55,17 @@ Repo docs describe the free app with hard caps; nothing mentions Polar or Stripe
 ## Out of scope
 
 Code changes. `.scratch/stripe-billing/**` stays as historical record.
+
+## Done
+
+All 5 scope items done as specced. CLAUDE.md's 6 edits verified true against current codebase
+(`getOrgUsageQuery` in `src/api/organization.ts`, `_community.tsx` is a plain shell, `limits.ts` /
+`limits-db.ts` paths correct). ADR 0002 renamed via `git mv`, intro "Five" → "Four", bullet 1
+deleted, amendment appended. ADR 0003 written fresh, matches 0001's decision-title + prose + rejected
+alternatives format. `org.metadata` note dropped entirely (not "kept generic") — grepped and
+confirmed nothing in `src/` reads `.metadata` anymore, so a generic claim would've been dead weight.
+Grep confirms only hit left is the ADR 0002 amendment note itself.
+
+`npm run format:fix && npm run lint:fix` clean — also reflowed 3 unrelated `.scratch/free-tier/`
+issue files (07–09) to 100-col; whitespace only, left in since format:fix is an acceptance
+criterion.

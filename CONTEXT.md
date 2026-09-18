@@ -44,20 +44,15 @@ A relation is unique across a pair regardless of direction (no duplicate A–B /
 The owner/admin capability to add/remove a Userless (and `active`) Community Profile's outgoing
 relations on its behalf. Distinct from a user editing their own relations on their own profile.
 
-## Billing status
+## Organization limit
 
-An organization's usability, derived from its **subscription row**, never stored. One of `active`
-(usable), `pending`, or `past_due`.
+The maximum number of organizations a single user may belong to at once, counted across **all
+roles** (owner, admin, member). Fixed at 5. Reaching it blocks creating a new organization and
+accepting an invitation; leaving or losing an organization frees a slot immediately.
 
-## Subscription row
+## Member limit
 
-The single source of truth for an organization's billing state: one row per org, written only by the
-webhook and by checkout creation.
-
-## Pending (billing status)
-
-Never completed a payment.
-
-## Past due
-
-Paid once, payment now failing.
+The maximum size of one organization. Fixed at 1000, applied separately to **Org Members** (any
+role, with a **pending invitation reserving a slot**) and to **Community Profiles** (any status,
+linked or userless). Reaching it blocks inviting a new Org Member or creating a new Community
+Profile respectively. There is no exemption for an Org Member creating their own Community Profile.

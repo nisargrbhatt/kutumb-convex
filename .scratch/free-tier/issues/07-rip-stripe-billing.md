@@ -71,15 +71,15 @@ Done per research/02, in the file's prescribed order. 17 files deleted, `auth.ts
 stripped of the `stripe` plugin + `onStripeEvent`/`getMember`/`organizationHooks`, 26
 `paymentMiddleware` → `authMiddleware` swaps across 4 api files (counts matched research exactly:
 13/7/3/3), gate removed from `_community.tsx`, `AuthUser.tsx`/`organization.ts` billing exports
-gone, legal/settings copy scrubbed, `subscription` table + both `stripe_customer_id` columns
-dropped via `migrations/0003_known_nomad.sql` (journal stays linear, `0002` untouched), 4 stripe
-deps uninstalled.
+gone, legal/settings copy scrubbed, `subscription` table + both `stripe_customer_id` columns dropped
+via `migrations/0003_known_nomad.sql` (journal stays linear, `0002` untouched), 4 stripe deps
+uninstalled.
 
 Gotcha not in the ticket: no `.dev.vars` exists locally — this repo's local secrets live in a
-gitignored `.env` instead (picked up by `wrangler types`). Removed the 5 `STRIPE_*` keys from
-there and re-ran `cf-typegen`; `worker-configuration.d.ts` now has zero Stripe entries. Also found
-`.env` was separately missing `BETTER_AUTH_DISABLE_SIGNUP` (pre-existing drift, unrelated to this
-ticket — `auth.ts` already reads it) — added an empty value so `cf-typegen`/`tsc` stay green.
+gitignored `.env` instead (picked up by `wrangler types`). Removed the 5 `STRIPE_*` keys from there
+and re-ran `cf-typegen`; `worker-configuration.d.ts` now has zero Stripe entries. Also found `.env`
+was separately missing `BETTER_AUTH_DISABLE_SIGNUP` (pre-existing drift, unrelated to this ticket —
+`auth.ts` already reads it) — added an empty value so `cf-typegen`/`tsc` stay green.
 
 `npm run build && npm run test && npm run format:fix && npm run lint:fix` all clean.
 `grep -riE "stripe|billing|subscription|checkout|payment" src/ package.json worker-configuration.d.ts`

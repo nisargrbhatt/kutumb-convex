@@ -71,8 +71,8 @@ Implemented variant A per prototype (`f06ab66`). `OnboardingForm` gained
 `getOrgUsageQuery`, two `Progress` rows, destructive at cap / amber at ≥90%). Invitations page:
 `orgAccept` toast branch + success now `navigate({to: "/dashboard"})` instead of
 `router.invalidate()`. Members page: `memberInvite` toast branch on invite; `getOrgUsageQuery`
-invalidated after invite send + member remove. Profile create (`profile/info`, `members/create`)
-now catch via `safeAsync`, toast title "Profile" + `error.message` (simplest path spec explicitly
+invalidated after invite send + member remove. Profile create (`profile/info`, `members/create`) now
+catch via `safeAsync`, toast title "Profile" + `error.message` (simplest path spec explicitly
 allowed), invalidate usage on success. Also invalidated usage on `rejectCommunityProfile`
 (`members/$id`) — the actual profile-delete-equivalent flow, caught by spec review below.
 
