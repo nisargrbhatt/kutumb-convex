@@ -1,18 +1,43 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
-import * as z from "zod";
-import { RootLayout } from "@/components/RootLayout";
+import { useId } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import z from "zod";
 import { usePostHog } from "@posthog/react";
+import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
+import { RootLayout } from "@/components/RootLayout";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { OAuthErrorAlert } from "@/components/auth/OAuthErrorAlert";
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import {
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	FieldSeparator,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
+import { authSearchSchema, buildAuthCallbackPath } from "@/lib/auth-search-params";
+
+const loginSchema = z.object({
+	email: z.email("Enter a valid email address."),
+	password: z.string().min(1, "Password is required."),
+});
 
 export const Route = createFileRoute("/login")({
 	component: RouteComponent,
-	validateSearch: z.object({
-		redirectTo: z.string().trim().optional(),
-	}),
+	validateSearch: authSearchSchema,
 	head: () => ({
 		meta: [
 			{
@@ -23,15 +48,39 @@ export const Route = createFileRoute("/login")({
 });
 
 function RouteComponent() {
-	const { redirectTo } = Route.useSearch();
+	const { redirectTo, invitation, error } = Route.useSearch();
+	const navigate = Route.useNavigate();
 	const posthog = usePostHog();
+	const formId = useId();
 
-	const [loading, setLoading] = useState(false);
+	const form = useForm<z.infer<typeof loginSchema>>({
+		defaultValues: { email: "", password: "" },
+		resolver: zodResolver(loginSchema),
+	});
+
+	const destination = redirectTo || "/dashboard";
+
+	const onSubmit = form.handleSubmit(async (values) => {
+		posthog.capture("sign_in_initiated", { provider: "password" });
+
+		const { error: signInError } = await authClient.signIn.email({
+			email: values.email,
+			password: values.password,
+			callbackURL: destination,
+		});
+
+		if (signInError) {
+			toast.error("Sign in failed", { description: "Invalid email or password." });
+			return;
+		}
+
+		navigate({ to: destination });
+	});
 
 	return (
 		<RootLayout>
 			<div className="flex h-full w-full items-center justify-center py-10">
-				<Card className="w-full max-w-md">
+				<Card className="w-full max-w-sm">
 					<CardHeader>
 						<CardTitle className="text-lg md:text-xl">Sign In</CardTitle>
 						<CardDescription className="text-xs md:text-sm">
@@ -39,58 +88,85 @@ function RouteComponent() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<div className="grid gap-4">
-							<div className={cn("flex w-full items-center gap-2", "flex-col justify-between")}>
+						<FieldGroup>
+							<OAuthErrorAlert error={error} />
+							<Form {...form}>
+								<form onSubmit={onSubmit} id={formId}>
+									<FieldGroup>
+										<Controller
+											control={form.control}
+											name="email"
+											render={({ field, fieldState }) => (
+												<Field data-invalid={fieldState.invalid}>
+													<FieldLabel htmlFor="login-email">Email</FieldLabel>
+													<Input
+														{...field}
+														id="login-email"
+														type="email"
+														autoComplete="email"
+														aria-invalid={fieldState.invalid}
+														placeholder="you@example.com"
+													/>
+													{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+												</Field>
+											)}
+										/>
+										<Controller
+											control={form.control}
+											name="password"
+											render={({ field, fieldState }) => (
+												<Field data-invalid={fieldState.invalid}>
+													<div className="flex items-center justify-between">
+														<FieldLabel htmlFor="login-password">Password</FieldLabel>
+														<Route.Link
+															to="/forgot-password"
+															className="link text-xs text-muted-foreground"
+														>
+															Forgot password?
+														</Route.Link>
+													</div>
+													<Input
+														{...field}
+														id="login-password"
+														type="password"
+														autoComplete="current-password"
+														aria-invalid={fieldState.invalid}
+													/>
+													{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+												</Field>
+											)}
+										/>
+									</FieldGroup>
+								</form>
+							</Form>
+							<Field orientation="horizontal">
 								<Button
-									variant="outline"
-									className={cn("w-full gap-2")}
-									disabled={loading}
-									onClick={async () => {
-										posthog.capture("sign_in_initiated", { provider: "google" });
-										await authClient.signIn.social(
-											{
-												provider: "google",
-												callbackURL: redirectTo ? redirectTo : "/dashboard",
-											},
-											{
-												onRequest: () => {
-													setLoading(true);
-												},
-												onResponse: () => {
-													setLoading(false);
-												},
-											}
-										);
-									}}
+									type="submit"
+									form={formId}
+									className="w-full"
+									disabled={form.formState.isSubmitting}
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="1em"
-										height="1em"
-										viewBox="0 0 256 262"
-									>
-										<path
-											fill="#4285F4"
-											d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622l38.755 30.023l2.685.268c24.659-22.774 38.875-56.282 38.875-96.027"
-										></path>
-										<path
-											fill="#34A853"
-											d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055c-34.523 0-63.824-22.773-74.269-54.25l-1.531.13l-40.298 31.187l-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1"
-										></path>
-										<path
-											fill="#FBBC05"
-											d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82c0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602z"
-										></path>
-										<path
-											fill="#EB4335"
-											d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0C79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251"
-										></path>
-									</svg>
-									Sign in with Google
+									Sign in
 								</Button>
-							</div>
-						</div>
+							</Field>
+							<FieldSeparator>Or</FieldSeparator>
+							<Field orientation="horizontal">
+								<GoogleAuthButton
+									mode="sign_in"
+									destination={destination}
+									errorCallbackURL={buildAuthCallbackPath("/login", { redirectTo, invitation })}
+								/>
+							</Field>
+						</FieldGroup>
 					</CardContent>
+					<CardFooter>
+						<FieldDescription className="text-center">
+							New here?{" "}
+							<Route.Link to="/signup" search={{ redirectTo, invitation }} className="link">
+								Create an account
+							</Route.Link>
+						</FieldDescription>
+					</CardFooter>
 				</Card>
 			</div>
 		</RootLayout>

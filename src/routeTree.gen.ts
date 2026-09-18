@@ -9,7 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as publicRouteRouteImport } from './routes/(public)/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,11 +20,8 @@ import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community
 import { Route as publicTermOfServiceIndexRouteImport } from './routes/(public)/term-of-service/index'
 import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/privacy-policy/index'
 import { Route as publicAboutIndexRouteImport } from './routes/(public)/about/index'
-import { Route as ApiPolarPortalRouteImport } from './routes/api/polar/portal'
 import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
-import { Route as AuthedOnboardingSuccessIndexRouteImport } from './routes/_authed/onboarding/success/index'
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
@@ -36,9 +36,24 @@ import { Route as AuthedCommunityProfileAddressesIndexRouteImport } from './rout
 import { Route as AuthedCommunityMembersCreateIndexRouteImport } from './routes/_authed/_community/members/create/index'
 import { Route as AuthedCommunityMembersIdIndexRouteImport } from './routes/_authed/_community/members/$id/index'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedRoute = AuthedRouteImport.update({
@@ -75,11 +90,6 @@ const publicAboutIndexRoute = publicAboutIndexRouteImport.update({
   path: '/about/',
   getParentRoute: () => publicRouteRoute,
 } as any)
-const ApiPolarPortalRoute = ApiPolarPortalRouteImport.update({
-  id: '/api/polar/portal',
-  path: '/api/polar/portal',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPhSplatRoute = ApiPhSplatRouteImport.update({
   id: '/api/ph/$',
   path: '/api/ph/$',
@@ -90,18 +100,6 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedCommunityMemoriesRouteRoute =
-  AuthedCommunityMemoriesRouteRouteImport.update({
-    id: '/memories',
-    path: '/memories',
-    getParentRoute: () => AuthedCommunityRoute,
-  } as any)
-const AuthedOnboardingSuccessIndexRoute =
-  AuthedOnboardingSuccessIndexRouteImport.update({
-    id: '/onboarding/success/',
-    path: '/onboarding/success/',
-    getParentRoute: () => AuthedRoute,
-  } as any)
 const AuthedOnboardingInvitationsIndexRoute =
   AuthedOnboardingInvitationsIndexRouteImport.update({
     id: '/onboarding/invitations/',
@@ -183,11 +181,12 @@ const AuthedCommunityMembersIdIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/memories': typeof AuthedCommunityMemoriesRouteRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
-  '/api/polar/portal': typeof ApiPolarPortalRoute
   '/about/': typeof publicAboutIndexRoute
   '/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
   '/term-of-service/': typeof publicTermOfServiceIndexRoute
@@ -196,7 +195,6 @@ export interface FileRoutesByFullPath {
   '/members/': typeof AuthedCommunityMembersIndexRoute
   '/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
-  '/onboarding/success/': typeof AuthedOnboardingSuccessIndexRoute
   '/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/members/create/': typeof AuthedCommunityMembersCreateIndexRoute
   '/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
@@ -208,11 +206,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/memories': typeof AuthedCommunityMemoriesRouteRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
-  '/api/polar/portal': typeof ApiPolarPortalRoute
   '/about': typeof publicAboutIndexRoute
   '/privacy-policy': typeof publicPrivacyPolicyIndexRoute
   '/term-of-service': typeof publicTermOfServiceIndexRoute
@@ -221,7 +220,6 @@ export interface FileRoutesByTo {
   '/members': typeof AuthedCommunityMembersIndexRoute
   '/onboarding/create': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
-  '/onboarding/success': typeof AuthedOnboardingSuccessIndexRoute
   '/members/$id': typeof AuthedCommunityMembersIdIndexRoute
   '/members/create': typeof AuthedCommunityMembersCreateIndexRoute
   '/profile/addresses': typeof AuthedCommunityProfileAddressesIndexRoute
@@ -236,12 +234,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(public)': typeof publicRouteRouteWithChildren
   '/_authed': typeof AuthedRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
-  '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
-  '/api/polar/portal': typeof ApiPolarPortalRoute
   '/(public)/about/': typeof publicAboutIndexRoute
   '/(public)/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
   '/(public)/term-of-service/': typeof publicTermOfServiceIndexRoute
@@ -250,7 +249,6 @@ export interface FileRoutesById {
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
   '/_authed/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
-  '/_authed/onboarding/success/': typeof AuthedOnboardingSuccessIndexRoute
   '/_authed/_community/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/_authed/_community/members/create/': typeof AuthedCommunityMembersCreateIndexRoute
   '/_authed/_community/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
@@ -264,11 +262,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/forgot-password'
     | '/login'
-    | '/memories'
+    | '/reset-password'
+    | '/signup'
     | '/api/auth/$'
     | '/api/ph/$'
-    | '/api/polar/portal'
     | '/about/'
     | '/privacy-policy/'
     | '/term-of-service/'
@@ -277,7 +276,6 @@ export interface FileRouteTypes {
     | '/members/'
     | '/onboarding/create/'
     | '/onboarding/invitations/'
-    | '/onboarding/success/'
     | '/members/$id/'
     | '/members/create/'
     | '/profile/addresses/'
@@ -289,11 +287,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/forgot-password'
     | '/login'
-    | '/memories'
+    | '/reset-password'
+    | '/signup'
     | '/api/auth/$'
     | '/api/ph/$'
-    | '/api/polar/portal'
     | '/about'
     | '/privacy-policy'
     | '/term-of-service'
@@ -302,7 +301,6 @@ export interface FileRouteTypes {
     | '/members'
     | '/onboarding/create'
     | '/onboarding/invitations'
-    | '/onboarding/success'
     | '/members/$id'
     | '/members/create'
     | '/profile/addresses'
@@ -316,12 +314,13 @@ export interface FileRouteTypes {
     | '/'
     | '/(public)'
     | '/_authed'
+    | '/forgot-password'
     | '/login'
+    | '/reset-password'
+    | '/signup'
     | '/_authed/_community'
-    | '/_authed/_community/memories'
     | '/api/auth/$'
     | '/api/ph/$'
-    | '/api/polar/portal'
     | '/(public)/about/'
     | '/(public)/privacy-policy/'
     | '/(public)/term-of-service/'
@@ -330,7 +329,6 @@ export interface FileRouteTypes {
     | '/_authed/_community/members/'
     | '/_authed/onboarding/create/'
     | '/_authed/onboarding/invitations/'
-    | '/_authed/onboarding/success/'
     | '/_authed/_community/members/$id/'
     | '/_authed/_community/members/create/'
     | '/_authed/_community/profile/addresses/'
@@ -345,19 +343,42 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   publicRouteRoute: typeof publicRouteRouteWithChildren
   AuthedRoute: typeof AuthedRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignupRoute: typeof SignupRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPhSplatRoute: typeof ApiPhSplatRoute
-  ApiPolarPortalRoute: typeof ApiPolarPortalRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed': {
@@ -409,13 +430,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicAboutIndexRouteImport
       parentRoute: typeof publicRouteRoute
     }
-    '/api/polar/portal': {
-      id: '/api/polar/portal'
-      path: '/api/polar/portal'
-      fullPath: '/api/polar/portal'
-      preLoaderRoute: typeof ApiPolarPortalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/ph/$': {
       id: '/api/ph/$'
       path: '/api/ph/$'
@@ -429,20 +443,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authed/_community/memories': {
-      id: '/_authed/_community/memories'
-      path: '/memories'
-      fullPath: '/memories'
-      preLoaderRoute: typeof AuthedCommunityMemoriesRouteRouteImport
-      parentRoute: typeof AuthedCommunityRoute
-    }
-    '/_authed/onboarding/success/': {
-      id: '/_authed/onboarding/success/'
-      path: '/onboarding/success'
-      fullPath: '/onboarding/success/'
-      preLoaderRoute: typeof AuthedOnboardingSuccessIndexRouteImport
-      parentRoute: typeof AuthedRoute
     }
     '/_authed/onboarding/invitations/': {
       id: '/_authed/onboarding/invitations/'
@@ -555,7 +555,6 @@ const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
 )
 
 interface AuthedCommunityRouteChildren {
-  AuthedCommunityMemoriesRouteRoute: typeof AuthedCommunityMemoriesRouteRoute
   AuthedCommunityCommunityTreeIndexRoute: typeof AuthedCommunityCommunityTreeIndexRoute
   AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
   AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
@@ -570,7 +569,6 @@ interface AuthedCommunityRouteChildren {
 }
 
 const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
-  AuthedCommunityMemoriesRouteRoute: AuthedCommunityMemoriesRouteRoute,
   AuthedCommunityCommunityTreeIndexRoute:
     AuthedCommunityCommunityTreeIndexRoute,
   AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
@@ -599,14 +597,12 @@ interface AuthedRouteChildren {
   AuthedCommunityRoute: typeof AuthedCommunityRouteWithChildren
   AuthedOnboardingCreateIndexRoute: typeof AuthedOnboardingCreateIndexRoute
   AuthedOnboardingInvitationsIndexRoute: typeof AuthedOnboardingInvitationsIndexRoute
-  AuthedOnboardingSuccessIndexRoute: typeof AuthedOnboardingSuccessIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCommunityRoute: AuthedCommunityRouteWithChildren,
   AuthedOnboardingCreateIndexRoute: AuthedOnboardingCreateIndexRoute,
   AuthedOnboardingInvitationsIndexRoute: AuthedOnboardingInvitationsIndexRoute,
-  AuthedOnboardingSuccessIndexRoute: AuthedOnboardingSuccessIndexRoute,
 }
 
 const AuthedRouteWithChildren =
@@ -616,10 +612,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   publicRouteRoute: publicRouteRouteWithChildren,
   AuthedRoute: AuthedRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignupRoute: SignupRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPhSplatRoute: ApiPhSplatRoute,
-  ApiPolarPortalRoute: ApiPolarPortalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

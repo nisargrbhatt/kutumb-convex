@@ -13,3 +13,19 @@ export function getPostHogClient() {
 	}
 	return posthogClient;
 }
+
+export function captureLimitReached(props: {
+	limit: "org" | "member" | "profile";
+	organizationId: string;
+	userId: string;
+}) {
+	try {
+		getPostHogClient().capture({
+			distinctId: props.userId,
+			event: "limit_reached",
+			properties: { limit: props.limit, organizationId: props.organizationId },
+		});
+	} catch (error) {
+		console.error("Failed to capture limit_reached event", error);
+	}
+}

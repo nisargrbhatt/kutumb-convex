@@ -94,7 +94,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getOrgUsageQuery } from "@/api/organization";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -182,6 +183,7 @@ function MemberActions() {
 	const [showReassignDialog, setShowReassignDialog] = useState(false);
 	const { data: activeOrg } = authClient.useActiveOrganization();
 	const posthog = usePostHog();
+	const queryClient = useQueryClient();
 
 	const orgMembers = activeOrg?.members ?? [];
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -236,6 +238,7 @@ function MemberActions() {
 		toast.success("Profile", {
 			description: "Profile rejected successfully",
 		});
+		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
 
 		router.invalidate();
 	};

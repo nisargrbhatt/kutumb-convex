@@ -17,6 +17,9 @@ import {
 	resolveAnchorId,
 	searchProfiles,
 } from "@/lib/communityGraphCache";
+import { canCreateProfile, LIMIT_COPY } from "@/lib/limits";
+import { countOrgProfiles } from "@/lib/limits-db";
+import { captureLimitReached } from "@/lib/posthog-server";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -134,6 +137,16 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 			},
 		});
 		if (!communityProfileItem) {
+			const existingProfileCount = await countOrgProfiles(organizationId);
+			if (!canCreateProfile(existingProfileCount)) {
+				captureLimitReached({
+					limit: "profile",
+					organizationId: organizationId,
+					userId: context.userId,
+				});
+				throw new Error(LIMIT_COPY.profileSelf.description);
+			}
+
 			await db.insert(communityProfile).values({
 				id: generatePrimaryKey(),
 				organizationId: organizationId,
@@ -761,6 +774,16 @@ export const addMissingMember = createServerFn({ method: "POST" })
 
 		if (typeof organizationId !== "string") {
 			throw new Error("No Organization Id found");
+		}
+
+		const existingProfileCount = await countOrgProfiles(organizationId);
+		if (!canCreateProfile(existingProfileCount)) {
+			captureLimitReached({
+				limit: "profile",
+				organizationId: organizationId,
+				userId: context.userId,
+			});
+			throw new Error(LIMIT_COPY.profileAdmin.description);
 		}
 
 		const result = await safeAsync(

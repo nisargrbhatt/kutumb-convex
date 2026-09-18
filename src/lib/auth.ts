@@ -2,17 +2,26 @@ import { db } from "@/db";
 import { betterAuth } from "better-auth/minimal";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { organization } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "cloudflare:workers";
 import { ac, member, owner, admin } from "./permission";
-import { polar, checkout, portal, usage, webhooks } from "@polar-sh/better-auth";
-import { polar as polarClient } from "@/lib/polar";
-import { organization as organizationTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { safeAsync, safeSync } from "./safe";
 import { resend } from "./resend";
 import InviteEmail from "@/emails/InviteEmail";
+import VerifyEmail from "@/emails/VerifyEmail";
+import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
 import { EMAIL_CONFIG } from "./common";
+import { createKvRateLimitStorage } from "./rate-limit-kv";
+import {
+	ORG_LIMIT,
+	MEMBER_LIMIT,
+	LIMIT_ERROR_CODES,
+	LIMIT_COPY,
+	canJoinOrganization,
+	canInviteMember,
+} from "./limits";
+import { countUserMemberships, countOrgMembersAndPending } from "./limits-db";
+import { captureLimitReached } from "./posthog-server";
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -27,8 +36,41 @@ export const auth = betterAuth({
 				admin: admin,
 				member: member,
 			},
+			organizationLimit: ORG_LIMIT,
+			membershipLimit: MEMBER_LIMIT,
+			invitationLimit: MEMBER_LIMIT,
+			organizationHooks: {
+				beforeAcceptInvitation: async ({ user, invitation }) => {
+					const n = await countUserMemberships(user.id);
+					if (!canJoinOrganization(n)) {
+						captureLimitReached({
+							limit: "org",
+							organizationId: invitation.organizationId,
+							userId: user.id,
+						});
+						throw new APIError("FORBIDDEN", {
+							code: LIMIT_ERROR_CODES.org,
+							message: LIMIT_COPY.orgAccept.description,
+						});
+					}
+				},
+				beforeCreateInvitation: async ({ organization, inviter }) => {
+					const n = await countOrgMembersAndPending(organization.id);
+					if (!canInviteMember(n)) {
+						captureLimitReached({
+							limit: "member",
+							organizationId: organization.id,
+							userId: inviter.id,
+						});
+						throw new APIError("FORBIDDEN", {
+							code: LIMIT_ERROR_CODES.member,
+							message: LIMIT_COPY.memberInvite.description,
+						});
+					}
+				},
+			},
 			sendInvitationEmail: async (payload) => {
-				const inviteLink = `${env.BETTER_AUTH_URL}/onboarding/invitations`;
+				const inviteLink = `${env.BETTER_AUTH_URL}/login?redirectTo=${encodeURIComponent("/onboarding/invitations")}&invitation=${encodeURIComponent(payload.id)}`;
 
 				try {
 					const { error } = await resend.emails.send({
@@ -51,220 +93,60 @@ export const auth = betterAuth({
 					console.error("Failed to send invitation email", error);
 				}
 			},
-			organizationHooks: {
-				afterRemoveMember: async (payload) => {
-					console.log("afterRemoveMember hook called for", payload);
-					const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
-					if (!parsedPayloadResult.success) {
-						console.error(
-							"Payload parsing failed for",
-							payload.organization.id,
-							payload.organization?.metadata
-						);
-						throw new Error("Payload parsing failed");
-					}
-
-					const parsedPayload = parsedPayloadResult.data;
-					const orgCustomerId = parsedPayload?.customerId;
-
-					if (typeof orgCustomerId !== "string") {
-						console.error("No Organization Customer Id found for", payload.organization.id);
-						throw new Error("No Organization Customer Id found");
-					}
-
-					const eventIngestResult = await safeAsync(
-						polarClient.events.ingest({
-							events: [
-								{
-									customerId: orgCustomerId,
-									name: "org_seat",
-									metadata: {
-										user_count: -1,
-										organizationMemberId: payload.member.id,
-										organizationId: payload.organization.id,
-										userId: payload.user.id,
-									},
-									externalMemberId: payload.member.id,
-									externalCustomerId: payload.organization.id,
-								},
-							],
-						})
-					);
-
-					if (!eventIngestResult.success) {
-						console.error(
-							"Event Ingest failed for ",
-							payload.organization.id,
-							eventIngestResult.error
-						);
-						throw new Error("Event Ingest failed");
-					}
-				},
-				// Don't know why but afterAddMember hook is not working, so added afterAcceptInvitation hook which is working fine and is called after a user accepts an invitation
-				// afterAddMember: async (payload) => {
-				// 	console.log("afterAddMember hook called for", payload);
-				// 	const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
-				// 	if (!parsedPayloadResult.success) {
-				// 		console.error(
-				// 			"Payload parsing failed for",
-				// 			payload.organization.id,
-				// 			payload.organization?.metadata
-				// 		);
-				// 		throw new Error("Payload parsing failed");
-				// 	}
-
-				// 	const parsedPayload = parsedPayloadResult.data;
-				// 	const orgCustomerId = parsedPayload?.customerId;
-
-				// 	if (typeof orgCustomerId !== "string") {
-				// 		console.error("No Organization Customer Id found for", payload.organization.id);
-				// 		throw new Error("No Organization Customer Id found");
-				// 	}
-
-				// 	const eventIngestResult = await safeAsync(
-				// 		polarClient.events.ingest({
-				// 			events: [
-				// 				{
-				// 					customerId: orgCustomerId,
-				// 					name: "org_seat",
-				// 					metadata: {
-				// 						user_count: 1,
-				// 						organizationMemberId: payload.member.id,
-				// 						organizationId: payload.organization.id,
-				// 						userId: payload.user.id,
-				// 					},
-				// 					externalMemberId: payload.member.id,
-				// 					externalCustomerId: payload.organization.id,
-				// 				},
-				// 			],
-				// 		})
-				// 	);
-
-				// 	console.log("Event Ingest result for", payload.organization.id, eventIngestResult);
-
-				// 	if (!eventIngestResult.success) {
-				// 		console.error(
-				// 			"Event Ingest failed for ",
-				// 			payload.organization.id,
-				// 			eventIngestResult.error
-				// 		);
-				// 		throw new Error("Event Ingest failed");
-				// 	}
-				// },
-				afterAcceptInvitation: async (payload) => {
-					console.log("afterAcceptInvitation hook called for", payload);
-					const parsedPayloadResult = safeSync(() => JSON.parse(payload.organization?.metadata));
-					if (!parsedPayloadResult.success) {
-						console.error(
-							"Payload parsing failed for",
-							payload.organization.id,
-							payload.organization?.metadata
-						);
-						throw new Error("Payload parsing failed");
-					}
-
-					const parsedPayload = parsedPayloadResult.data;
-					const orgCustomerId = parsedPayload?.customerId;
-
-					if (typeof orgCustomerId !== "string") {
-						console.error("No Organization Customer Id found for", payload.organization.id);
-						throw new Error("No Organization Customer Id found");
-					}
-
-					const eventIngestResult = await safeAsync(
-						polarClient.events.ingest({
-							events: [
-								{
-									customerId: orgCustomerId,
-									name: "org_seat",
-									metadata: {
-										user_count: 1,
-										organizationMemberId: payload.member.id,
-										organizationId: payload.organization.id,
-										userId: payload.user.id,
-									},
-									externalMemberId: payload.member.id,
-									externalCustomerId: payload.organization.id,
-								},
-							],
-						})
-					);
-
-					console.log("Event Ingest result for", payload.organization.id, eventIngestResult);
-
-					if (!eventIngestResult.success) {
-						console.error(
-							"Event Ingest failed for ",
-							payload.organization.id,
-							eventIngestResult.error
-						);
-						throw new Error("Event Ingest failed");
-					}
-				},
-			},
-		}),
-		polar({
-			client: polarClient,
-			createCustomerOnSignUp: false,
-			use: [
-				checkout({
-					products: [
-						{
-							productId: env.POLAR_PRODUCT_ID, // ID of Product from Polar Dashboard
-							slug: "org-product", // Custom slug for easy reference in Checkout URL, e.g. /checkout/pro
-						},
-					],
-					successUrl: "/onboarding/success?checkout_id={CHECKOUT_ID}",
-					authenticatedUsersOnly: true,
-					returnUrl: "/onboarding/create",
-				}),
-				portal(),
-				usage(),
-				webhooks({
-					secret: env.POLAR_WEBHOOK_SECRET,
-					onSubscriptionCreated: async (payload) => {
-						const organizationId = payload.data.metadata?.referenceId;
-						if (typeof organizationId !== "string") {
-							throw new Error("No Organization Id found");
-						}
-
-						const result = await db
-							.update(organizationTable)
-							.set({
-								metadata: JSON.stringify({
-									subscriptionId: payload.data.id,
-									customerId: payload.data.customerId,
-									paymentSetup: true,
-								}),
-							})
-							.where(eq(organizationTable.id, organizationId));
-
-						if (!result.success) {
-							console.error(result.error);
-							throw new Error("Failed to update organization metadata");
-						}
-					},
-					onSubscriptionCanceled: async (payload) => {
-						const organizationId = payload.data.metadata?.referenceId;
-						if (typeof organizationId !== "string") {
-							throw new Error("No Organization Id found");
-						}
-
-						const result = await db
-							.delete(organizationTable)
-							.where(eq(organizationTable.id, organizationId));
-
-						if (!result.success) {
-							console.error(result.error);
-							throw new Error("Failed to delete organization");
-						}
-					},
-				}),
-			],
 		}),
 	],
+	// 🔒 account.accountLinking.requireLocalEmailVerified defaults to true — left unset,
+	// never set to false. It's the only thing blocking pre-registration takeover now that
+	// requireEmailVerification is off (attacker registers unverified password account on
+	// victim's email, victim signs in with Google — link is refused without it). Any
+	// better-auth upgrade must re-verify this default hasn't flipped.
 	emailAndPassword: {
-		enabled: false,
+		enabled: true,
+		disableSignUp: env.BETTER_AUTH_DISABLE_SIGNUP === "1",
+		requireEmailVerification: false,
+		autoSignIn: true,
+		minPasswordLength: 8,
+		sendResetPassword: async ({ user, url }) => {
+			try {
+				const { error } = await resend.emails.send({
+					from: EMAIL_CONFIG.from,
+					to: user.email,
+					subject: "Reset your Kutumb password",
+					react: ResetPasswordEmail({ resetLink: url }),
+				});
+
+				if (error) {
+					console.error("Resend API correctly returned error:", error);
+				}
+			} catch (error) {
+				console.error("Failed to send reset password email", error);
+			}
+		},
+	},
+	emailVerification: {
+		sendOnSignUp: true,
+		sendVerificationEmail: async ({ user, url }) => {
+			try {
+				const { error } = await resend.emails.send({
+					from: EMAIL_CONFIG.from,
+					to: user.email,
+					subject: "Verify your email for Kutumb",
+					react: VerifyEmail({ verifyLink: url }),
+				});
+
+				if (error) {
+					console.error("Resend API correctly returned error:", error);
+				}
+			} catch (error) {
+				console.error("Failed to send verification email", error);
+			}
+		},
+	},
+	// Only the rate limiter points at KV — not secondaryStorage, which would also
+	// relocate session storage onto KV's eventual consistency (every request, plus
+	// logout/session revocation).
+	rateLimit: {
+		customStorage: createKvRateLimitStorage(env.KV),
 	},
 	secret: env.BETTER_AUTH_SECRET,
 	socialProviders: {

@@ -1,4 +1,4 @@
-import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -54,41 +54,35 @@ export function AuthUser() {
 						align="end"
 						sideOffset={4}
 					>
-						<DropdownMenuLabel className="p-0 font-normal">
-							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-								<Avatar className="h-8 w-8 rounded-lg">
-									<AvatarImage src={session?.user?.image ?? undefined} />
-									<AvatarFallback className="rounded-lg">
-										{(session?.user?.name ?? session?.user?.email)?.at(0)?.toUpperCase()}
-									</AvatarFallback>
-								</Avatar>
-								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-medium">
-										{session?.user?.name ?? session?.user?.email}
-									</span>
-									<span className="truncate text-xs">{session?.user?.email}</span>
-								</div>
-							</div>
-						</DropdownMenuLabel>
-						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<a href={`/api/polar/portal`}>
-								<DropdownMenuItem>
-									<BadgeCheck />
-									Account
-								</DropdownMenuItem>
-							</a>
+							<DropdownMenuLabel className="p-0 font-normal">
+								<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+									<Avatar className="h-8 w-8 rounded-lg">
+										<AvatarImage src={session?.user?.image ?? undefined} />
+										<AvatarFallback className="rounded-lg">
+											{(session?.user?.name ?? session?.user?.email)?.at(0)?.toUpperCase()}
+										</AvatarFallback>
+									</Avatar>
+									<div className="grid flex-1 text-left text-sm leading-tight">
+										<span className="truncate font-medium">
+											{session?.user?.name ?? session?.user?.email}
+										</span>
+										<span className="truncate text-xs">{session?.user?.email}</span>
+									</div>
+								</div>
+							</DropdownMenuLabel>
+							<DropdownMenuSeparator />
+
+							<DropdownMenuItem
+								onClick={async () => {
+									await authClient.signOut();
+									window.location.href = new URL("/login", window.location.origin).toString();
+								}}
+							>
+								<LogOut />
+								Log out
+							</DropdownMenuItem>
 						</DropdownMenuGroup>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem
-							onClick={async () => {
-								await authClient.signOut();
-								window.location.href = new URL("/login", window.location.origin).toString();
-							}}
-						>
-							<LogOut />
-							Log out
-						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</SidebarMenuItem>

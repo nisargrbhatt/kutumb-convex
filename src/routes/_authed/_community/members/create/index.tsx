@@ -1,7 +1,8 @@
 import { getOrganizationCustomFieldsQuery } from "@/api/fields";
+import { getOrgUsageQuery } from "@/api/organization";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { safeAsync } from "@/lib/safe";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
 	Breadcrumb,
@@ -98,6 +99,7 @@ type CommunityProfileFormValues = z.infer<typeof communityProfileSchema>;
 function CommunityProfileForm({ customFields }: { customFields: CustomField[] }) {
 	const navigate = Route.useNavigate();
 	const posthog = usePostHog();
+	const queryClient = useQueryClient();
 	const form = useForm<CommunityProfileFormValues>({
 		resolver: zodResolver(communityProfileSchema),
 		defaultValues: {
@@ -127,8 +129,8 @@ function CommunityProfileForm({ customFields }: { customFields: CustomField[] })
 
 		if (!result.success) {
 			console.error(result.error);
-			toast.error("Member", {
-				description: "Failed to add member",
+			toast.error("Profile", {
+				description: result.error?.message ?? "Failed to add member",
 			});
 			return;
 		}
@@ -138,6 +140,7 @@ function CommunityProfileForm({ customFields }: { customFields: CustomField[] })
 			description:
 				"Member added successfully as a Draft Record. Owner/Admin will be notified to approve the profile.",
 		});
+		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
 		navigate({ to: "/members" });
 	});
 

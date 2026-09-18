@@ -1,8 +1,5 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this
-repository.
-
 - In all interactions and commit messages, be extremely consice and sacrifice grammar for the sake
   of concision.
 
@@ -12,35 +9,7 @@ Kutumb is a multi-tenant community-management SaaS built on **TanStack Start** (
 SSR) deployed to **Cloudflare Workers**. Despite the directory name (`kutumb-convex`), this project
 does **not** use Convex — persistence is **Cloudflare D1** (SQLite) via **Drizzle ORM**, with
 **Cloudflare KV** for caching. Auth is **better-auth** (with its organization plugin for
-multi-tenancy), billing is **Polar**, analytics is **PostHog**, and transactional email is
-**Resend** + **react-email**.
-
-## Commands
-
-```bash
-npm run dev            # Vite dev server on :3000 (README's "npm run start" is wrong; there is no start script)
-npm run build          # Production build
-npm run test           # Run Vitest once
-npx vitest <pattern>   # Run a single test file / watch mode
-npm run lint           # oxlint
-npm run lint:fix       # oxlint --fix
-npm run format         # oxfmt --check
-npm run format:fix     # oxfmt (writes)
-npm run email:dev      # Preview react-email templates on :3001
-npm run deploy         # build + wrangler deploy
-```
-
-### Database / migrations (Drizzle + D1)
-
-```bash
-npm run migration:generate        # generate SQL from src/db/schema.ts into ./migrations
-npm run migration:migrate:local   # apply to local D1
-npm run migration:migrate:prod    # apply to remote D1 (wrangler d1 migrations apply D1 --remote)
-```
-
-`drizzle-kit generate` (migration:generate) needs `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`,
-and `CLOUDFLARE_D1_TOKEN` in `.env` (see `drizzle.config.ts`). After editing the schema, always
-generate a migration — the schema file alone does not change the database.
+multi-tenancy), analytics is **PostHog**, and transactional email is **Resend** + **react-email**.
 
 ## Architecture
 
@@ -51,7 +20,7 @@ across two directories — the distinction is a convention, not enforced:
 
 - `src/handler/*` — server functions consumed directly by route `beforeLoad`/`loader`.
 - `src/api/*` — server functions that also export a **`queryOptions` factory** (e.g.
-  `checkCurrentOrgPaymentSetupQuery`) for use with TanStack Query on the client.
+  `getOrgUsageQuery`) for use with TanStack Query on the client.
 
 Standard pattern: `createServerFn({ method }).middleware([authMiddleware]).handler(...)`.
 `authMiddleware` (`src/middleware/auth.ts`) resolves the better-auth session, redirects to `/login`
@@ -67,8 +36,7 @@ better-auth is configured with the **organization plugin**. Each organization is
 belong to orgs with roles `owner | admin | member`. Permissions use better-auth **access control**
 (`src/lib/permission.ts`) with custom statements (`communityProfile`, `customFields`) — check them
 server-side via `auth.api.hasPermission({ headers, body: { permissions: {...} } })`, never trust the
-client. Org `metadata` is a JSON string blob (always parse defensively, e.g. via `safeSync`); it
-stores `paymentSetup` and the Polar `customerId`.
+client.
 
 The better-auth HTTP handler is mounted at the catch-all route `src/routes/api/auth/$.ts`. Org
 lifecycle hooks (e.g. `afterAddMember`) and invitation emails are wired inside the `auth` config.
@@ -85,18 +53,14 @@ segments:
   provider + Toaster.
 - `_authed.tsx` — gate: redirects unauthenticated users to `/login`, and users without an
   `activeOrganizationId` to `/onboarding/create`.
-- `_authed/_community.tsx` — gate: calls `checkOrgPaymentDone`; renders `PaymentRequiredBanner`
-  instead of the app shell until the org completes Polar payment setup. Feature routes (dashboard,
-  members, profile, settings, community-tree, memories) live under here.
+- `_authed/_community.tsx` — layout shell for feature routes (dashboard, members, profile, settings,
+  community-tree, memories); no gate of its own — `_authed.tsx` handles session/org redirects.
 
 For any other reference, lookout for `/tanstack-start-best-practices`,
 `/tanstack-query-best-practices` skill for better planning and reasoning.
 
-### Billing & analytics
+### Analytics
 
-- **Polar** (`src/lib/polar.ts`) — sandbox vs production switched by `POLAR_MODE`. Integrated into
-  better-auth via `@polar-sh/better-auth` (checkout, portal, usage, webhooks); usage events are
-  ingested in org hooks.
 - **PostHog** is proxied to avoid ad-blockers: client sends to `/api/ph`, and
   `src/routes/api/ph/$.ts` reverse-proxies to `VITE_PUBLIC_POSTHOG_HOST`. Server-side capture lives
   in `src/lib/posthog-server.ts`.
@@ -120,6 +84,9 @@ inline. `db` (`src/db/index.ts`) is the Drizzle client bound to the `D1` Cloudfl
   `arrow-body-style: as-needed`. Run `npm run format:fix && npm run lint:fix` before committing.
 - **UI:** shadcn/ui ("new-york" style) in `src/components/ui`, Tailwind v4, lucide icons. Forms use
   react-hook-form + zod resolvers.
+- **Limits:** `ORG_LIMIT`/`MEMBER_LIMIT` hardcoded in `src/lib/limits.ts` (pure, client-safe);
+  counters in `src/lib/limits-db.ts`. Enforced in better-auth org hooks + profile insert sites. See
+  ADR 0003.
 
 ## Github
 

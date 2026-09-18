@@ -54,8 +54,10 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { usePostHog } from "@posthog/react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
+import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/lib/limits";
+import { getOrgUsageQuery } from "@/api/organization";
 import {
 	Table,
 	TableBody,
@@ -108,6 +110,7 @@ const changeRoleSchema = z.object({
 function AddMemberDrawer() {
 	const [open, setOpen] = useState(false);
 	const posthog = usePostHog();
+	const queryClient = useQueryClient();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -126,6 +129,12 @@ function AddMemberDrawer() {
 
 		if (error) {
 			console.error(error);
+			if (error.code === LIMIT_ERROR_CODES.member) {
+				toast.error(LIMIT_COPY.memberInvite.title, {
+					description: LIMIT_COPY.memberInvite.description,
+				});
+				return;
+			}
 			toast.error("Member", {
 				description: "Member could not be invited",
 			});
@@ -137,6 +146,7 @@ function AddMemberDrawer() {
 		toast.success("Member", {
 			description: "Member invited successfully",
 		});
+		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
 		form.reset();
 		setOpen(false);
 	});
@@ -325,6 +335,7 @@ function OrganizationMemberList() {
 	const { data: activeOrganization } = authClient.useActiveOrganization();
 	const { data: session } = authClient.useSession();
 	const posthog = usePostHog();
+	const queryClient = useQueryClient();
 
 	const currentUserId = session?.user?.id;
 	const currentRole = activeOrganization?.members?.find((m) => m.user.id === currentUserId)?.role;
@@ -346,6 +357,7 @@ function OrganizationMemberList() {
 		toast.success("Member", {
 			description: "Member removed successfully",
 		});
+		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
 	};
 
 	const members = activeOrganization?.members ?? [];

@@ -17,6 +17,7 @@ import { GalleryVerticalEnd } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { usePostHog } from "@posthog/react";
+import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/lib/limits";
 
 export const Route = createFileRoute("/_authed/onboarding/invitations/")({
 	component: RouteComponent,
@@ -38,6 +39,12 @@ function AcceptInvitationAction(props: { invitationId: string; organizationName?
 			});
 			if (error) {
 				console.error(error);
+				if (error.code === LIMIT_ERROR_CODES.org) {
+					toast.error(LIMIT_COPY.orgAccept.title, {
+						description: LIMIT_COPY.orgAccept.description,
+					});
+					return;
+				}
 				toast.error("Invitation", {
 					description: "Failed to accept invitation",
 				});
@@ -50,7 +57,7 @@ function AcceptInvitationAction(props: { invitationId: string; organizationName?
 			toast.success("Invitation", {
 				description: "Invitation accepted successfully",
 			});
-			router.invalidate();
+			router.navigate({ to: "/dashboard" });
 		});
 	};
 

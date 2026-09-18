@@ -1,54 +1,10 @@
 import { authMiddleware } from "@/middleware/auth";
 import { createServerFn } from "@tanstack/react-start";
-import { db } from "@/db";
-import { queryOptions } from "@tanstack/react-query";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import { queryOptions } from "@tanstack/react-query";
 import { auth } from "@/lib/auth";
-
-export const checkCurrentOrgPaymentSetup = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
-	.handler(async ({ context }) => {
-		const currentOrgId = context.session?.session?.activeOrganizationId;
-		if (typeof currentOrgId !== "string") {
-			throw new Error("No current Organization found");
-		}
-
-		const currentOrg = await db.query.organization.findFirst({
-			where: (fields, op) => op.eq(fields.id, currentOrgId),
-			columns: {
-				metadata: true,
-			},
-		});
-
-		if (!currentOrg) {
-			throw new Error("Organization not found");
-		}
-
-		try {
-			const metadata = JSON.parse(currentOrg?.metadata ?? "{}");
-			const paymentSetup = metadata?.paymentSetup;
-			return { paymentSetup: Boolean(paymentSetup) };
-		} catch (error) {
-			console.error(error, "Error parsing metadata");
-			return { paymentSetup: false };
-		}
-	});
-
-export const checkCurrentOrgPaymentSetupQuery = () =>
-	queryOptions({
-		queryKey: ["check-current-org-payment-setup"],
-		queryFn: async ({ signal }) =>
-			checkCurrentOrgPaymentSetup({
-				signal,
-			}),
-		refetchInterval: (query) => {
-			const paymentSetup = query?.state?.data?.paymentSetup;
-			if (paymentSetup) {
-				return false;
-			}
-			return 5 * 1000;
-		},
-	});
+import { ORG_LIMIT, MEMBER_LIMIT } from "@/lib/limits";
+import { countUserMemberships, countOrgMembersAndPending, countOrgProfiles } from "@/lib/limits-db";
 
 export const listMyOrganizationInvitations = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -57,4 +13,40 @@ export const listMyOrganizationInvitations = createServerFn({ method: "GET" })
 			headers: getRequestHeaders(),
 		});
 		return invites;
+	});
+
+export const getMyOrganizationCount = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.handler(async ({ context }) => {
+		const count = await countUserMemberships(context.userId);
+		return { count, limit: ORG_LIMIT };
+	});
+
+export const getMyOrganizationCountQuery = () =>
+	queryOptions({
+		queryKey: ["get-my-organization-count"],
+		queryFn: async () => await getMyOrganizationCount(),
+	});
+
+export const getOrgUsage = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.handler(async ({ context }) => {
+		const organizationId = context?.session?.session?.activeOrganizationId;
+
+		if (typeof organizationId !== "string") {
+			throw new Error("No Organization Id found");
+		}
+
+		const [members, profiles] = await Promise.all([
+			countOrgMembersAndPending(organizationId),
+			countOrgProfiles(organizationId),
+		]);
+
+		return { members, profiles, limit: MEMBER_LIMIT };
+	});
+
+export const getOrgUsageQuery = () =>
+	queryOptions({
+		queryKey: ["get-org-usage"],
+		queryFn: async () => await getOrgUsage(),
 	});
