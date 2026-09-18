@@ -22,7 +22,6 @@ import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/
 import { Route as publicAboutIndexRouteImport } from './routes/(public)/about/index'
 import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as AuthedCommunityMemoriesRouteRouteImport } from './routes/_authed/_community/memories/route'
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
@@ -101,12 +100,6 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedCommunityMemoriesRouteRoute =
-  AuthedCommunityMemoriesRouteRouteImport.update({
-    id: '/memories',
-    path: '/memories',
-    getParentRoute: () => AuthedCommunityRoute,
-  } as any)
 const AuthedOnboardingInvitationsIndexRoute =
   AuthedOnboardingInvitationsIndexRouteImport.update({
     id: '/onboarding/invitations/',
@@ -192,7 +185,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about/': typeof publicAboutIndexRoute
@@ -218,7 +210,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about': typeof publicAboutIndexRoute
@@ -248,7 +239,6 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
-  '/_authed/_community/memories': typeof AuthedCommunityMemoriesRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/(public)/about/': typeof publicAboutIndexRoute
@@ -276,7 +266,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
-    | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
     | '/about/'
@@ -302,7 +291,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
-    | '/memories'
     | '/api/auth/$'
     | '/api/ph/$'
     | '/about'
@@ -331,7 +319,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authed/_community'
-    | '/_authed/_community/memories'
     | '/api/auth/$'
     | '/api/ph/$'
     | '/(public)/about/'
@@ -457,13 +444,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/_community/memories': {
-      id: '/_authed/_community/memories'
-      path: '/memories'
-      fullPath: '/memories'
-      preLoaderRoute: typeof AuthedCommunityMemoriesRouteRouteImport
-      parentRoute: typeof AuthedCommunityRoute
-    }
     '/_authed/onboarding/invitations/': {
       id: '/_authed/onboarding/invitations/'
       path: '/onboarding/invitations'
@@ -575,7 +555,6 @@ const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
 )
 
 interface AuthedCommunityRouteChildren {
-  AuthedCommunityMemoriesRouteRoute: typeof AuthedCommunityMemoriesRouteRoute
   AuthedCommunityCommunityTreeIndexRoute: typeof AuthedCommunityCommunityTreeIndexRoute
   AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
   AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
@@ -590,7 +569,6 @@ interface AuthedCommunityRouteChildren {
 }
 
 const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
-  AuthedCommunityMemoriesRouteRoute: AuthedCommunityMemoriesRouteRoute,
   AuthedCommunityCommunityTreeIndexRoute:
     AuthedCommunityCommunityTreeIndexRoute,
   AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
