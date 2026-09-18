@@ -1,6 +1,6 @@
 # 08 — Limits lib + server-side enforcement
 
-Parent: [PRD.md](../PRD.md) §2–§5, §10 Label: `impl` Status: `ready-for-agent` Depends on:
+Parent: [PRD.md](../PRD.md) §2–§5, §10 Label: `impl` Status: `closed` Depends on:
 [07](07-rip-stripe-billing.md)
 
 ## Goal
@@ -84,3 +84,32 @@ client sees `error.code === undefined`, which [09](09-limit-ui.md) cannot map to
 
 All UI (badge, alert, usage card, toast branching) → [09](09-limit-ui.md). ADR 0003 →
 [10](10-docs-and-adrs.md).
+
+## Comments
+
+Implemented per contract: `src/lib/limits.ts` (verbatim PRD §3, no `db`/`cloudflare:workers`
+import), `src/lib/limits.test.ts` (n-1/n/n+1 per predicate + `LIMIT_COPY` interpolation, 14 cases),
+`src/lib/limits-db.ts` (3 Drizzle counters, `count()` not `.length`). `src/lib/auth.ts`
+`organizationHooks` wired with `organizationLimit`/`membershipLimit`/`invitationLimit` +
+`beforeAcceptInvitation`/`beforeCreateInvitation`, both throwing `APIError` only. Profile guard in
+both `communityProfile.ts` insert sites (`upsertMyCommunityProfile` → `profileSelf`,
+`addMissingMember` → `profileAdmin`). `captureLimitReached` added to `posthog-server.ts`,
+fire-and-forget via try/catch. `getMyOrganizationCount` + `getOrgUsage` added to `organization.ts`
+with `queryOptions` factories.
+
+Verified the one thing the ticket flagged as unverified: step 4's pseudocode uses `inviter.user.id`
+inside `beforeCreateInvitation`, but `node_modules/better-auth/dist/plugins/organization/types.d.mts`
+types `inviter` as `User & Record<string,any>` directly (not `{user: User}`) — used `inviter.id`
+instead. research/01 §2 corroborates.
+
+`npm run build && npm run test && npm run format:fix && npm run lint:fix` all clean. `/code-review`
+(Standards + Spec, parallel) ran clean — zero hard findings on either axis. Standards flagged 3
+judgement-call smells only (guard duplication across 4 call sites, inconsistent `safeAsync` usage in
+`limits-db.ts`'s counters, `getOrgUsage`'s single `limit` field covering two conceptually distinct
+caps) — none blocking, left as-is since the `getOrgUsage` shape is spec-mandated verbatim (line 62-63
+above) and the duplicated guards throw different error types (`APIError` vs plain `Error`) so aren't
+free to dedupe.
+
+Runtime acceptance checks (403 codes on real invite-accept/invite-send/org-create at cap, temporarily
+lowering `MEMBER_LIMIT` locally) were not exercised — no local D1/wrangler dev loop was spun up this
+pass; static verification (types, unit tests, build) is what's covered here.

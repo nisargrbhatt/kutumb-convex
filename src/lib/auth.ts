@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { betterAuth } from "better-auth/minimal";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { organization } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "cloudflare:workers";
 import { ac, member, owner, admin } from "./permission";
@@ -11,6 +12,16 @@ import VerifyEmail from "@/emails/VerifyEmail";
 import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
 import { EMAIL_CONFIG } from "./common";
 import { createKvRateLimitStorage } from "./rate-limit-kv";
+import {
+	ORG_LIMIT,
+	MEMBER_LIMIT,
+	LIMIT_ERROR_CODES,
+	LIMIT_COPY,
+	canJoinOrganization,
+	canInviteMember,
+} from "./limits";
+import { countUserMemberships, countOrgMembersAndPending } from "./limits-db";
+import { captureLimitReached } from "./posthog-server";
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -24,6 +35,39 @@ export const auth = betterAuth({
 				owner: owner,
 				admin: admin,
 				member: member,
+			},
+			organizationLimit: ORG_LIMIT,
+			membershipLimit: MEMBER_LIMIT,
+			invitationLimit: MEMBER_LIMIT,
+			organizationHooks: {
+				beforeAcceptInvitation: async ({ user, invitation }) => {
+					const n = await countUserMemberships(user.id);
+					if (!canJoinOrganization(n)) {
+						captureLimitReached({
+							limit: "org",
+							organizationId: invitation.organizationId,
+							userId: user.id,
+						});
+						throw new APIError("FORBIDDEN", {
+							code: LIMIT_ERROR_CODES.org,
+							message: LIMIT_COPY.orgAccept.description,
+						});
+					}
+				},
+				beforeCreateInvitation: async ({ organization, inviter }) => {
+					const n = await countOrgMembersAndPending(organization.id);
+					if (!canInviteMember(n)) {
+						captureLimitReached({
+							limit: "member",
+							organizationId: organization.id,
+							userId: inviter.id,
+						});
+						throw new APIError("FORBIDDEN", {
+							code: LIMIT_ERROR_CODES.member,
+							message: LIMIT_COPY.memberInvite.description,
+						});
+					}
+				},
 			},
 			sendInvitationEmail: async (payload) => {
 				const inviteLink = `${env.BETTER_AUTH_URL}/login?redirectTo=${encodeURIComponent("/onboarding/invitations")}&invitation=${encodeURIComponent(payload.id)}`;
