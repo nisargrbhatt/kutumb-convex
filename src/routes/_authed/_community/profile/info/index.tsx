@@ -36,6 +36,9 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { safeAsync } from "@/lib/safe";
+import { getOrgUsageQuery } from "@/api/organization";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authed/_community/profile/info/")({
 	component: RouteComponent,
@@ -109,28 +112,43 @@ function CommunityProfileForm({
 		resolver: zodResolver(communityProfileSchema),
 		defaultValues: defaultValues,
 	});
+	const queryClient = useQueryClient();
 
 	const onSubmit = form.handleSubmit(async (data) => {
-		await upsertMyCommunityProfile({
-			data: {
-				firstName: data.firstName,
-				lastName: data.lastName,
-				middleName: data?.middleName && data?.middleName?.length > 0 ? data?.middleName : undefined,
-				nickName: data?.nickName && data?.nickName?.length > 0 ? data?.nickName : undefined,
-				gender: data?.gender && data?.gender?.length > 0 ? data?.gender : undefined,
-				email: data?.email && data?.email?.length > 0 ? data?.email : undefined,
-				bloodGroup: data?.bloodGroup && data?.bloodGroup?.length > 0 ? data?.bloodGroup : undefined,
-				mobileNumber:
-					data?.mobileNumber && data?.mobileNumber?.length > 0 ? data?.mobileNumber : undefined,
-				dateOfBirth: data?.dateOfBirth ? data?.dateOfBirth?.toJSON() : undefined,
-				dateOfDeath: data?.dateOfDeath ? data?.dateOfDeath?.toJSON() : undefined,
-				customFieldData:
-					Object.keys(data?.customFieldData ?? {}).length > 0 ? data?.customFieldData : undefined,
-			},
-		});
+		const result = await safeAsync(
+			upsertMyCommunityProfile({
+				data: {
+					firstName: data.firstName,
+					lastName: data.lastName,
+					middleName:
+						data?.middleName && data?.middleName?.length > 0 ? data?.middleName : undefined,
+					nickName: data?.nickName && data?.nickName?.length > 0 ? data?.nickName : undefined,
+					gender: data?.gender && data?.gender?.length > 0 ? data?.gender : undefined,
+					email: data?.email && data?.email?.length > 0 ? data?.email : undefined,
+					bloodGroup:
+						data?.bloodGroup && data?.bloodGroup?.length > 0 ? data?.bloodGroup : undefined,
+					mobileNumber:
+						data?.mobileNumber && data?.mobileNumber?.length > 0 ? data?.mobileNumber : undefined,
+					dateOfBirth: data?.dateOfBirth ? data?.dateOfBirth?.toJSON() : undefined,
+					dateOfDeath: data?.dateOfDeath ? data?.dateOfDeath?.toJSON() : undefined,
+					customFieldData:
+						Object.keys(data?.customFieldData ?? {}).length > 0 ? data?.customFieldData : undefined,
+				},
+			})
+		);
+
+		if (!result.success) {
+			console.error(result.error);
+			toast.error("Profile", {
+				description: result.error?.message ?? "Failed to update profile",
+			});
+			return;
+		}
+
 		toast.success("Community Profile", {
 			description: "Community Profile updated successfully",
 		});
+		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
 	});
 
 	return (

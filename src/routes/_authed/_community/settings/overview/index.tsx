@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
@@ -37,8 +39,14 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
 import { usePostHog } from "@posthog/react";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { getOrgUsageQuery } from "@/api/organization";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authed/_community/settings/overview/")({
+	loader: async ({ context }) => {
+		await context.queryClient.ensureQueryData(getOrgUsageQuery());
+	},
 	component: RouteComponent,
 });
 
@@ -206,6 +214,36 @@ function DeleteOrganizationDialog(props: { organizationId: string; name: string 
 	);
 }
 
+const usageTone = (used: number, limit: number) =>
+	used >= limit ? "text-destructive" : used >= limit * 0.9 ? "text-amber-600" : "";
+
+function UsageCard() {
+	const { data: usage } = useSuspenseQuery(getOrgUsageQuery());
+	const rows = [
+		{ label: "Org Members", used: usage.members },
+		{ label: "Community Profiles", used: usage.profiles },
+	];
+
+	return (
+		<Card className="w-full">
+			<CardHeader>
+				<CardTitle>Usage</CardTitle>
+				<CardDescription>Free plan limits for this organization.</CardDescription>
+			</CardHeader>
+			<CardContent className="flex flex-col gap-4">
+				{rows.map((row) => (
+					<Progress key={row.label} value={(row.used / usage.limit) * 100}>
+						<ProgressLabel>{row.label}</ProgressLabel>
+						<ProgressValue className={cn("font-mono", usageTone(row.used, usage.limit))}>
+							{() => `${row.used} / ${usage.limit}`}
+						</ProgressValue>
+					</Progress>
+				))}
+			</CardContent>
+		</Card>
+	);
+}
+
 function DangerZone(props: { organizationId: string; name: string }) {
 	const { data: activeMemberRole } = authClient.useActiveMemberRole();
 
@@ -240,6 +278,7 @@ function RouteComponent() {
 						slug={activeOrg?.slug}
 						organizationId={activeOrg.id}
 					/>
+					<UsageCard />
 					<DangerZone organizationId={activeOrg.id} name={activeOrg.name} />
 				</>
 			) : null}

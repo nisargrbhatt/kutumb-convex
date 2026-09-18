@@ -19,6 +19,8 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Link, useRouter } from "@tanstack/react-router";
 import { usePostHog } from "@posthog/react";
+import type { ReactNode } from "react";
+import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/lib/limits";
 
 const formSchema = z.object({
 	name: z
@@ -38,7 +40,13 @@ const formSchema = z.object({
 		.regex(/^[a-zA-Z0-9-]+$/, "Organization slug can only contain letters, numbers, and dashes."),
 });
 
-export function OnboardingForm() {
+type OnboardingFormProps = {
+	titleAdornment?: ReactNode;
+	beforeForm?: ReactNode;
+	disabled?: boolean;
+};
+
+export function OnboardingForm({ titleAdornment, beforeForm, disabled }: OnboardingFormProps = {}) {
 	const router = useRouter();
 	const formId = useId();
 	const posthog = usePostHog();
@@ -91,6 +99,17 @@ export function OnboardingForm() {
 		});
 
 		if (createOrgError) {
+			if (createOrgError.code === LIMIT_ERROR_CODES.org) {
+				posthog.capture("organization_create_failed", {
+					reason: "org_limit",
+					name: values.name,
+					slug: values.slug,
+				});
+				toast.error(LIMIT_COPY.orgCreate.title, {
+					description: LIMIT_COPY.orgCreate.description,
+				});
+				return;
+			}
 			posthog.capture("organization_create_failed", {
 				reason: "server_error",
 				name: values.name,
@@ -120,7 +139,9 @@ export function OnboardingForm() {
 		<div className={cn("flex flex-col gap-6")}>
 			<Card>
 				<CardHeader className="text-center">
-					<CardTitle className="text-xl">Create your organization</CardTitle>
+					<CardTitle className="flex items-center justify-center gap-2 text-xl">
+						Create your organization {titleAdornment}
+					</CardTitle>
 					<CardDescription>
 						Enter your organization details below to create your organization. or ask organization
 						admin to{" "}
@@ -131,6 +152,7 @@ export function OnboardingForm() {
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
+					{beforeForm}
 					<Form {...form}>
 						<form onSubmit={onSubmit} id={formId}>
 							<FieldGroup>
@@ -180,7 +202,7 @@ export function OnboardingForm() {
 							type="submit"
 							form={formId}
 							className="w-full"
-							disabled={form.formState.isSubmitting}
+							disabled={form.formState.isSubmitting || disabled}
 						>
 							Create
 						</Button>

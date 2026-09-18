@@ -1,6 +1,6 @@
 # 09 — Limit UI: `n/5` create-org, usage card, error toasts
 
-Parent: [PRD.md](../PRD.md) §5, §7 Label: `impl` Status: `ready-for-agent` Depends on:
+Parent: [PRD.md](../PRD.md) §5, §7 Label: `impl` Status: `closed` Depends on:
 [08](08-limits-lib-and-enforcement.md)
 
 ## Goal
@@ -61,3 +61,35 @@ are throwaway).
 ## Out of scope
 
 Server logic (done in 08). Any inline error UI for accept/invite/profile — toasts only.
+
+## Comments
+
+Implemented variant A per prototype (`f06ab66`). `OnboardingForm` gained
+`titleAdornment`/`beforeForm`/`disabled` slots; `create/index.tsx` loader ensures
+`getMyOrganizationCountQuery`, badge secondary/destructive, Lock alert at cap, fallback toast on
+`error.code === LIMIT_ERROR_CODES.org`. `settings/overview` got `UsageCard` (loader ensures
+`getOrgUsageQuery`, two `Progress` rows, destructive at cap / amber at ≥90%). Invitations page:
+`orgAccept` toast branch + success now `navigate({to: "/dashboard"})` instead of
+`router.invalidate()`. Members page: `memberInvite` toast branch on invite; `getOrgUsageQuery`
+invalidated after invite send + member remove. Profile create (`profile/info`, `members/create`)
+now catch via `safeAsync`, toast title "Profile" + `error.message` (simplest path spec explicitly
+allowed), invalidate usage on success. Also invalidated usage on `rejectCommunityProfile`
+(`members/$id`) — the actual profile-delete-equivalent flow, caught by spec review below.
+
+`/code-review` (Standards + Spec, parallel, scoped to `git diff HEAD -- src/`) ran clean after one
+fix. Spec found 1 real gap (usage invalidation missing on profile reject) — fixed. Spec also flagged
+an unrequested `posthog.capture` on the org-limit toast path in `OnboardingForm` — left as-is,
+mirrors the existing `reason: "server_error"` capture in the same function. Standards found zero
+hard violations; 4 judgement-call smells (limit-toast branch duplicated 3x, usage-invalidate call
+duplicated 4x, invitations-page `router.navigate` swap bundled into the same edit as the limit-toast
+change, `usageTone` taking two primitives) — none blocking, left as-is.
+
+`npm run build && npm run test && npm run format:fix && npm run lint:fix` all clean (22/22 tests).
+SSR smoke-checked via `npm run dev` + curl: `/onboarding/create` and `/settings/overview` both
+307-redirect to `/login` unauthenticated, no server errors in logs — confirms new route modules load
+without crashing.
+
+Not exercised: no browser automation tool was available this session (claude-in-chrome MCP tools
+didn't load), so the actual acceptance checks (5/5 destructive badge+alert+disabled, usage card
+amber/red thresholds via lowered `MEMBER_LIMIT`, real accept/invite/profile toasts, responsive
+breakpoints) were not clicked through live. Recommend a manual pass before merge.
