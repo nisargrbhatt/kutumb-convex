@@ -1,9 +1,9 @@
-import { getActiveMemberCountQuery, getMyCommunityProfileQuery } from "@/api/communityProfile";
-import { getMyCommunityAddressesQuery } from "@/api/communityAddress";
+import { getActiveMemberCountQuery, getMyCommunityProfileQuery } from "@/queries/communityProfile";
+import { getMyCommunityAddressesQuery } from "@/queries/communityAddress";
 import {
 	getMyIncomingRelationCountQuery,
 	getMyOutgoingRelationCountQuery,
-} from "@/api/communityRelation";
+} from "@/queries/communityRelation";
 import {
 	Breadcrumb,
 	BreadcrumbItem,

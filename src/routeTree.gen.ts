@@ -22,6 +22,7 @@ import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/
 import { Route as publicAboutIndexRouteImport } from './routes/(public)/about/index'
 import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthedCommunitySettingsRouteImport } from './routes/_authed/_community/settings'
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
@@ -100,6 +101,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedCommunitySettingsRoute = AuthedCommunitySettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthedCommunityRoute,
+} as any)
 const AuthedOnboardingInvitationsIndexRoute =
   AuthedOnboardingInvitationsIndexRouteImport.update({
     id: '/onboarding/invitations/',
@@ -132,21 +138,21 @@ const AuthedCommunityCommunityTreeIndexRoute =
   } as any)
 const AuthedCommunitySettingsOverviewIndexRoute =
   AuthedCommunitySettingsOverviewIndexRouteImport.update({
-    id: '/settings/overview/',
-    path: '/settings/overview/',
-    getParentRoute: () => AuthedCommunityRoute,
+    id: '/overview/',
+    path: '/overview/',
+    getParentRoute: () => AuthedCommunitySettingsRoute,
   } as any)
 const AuthedCommunitySettingsMembersIndexRoute =
   AuthedCommunitySettingsMembersIndexRouteImport.update({
-    id: '/settings/members/',
-    path: '/settings/members/',
-    getParentRoute: () => AuthedCommunityRoute,
+    id: '/members/',
+    path: '/members/',
+    getParentRoute: () => AuthedCommunitySettingsRoute,
   } as any)
 const AuthedCommunitySettingsFieldsIndexRoute =
   AuthedCommunitySettingsFieldsIndexRouteImport.update({
-    id: '/settings/fields/',
-    path: '/settings/fields/',
-    getParentRoute: () => AuthedCommunityRoute,
+    id: '/fields/',
+    path: '/fields/',
+    getParentRoute: () => AuthedCommunitySettingsRoute,
   } as any)
 const AuthedCommunityProfileRelationshipsIndexRoute =
   AuthedCommunityProfileRelationshipsIndexRouteImport.update({
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about/': typeof publicAboutIndexRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about': typeof publicAboutIndexRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
+  '/_authed/_community/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/(public)/about/': typeof publicAboutIndexRoute
@@ -266,6 +275,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/settings'
     | '/api/auth/$'
     | '/api/ph/$'
     | '/about/'
@@ -291,6 +301,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/settings'
     | '/api/auth/$'
     | '/api/ph/$'
     | '/about'
@@ -319,6 +330,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authed/_community'
+    | '/_authed/_community/settings'
     | '/api/auth/$'
     | '/api/ph/$'
     | '/(public)/about/'
@@ -444,6 +456,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/_community/settings': {
+      id: '/_authed/_community/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthedCommunitySettingsRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
     '/_authed/onboarding/invitations/': {
       id: '/_authed/onboarding/invitations/'
       path: '/onboarding/invitations'
@@ -481,24 +500,24 @@ declare module '@tanstack/react-router' {
     }
     '/_authed/_community/settings/overview/': {
       id: '/_authed/_community/settings/overview/'
-      path: '/settings/overview'
+      path: '/overview'
       fullPath: '/settings/overview/'
       preLoaderRoute: typeof AuthedCommunitySettingsOverviewIndexRouteImport
-      parentRoute: typeof AuthedCommunityRoute
+      parentRoute: typeof AuthedCommunitySettingsRoute
     }
     '/_authed/_community/settings/members/': {
       id: '/_authed/_community/settings/members/'
-      path: '/settings/members'
+      path: '/members'
       fullPath: '/settings/members/'
       preLoaderRoute: typeof AuthedCommunitySettingsMembersIndexRouteImport
-      parentRoute: typeof AuthedCommunityRoute
+      parentRoute: typeof AuthedCommunitySettingsRoute
     }
     '/_authed/_community/settings/fields/': {
       id: '/_authed/_community/settings/fields/'
-      path: '/settings/fields'
+      path: '/fields'
       fullPath: '/settings/fields/'
       preLoaderRoute: typeof AuthedCommunitySettingsFieldsIndexRouteImport
-      parentRoute: typeof AuthedCommunityRoute
+      parentRoute: typeof AuthedCommunitySettingsRoute
     }
     '/_authed/_community/profile/relationships/': {
       id: '/_authed/_community/profile/relationships/'
@@ -554,7 +573,29 @@ const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
   publicRouteRouteChildren,
 )
 
+interface AuthedCommunitySettingsRouteChildren {
+  AuthedCommunitySettingsFieldsIndexRoute: typeof AuthedCommunitySettingsFieldsIndexRoute
+  AuthedCommunitySettingsMembersIndexRoute: typeof AuthedCommunitySettingsMembersIndexRoute
+  AuthedCommunitySettingsOverviewIndexRoute: typeof AuthedCommunitySettingsOverviewIndexRoute
+}
+
+const AuthedCommunitySettingsRouteChildren: AuthedCommunitySettingsRouteChildren =
+  {
+    AuthedCommunitySettingsFieldsIndexRoute:
+      AuthedCommunitySettingsFieldsIndexRoute,
+    AuthedCommunitySettingsMembersIndexRoute:
+      AuthedCommunitySettingsMembersIndexRoute,
+    AuthedCommunitySettingsOverviewIndexRoute:
+      AuthedCommunitySettingsOverviewIndexRoute,
+  }
+
+const AuthedCommunitySettingsRouteWithChildren =
+  AuthedCommunitySettingsRoute._addFileChildren(
+    AuthedCommunitySettingsRouteChildren,
+  )
+
 interface AuthedCommunityRouteChildren {
+  AuthedCommunitySettingsRoute: typeof AuthedCommunitySettingsRouteWithChildren
   AuthedCommunityCommunityTreeIndexRoute: typeof AuthedCommunityCommunityTreeIndexRoute
   AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
   AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
@@ -563,12 +604,10 @@ interface AuthedCommunityRouteChildren {
   AuthedCommunityProfileAddressesIndexRoute: typeof AuthedCommunityProfileAddressesIndexRoute
   AuthedCommunityProfileInfoIndexRoute: typeof AuthedCommunityProfileInfoIndexRoute
   AuthedCommunityProfileRelationshipsIndexRoute: typeof AuthedCommunityProfileRelationshipsIndexRoute
-  AuthedCommunitySettingsFieldsIndexRoute: typeof AuthedCommunitySettingsFieldsIndexRoute
-  AuthedCommunitySettingsMembersIndexRoute: typeof AuthedCommunitySettingsMembersIndexRoute
-  AuthedCommunitySettingsOverviewIndexRoute: typeof AuthedCommunitySettingsOverviewIndexRoute
 }
 
 const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
+  AuthedCommunitySettingsRoute: AuthedCommunitySettingsRouteWithChildren,
   AuthedCommunityCommunityTreeIndexRoute:
     AuthedCommunityCommunityTreeIndexRoute,
   AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
@@ -581,12 +620,6 @@ const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
   AuthedCommunityProfileInfoIndexRoute: AuthedCommunityProfileInfoIndexRoute,
   AuthedCommunityProfileRelationshipsIndexRoute:
     AuthedCommunityProfileRelationshipsIndexRoute,
-  AuthedCommunitySettingsFieldsIndexRoute:
-    AuthedCommunitySettingsFieldsIndexRoute,
-  AuthedCommunitySettingsMembersIndexRoute:
-    AuthedCommunitySettingsMembersIndexRoute,
-  AuthedCommunitySettingsOverviewIndexRoute:
-    AuthedCommunitySettingsOverviewIndexRoute,
 }
 
 const AuthedCommunityRouteWithChildren = AuthedCommunityRoute._addFileChildren(

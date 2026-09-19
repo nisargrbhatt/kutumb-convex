@@ -1,14 +1,11 @@
-import { authMiddleware } from "@/middleware/auth";
+import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
-import { queryOptions } from "@tanstack/react-query";
 import { COMMUNITY_PROFILE_BLOOD_GROUP, COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
 import { communityProfile } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { and, count, eq, like, sql } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 import { safeAsync } from "@/lib/safe";
 import {
 	extractSubgraph,
@@ -20,22 +17,19 @@ import {
 import { canCreateProfile, LIMIT_COPY } from "@/lib/limits";
 import { countOrgProfiles } from "@/lib/limits-db";
 import { captureLimitReached } from "@/lib/posthog-server";
+import { AppError } from "@/domain/errors";
+import { assertCan } from "@/domain/permission";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
-
+	.middleware([orgMiddleware])
 	.handler(async ({ context }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
+		const { organizationId, userId } = context.actor;
 
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
-
-		const communityProfile = await db.query.communityProfile.findFirst({
+		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 
 			columns: {
@@ -44,28 +38,13 @@ export const getMyCommunityProfile = createServerFn({ method: "GET" })
 			},
 		});
 
-		return communityProfile ?? null;
-	});
-
-export const getMyCommunityProfileQuery = () =>
-	queryOptions({
-		queryKey: ["get-my-community-profile"],
-		queryFn: async () => {
-			const result = await getMyCommunityProfile();
-			return result;
-		},
-		staleTime: 0,
-		gcTime: 0,
+		return profile ?? null;
 	});
 
 export const getActiveMemberCount = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ context }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		const [result] = await db
 			.select({ total: count() })
@@ -80,17 +59,8 @@ export const getActiveMemberCount = createServerFn({ method: "GET" })
 		return result?.total ?? 0;
 	});
 
-export const getActiveMemberCountQuery = () =>
-	queryOptions({
-		queryKey: ["get-active-member-count"],
-		queryFn: async () => {
-			const result = await getActiveMemberCount();
-			return result;
-		},
-	});
-
 export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			firstName: z.string().min(1, "First name is required"),
@@ -119,17 +89,13 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const communityProfileItem = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 
 			columns: {
@@ -142,15 +108,15 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 				captureLimitReached({
 					limit: "profile",
 					organizationId: organizationId,
-					userId: context.userId,
+					userId: userId,
 				});
-				throw new Error(LIMIT_COPY.profileSelf.description);
+				throw new AppError("LimitReached", LIMIT_COPY.profileSelf.description);
 			}
 
 			await db.insert(communityProfile).values({
 				id: generatePrimaryKey(),
 				organizationId: organizationId,
-				userId: context.userId,
+				userId: userId,
 				firstName: data.firstName,
 				middleName: data.middleName,
 				lastName: data.lastName,
@@ -219,13 +185,9 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 	});
 
 export const getCommunityProfileList = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ context }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		const communityProfiles = await db.query.communityProfile.findMany({
 			where: (fields, operators) => operators.eq(fields.organizationId, organizationId),
@@ -241,28 +203,15 @@ export const getCommunityProfileList = createServerFn({ method: "GET" })
 		return communityProfiles;
 	});
 
-export const getCommunityProfileListQuery = () =>
-	queryOptions({
-		queryKey: ["get-community-profile-list"],
-		queryFn: async () => {
-			const result = await getCommunityProfileList();
-			return result;
-		},
-	});
-
 export const getActiveProfilesForRelation = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			subjectId: z.string().min(1, "Subject profile is required"),
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		const communityProfiles = await db.query.communityProfile.findMany({
 			where: (fields, operators) =>
@@ -283,17 +232,8 @@ export const getActiveProfilesForRelation = createServerFn({ method: "GET" })
 		return communityProfiles;
 	});
 
-export const getActiveProfilesForRelationQuery = (subjectId: string) =>
-	queryOptions({
-		queryKey: ["get-active-profiles-for-relation", subjectId],
-		queryFn: async () => {
-			const result = await getActiveProfilesForRelation({ data: { subjectId } });
-			return result;
-		},
-	});
-
 export const getCommunityMembers = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			search: z.string().optional(),
@@ -310,11 +250,7 @@ export const getCommunityMembers = createServerFn({ method: "GET" })
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		const conditions = [eq(communityProfile.organizationId, organizationId)];
 
@@ -366,39 +302,8 @@ export const getCommunityMembers = createServerFn({ method: "GET" })
 		};
 	});
 
-export const getCommunityMembersQuery = (props: {
-	search?: string;
-	status?: string;
-	gender?: string;
-	page?: number;
-	pageSize?: number;
-}) =>
-	queryOptions({
-		queryKey: [
-			"get-community-members",
-
-			props.search ?? "",
-			props.status ?? "",
-			props.gender ?? "",
-			props.page ?? 1,
-			props.pageSize ?? 10,
-		],
-		queryFn: async () => {
-			const result = await getCommunityMembers({
-				data: {
-					search: props.search,
-					status: props.status as "active" | "inactive" | "draft" | undefined,
-					gender: props.gender as "male" | "female" | "other" | undefined,
-					page: props.page ?? 1,
-					pageSize: props.pageSize ?? 10,
-				},
-			});
-			return result;
-		},
-	});
-
 export const getFocusedCommunityGraph = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			focusId: z.string().optional(),
@@ -406,11 +311,7 @@ export const getFocusedCommunityGraph = createServerFn({ method: "GET" })
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const blob = await getOrgGraphBlob(organizationId);
 
@@ -419,10 +320,7 @@ export const getFocusedCommunityGraph = createServerFn({ method: "GET" })
 		if (!preferredId) {
 			const ownProfile = await db.query.communityProfile.findFirst({
 				where: (fields, ops) =>
-					ops.and(
-						ops.eq(fields.organizationId, organizationId),
-						ops.eq(fields.userId, context.userId)
-					),
+					ops.and(ops.eq(fields.organizationId, organizationId), ops.eq(fields.userId, userId)),
 				columns: { id: true },
 			});
 			if (ownProfile && blob.profiles.some((p) => p.id === ownProfile.id)) {
@@ -434,36 +332,14 @@ export const getFocusedCommunityGraph = createServerFn({ method: "GET" })
 		return extractSubgraph(blob, anchorId, data.depth);
 	});
 
-export const getFocusedCommunityGraphQuery = (props?: { focusId?: string; depth?: number }) =>
-	queryOptions({
-		queryKey: ["community-graph", props?.focusId ?? "__default__", props?.depth ?? 2],
-		queryFn: async () =>
-			getFocusedCommunityGraph({
-				data: { focusId: props?.focusId, depth: props?.depth ?? 2 },
-			}),
-		staleTime: 5 * 60 * 1000,
-	});
-
 export const searchCommunityProfilesLite = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(z.object({ query: z.string() }))
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		const blob = await getOrgGraphBlob(organizationId);
 		return searchProfiles(blob, data.query, 20);
-	});
-
-export const searchCommunityProfilesLiteQuery = (query: string) =>
-	queryOptions({
-		queryKey: ["community-profile-search", query],
-		queryFn: async () => searchCommunityProfilesLite({ data: { query } }),
-		staleTime: 60 * 1000,
-		enabled: query.trim().length > 0,
 	});
 
 export const getCommunityMemberById = createServerFn({ method: "GET" })
@@ -472,15 +348,11 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 			id: z.string().describe("Community Profile Id"),
 		})
 	)
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
+		const { organizationId } = context.actor;
 
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
-
-		const communityProfile = await db.query.communityProfile.findFirst({
+		const foundProfile = await db.query.communityProfile.findFirst({
 			where: (fields, ops) =>
 				ops.and(ops.eq(fields.id, data.id), ops.eq(fields.organizationId, organizationId)),
 			columns: {
@@ -488,12 +360,12 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 			},
 		});
 
-		if (!communityProfile) {
-			throw new Error("Community Profile not found");
+		if (!foundProfile) {
+			throw new AppError("NotFound", "Community Profile not found");
 		}
 
 		const profileAddresses = await db.query.communityAddress.findMany({
-			where: (fields, ops) => ops.eq(fields.communityProfileId, communityProfile.id),
+			where: (fields, ops) => ops.eq(fields.communityProfileId, foundProfile.id),
 			columns: {
 				communityProfileId: false,
 			},
@@ -516,7 +388,7 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 
 		// Outgoing: subject is the `from`. Type read subject-centric.
 		const outgoingRelations = await db.query.communityRelation.findMany({
-			where: (fields, ops) => ops.eq(fields.fromId, communityProfile.id),
+			where: (fields, ops) => ops.eq(fields.fromId, foundProfile.id),
 			columns: { organizationId: false },
 			with: {
 				toCommunityProfile: { columns: counterpartColumns },
@@ -525,7 +397,7 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 
 		// Incoming: subject is the `to`. Type shown as stored (no inversion — ADR 0001).
 		const incomingRelations = await db.query.communityRelation.findMany({
-			where: (fields, ops) => ops.eq(fields.toId, communityProfile.id),
+			where: (fields, ops) => ops.eq(fields.toId, foundProfile.id),
 			columns: { organizationId: false },
 			with: {
 				fromCommunityProfile: { columns: counterpartColumns },
@@ -533,7 +405,7 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 		});
 
 		return {
-			profile: communityProfile,
+			profile: foundProfile,
 			addresses: profileAddresses,
 			customFields: customFields?.map((i) => i.label),
 			outgoingRelations,
@@ -547,26 +419,11 @@ export const acceptCommunityProfile = createServerFn({ method: "POST" })
 			memberId: z.string().describe("Community Profile Id"),
 		})
 	)
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ data, context }) => {
-		const canApproveCommunityProfile = await auth.api.hasPermission({
-			headers: getRequestHeaders(),
-			body: {
-				permissions: {
-					communityProfile: ["approve"],
-				},
-			},
-		});
+		assertCan(context.actor, { communityProfile: ["approve"] });
 
-		if (!canApproveCommunityProfile.success) {
-			throw new Error("You do not have permission to approve this resource");
-		}
-
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		const existingProfile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
@@ -581,7 +438,7 @@ export const acceptCommunityProfile = createServerFn({ method: "POST" })
 		});
 
 		if (!existingProfile) {
-			throw new Error("Community Profile not found which is in draft state");
+			throw new AppError("NotFound", "Community Profile not found which is in draft state");
 		}
 
 		await db
@@ -604,26 +461,11 @@ export const rejectCommunityProfile = createServerFn({ method: "POST" })
 			memberId: z.string().describe("Community Profile Id"),
 		})
 	)
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ data, context }) => {
-		const canRejectCommunityProfile = await auth.api.hasPermission({
-			headers: getRequestHeaders(),
-			body: {
-				permissions: {
-					communityProfile: ["reject"],
-				},
-			},
-		});
+		assertCan(context.actor, { communityProfile: ["reject"] });
 
-		if (!canRejectCommunityProfile.success) {
-			throw new Error("You do not have permission to reject this resource");
-		}
-
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		const existingProfile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
@@ -638,7 +480,7 @@ export const rejectCommunityProfile = createServerFn({ method: "POST" })
 		});
 
 		if (!existingProfile) {
-			throw new Error("Community Profile not found which is in draft state");
+			throw new AppError("NotFound", "Community Profile not found which is in draft state");
 		}
 
 		await db
@@ -656,7 +498,7 @@ export const rejectCommunityProfile = createServerFn({ method: "POST" })
 	});
 
 export const reassignProfileToUser = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			memberId: z.string(),
@@ -664,26 +506,11 @@ export const reassignProfileToUser = createServerFn({ method: "POST" })
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const canReassignCommunityProfile = await auth.api.hasPermission({
-			headers: getRequestHeaders(),
-			body: {
-				permissions: {
-					communityProfile: ["reassign"],
-				},
-			},
-		});
+		assertCan(context.actor, { communityProfile: ["reassign"] });
 
-		if (!canReassignCommunityProfile.success) {
-			throw new Error("You do not have permission to reassign this resource");
-		}
+		const { organizationId, userId: actorUserId } = context.actor;
 
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
-
-		if (data.userId === context?.userId) {
+		if (data.userId === actorUserId) {
 			throw new Error("Can't assign profile to yourself");
 		}
 
@@ -695,7 +522,7 @@ export const reassignProfileToUser = createServerFn({ method: "POST" })
 		});
 
 		if (!user) {
-			throw new Error("User doesn't exist");
+			throw new AppError("NotFound", "User doesn't exist");
 		}
 
 		const memberProfile = await db.query.communityProfile.findFirst({
@@ -711,7 +538,7 @@ export const reassignProfileToUser = createServerFn({ method: "POST" })
 		});
 
 		if (!memberProfile) {
-			throw new Error("Member profile doesn't exist or already has linked user");
+			throw new AppError("NotFound", "Member profile doesn't exist or already has linked user");
 		}
 
 		await db
@@ -729,7 +556,7 @@ export const reassignProfileToUser = createServerFn({ method: "POST" })
 	});
 
 export const addMissingMember = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			firstName: z.string().min(1, "First name is required"),
@@ -757,33 +584,18 @@ export const addMissingMember = createServerFn({ method: "POST" })
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const canCreateCommunityProfile = await auth.api.hasPermission({
-			headers: getRequestHeaders(),
-			body: {
-				permissions: {
-					communityProfile: ["create"],
-				},
-			},
-		});
+		assertCan(context.actor, { communityProfile: ["create"] });
 
-		if (!canCreateCommunityProfile.success) {
-			throw new Error("You do not have permission to create this resource");
-		}
-
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const existingProfileCount = await countOrgProfiles(organizationId);
 		if (!canCreateProfile(existingProfileCount)) {
 			captureLimitReached({
 				limit: "profile",
 				organizationId: organizationId,
-				userId: context.userId,
+				userId: userId,
 			});
-			throw new Error(LIMIT_COPY.profileAdmin.description);
+			throw new AppError("LimitReached", LIMIT_COPY.profileAdmin.description);
 		}
 
 		const result = await safeAsync(
@@ -799,7 +611,7 @@ export const addMissingMember = createServerFn({ method: "POST" })
 				mobileNumber: data.mobileNumber,
 				dateOfBirth: data.dateOfBirth,
 				dateOfDeath: data.dateOfDeath,
-				comment: `Added by ${context?.session?.user?.name}(${context?.session?.user?.email})(${context?.userId})`,
+				comment: `Added by ${context?.session?.user?.name}(${context?.session?.user?.email})(${userId})`,
 				customFieldData: data.customFieldData,
 				organizationId: organizationId,
 				status: "draft",

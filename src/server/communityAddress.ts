@@ -1,27 +1,23 @@
-import { authMiddleware } from "@/middleware/auth";
+import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
-import { queryOptions } from "@tanstack/react-query";
 import { COMMUNITY_ADDRESS_TYPE } from "@/db/constants";
 import { communityAddress } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { eq } from "drizzle-orm";
+import { AppError } from "@/domain/errors";
 
 export const getMyCommunityAddresses = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ context }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 			columns: {
 				id: true,
@@ -39,17 +35,8 @@ export const getMyCommunityAddresses = createServerFn({ method: "GET" })
 		return addresses;
 	});
 
-export const getMyCommunityAddressesQuery = () =>
-	queryOptions({
-		queryKey: ["get-my-community-addresses"],
-		queryFn: async () => {
-			const result = await getMyCommunityAddresses();
-			return result;
-		},
-	});
-
 export const addMyCommunityAddress = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			line1: z.string().min(1, "Line 1 is required"),
@@ -70,17 +57,13 @@ export const addMyCommunityAddress = createServerFn({ method: "POST" })
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 			columns: {
 				id: true,
@@ -88,7 +71,7 @@ export const addMyCommunityAddress = createServerFn({ method: "POST" })
 		});
 
 		if (!profile) {
-			throw new Error("Community profile not found");
+			throw new AppError("NotFound", "Community profile not found");
 		}
 
 		await db.insert(communityAddress).values({
@@ -111,24 +94,20 @@ export const addMyCommunityAddress = createServerFn({ method: "POST" })
 	});
 
 export const deleteMyCommunityAddress = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			id: z.string().trim().min(1, "Address ID is required"),
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 			columns: {
 				id: true,
@@ -136,7 +115,7 @@ export const deleteMyCommunityAddress = createServerFn({ method: "POST" })
 		});
 
 		if (!profile) {
-			throw new Error("Community profile not found");
+			throw new AppError("NotFound", "Community profile not found");
 		}
 
 		const address = await db.query.communityAddress.findFirst({
@@ -151,7 +130,7 @@ export const deleteMyCommunityAddress = createServerFn({ method: "POST" })
 		});
 
 		if (!address) {
-			throw new Error("Address not found or does not belong to you");
+			throw new AppError("NotFound", "Address not found or does not belong to you");
 		}
 
 		await db.delete(communityAddress).where(eq(communityAddress.id, address.id));

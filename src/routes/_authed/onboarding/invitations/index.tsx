@@ -1,4 +1,4 @@
-import { listMyOrganizationInvitations } from "@/api/organization";
+import { listMyOrganizationInvitations } from "@/server/organization";
 import { RootLayout } from "@/components/RootLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

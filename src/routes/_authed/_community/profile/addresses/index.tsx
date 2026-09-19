@@ -1,8 +1,5 @@
-import {
-	addMyCommunityAddress,
-	deleteMyCommunityAddress,
-	getMyCommunityAddressesQuery,
-} from "@/api/communityAddress";
+import { addMyCommunityAddress, deleteMyCommunityAddress } from "@/server/communityAddress";
+import { getMyCommunityAddressesQuery } from "@/queries/communityAddress";
 import {
 	Breadcrumb,
 	BreadcrumbItem,

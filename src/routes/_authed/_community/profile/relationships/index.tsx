@@ -1,9 +1,9 @@
 import {
 	addMyCommunityRelationship,
 	deleteMyCommunityRelationship,
-	getMyCommunityRelationshipsQuery,
-} from "@/api/communityRelation";
-import { getCommunityProfileListQuery } from "@/api/communityProfile";
+} from "@/server/communityRelation";
+import { getMyCommunityRelationshipsQuery } from "@/queries/communityRelation";
+import { getCommunityProfileListQuery } from "@/queries/communityProfile";
 import {
 	Breadcrumb,
 	BreadcrumbItem,

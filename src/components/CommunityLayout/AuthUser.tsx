@@ -16,10 +16,11 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
+import { useActor } from "@/hooks/useActor";
 
 export function AuthUser() {
 	const { data: session } = authClient.useSession();
-	const { data: currentRole } = authClient.useActiveMemberRole();
+	const actor = useActor();
 	const { isMobile } = useSidebar();
 
 	return (
@@ -44,7 +45,7 @@ export function AuthUser() {
 							<span className="truncate font-medium">
 								{session?.user?.name ?? session?.user?.email}
 							</span>
-							<span className="truncate text-xs capitalize">{currentRole?.role}</span>
+							<span className="truncate text-xs capitalize">{actor?.role}</span>
 						</div>
 						<ChevronsUpDown className="ml-auto size-4" />
 					</DropdownMenuTrigger>

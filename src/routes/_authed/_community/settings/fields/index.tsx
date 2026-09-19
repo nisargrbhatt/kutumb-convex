@@ -1,8 +1,5 @@
-import {
-	addOrganizationCustomField,
-	deleteOrganizationCustomField,
-	getOrganizationCustomFieldsQuery,
-} from "@/api/fields";
+import { addOrganizationCustomField, deleteOrganizationCustomField } from "@/server/fields";
+import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
 import {
 	AlertDialog,
 	AlertDialogAction,

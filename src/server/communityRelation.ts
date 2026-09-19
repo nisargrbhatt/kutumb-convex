@@ -1,15 +1,14 @@
-import { authMiddleware } from "@/middleware/auth";
+import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
-import { queryOptions } from "@tanstack/react-query";
 import { COMMUNITY_PROFILE_STATUS, COMMUNITY_RELATION_TYPE } from "@/db/constants";
 import { communityRelation } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { count, eq } from "drizzle-orm";
 import { invalidateOrgGraph } from "@/lib/communityGraphCache";
-import { auth } from "@/lib/auth";
-import { getRequestHeaders } from "@tanstack/react-start/server";
+import { AppError } from "@/domain/errors";
+import { assertCan } from "@/domain/permission";
 
 const relationTypeSchema = z.enum([
 	COMMUNITY_RELATION_TYPE.brother,
@@ -28,19 +27,15 @@ const relationTypeSchema = z.enum([
 ]);
 
 export const getMyCommunityRelationships = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ context }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 			columns: {
 				id: true,
@@ -69,29 +64,16 @@ export const getMyCommunityRelationships = createServerFn({ method: "GET" })
 		return relationships;
 	});
 
-export const getMyCommunityRelationshipsQuery = () =>
-	queryOptions({
-		queryKey: ["get-my-community-relationships"],
-		queryFn: async () => {
-			const result = await getMyCommunityRelationships();
-			return result;
-		},
-	});
-
 export const getMyIncomingRelationCount = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ context }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 			columns: {
 				id: true,
@@ -110,29 +92,16 @@ export const getMyIncomingRelationCount = createServerFn({ method: "GET" })
 		return result?.total ?? 0;
 	});
 
-export const getMyIncomingRelationCountQuery = () =>
-	queryOptions({
-		queryKey: ["get-my-incoming-relation-count"],
-		queryFn: async () => {
-			const result = await getMyIncomingRelationCount();
-			return result;
-		},
-	});
-
 export const getMyOutgoingRelationCount = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ context }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 			columns: {
 				id: true,
@@ -151,51 +120,24 @@ export const getMyOutgoingRelationCount = createServerFn({ method: "GET" })
 		return result?.total ?? 0;
 	});
 
-export const getMyOutgoingRelationCountQuery = () =>
-	queryOptions({
-		queryKey: ["get-my-outgoing-relation-count"],
-		queryFn: async () => {
-			const result = await getMyOutgoingRelationCount();
-			return result;
-		},
-	});
-
 export const addMyCommunityRelationship = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
-			type: z.enum([
-				COMMUNITY_RELATION_TYPE.brother,
-				COMMUNITY_RELATION_TYPE.brother_in_law,
-				COMMUNITY_RELATION_TYPE.child,
-				COMMUNITY_RELATION_TYPE.father,
-				COMMUNITY_RELATION_TYPE.father_in_law,
-				COMMUNITY_RELATION_TYPE.mother,
-				COMMUNITY_RELATION_TYPE.mother_in_law,
-				COMMUNITY_RELATION_TYPE.sister,
-				COMMUNITY_RELATION_TYPE.sister_in_law,
-				COMMUNITY_RELATION_TYPE.wife,
-				COMMUNITY_RELATION_TYPE.husband,
-				COMMUNITY_RELATION_TYPE.uncle,
-				COMMUNITY_RELATION_TYPE.aunt,
-			]),
+			type: relationTypeSchema,
 			toId: z.string().min(1, "Target profile is required"),
 			note: z.string().optional(),
 			bloodRelation: z.boolean().default(false).optional(),
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 			columns: {
 				id: true,
@@ -203,7 +145,7 @@ export const addMyCommunityRelationship = createServerFn({ method: "POST" })
 		});
 
 		if (!profile) {
-			throw new Error("Community profile not found");
+			throw new AppError("NotFound", "Community profile not found");
 		}
 
 		if (profile.id === data.toId) {
@@ -249,24 +191,20 @@ export const addMyCommunityRelationship = createServerFn({ method: "POST" })
 	});
 
 export const deleteMyCommunityRelationship = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			id: z.string().trim().min(1, "Relationship ID is required"),
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId, userId } = context.actor;
 
 		const profile = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
 				operators.and(
 					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, context.userId)
+					operators.eq(fields.userId, userId)
 				),
 			columns: {
 				id: true,
@@ -274,7 +212,7 @@ export const deleteMyCommunityRelationship = createServerFn({ method: "POST" })
 		});
 
 		if (!profile) {
-			throw new Error("Community profile not found");
+			throw new AppError("NotFound", "Community profile not found");
 		}
 
 		const relationship = await db.query.communityRelation.findFirst({
@@ -286,7 +224,7 @@ export const deleteMyCommunityRelationship = createServerFn({ method: "POST" })
 		});
 
 		if (!relationship) {
-			throw new Error("Relationship not found or does not belong to you");
+			throw new AppError("NotFound", "Relationship not found or does not belong to you");
 		}
 
 		await db.delete(communityRelation).where(eq(communityRelation.id, relationship.id));
@@ -300,7 +238,7 @@ export const deleteMyCommunityRelationship = createServerFn({ method: "POST" })
 
 // Owner/admin add an outgoing relation on behalf of a userless, active profile.
 export const addCommunityRelationToProfile = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			subjectId: z.string().trim().min(1, "Subject profile is required"),
@@ -311,24 +249,9 @@ export const addCommunityRelationToProfile = createServerFn({ method: "POST" })
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const canManageRelations = await auth.api.hasPermission({
-			headers: getRequestHeaders(),
-			body: {
-				permissions: {
-					communityProfile: ["manageRelations"],
-				},
-			},
-		});
+		assertCan(context.actor, { communityProfile: ["manageRelations"] });
 
-		if (!canManageRelations.success) {
-			throw new Error("You do not have permission to manage relations");
-		}
-
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		if (data.subjectId === data.toId) {
 			throw new Error("A profile cannot have a relation to itself");
@@ -348,7 +271,7 @@ export const addCommunityRelationToProfile = createServerFn({ method: "POST" })
 		});
 
 		if (!subject) {
-			throw new Error("Subject profile not found");
+			throw new AppError("NotFound", "Subject profile not found");
 		}
 
 		if (subject.userId) {
@@ -371,7 +294,7 @@ export const addCommunityRelationToProfile = createServerFn({ method: "POST" })
 		});
 
 		if (!target) {
-			throw new Error("Target profile not found");
+			throw new AppError("NotFound", "Target profile not found");
 		}
 
 		const existingRelationship = await db.query.communityRelation.findFirst({
@@ -414,7 +337,7 @@ export const addCommunityRelationToProfile = createServerFn({ method: "POST" })
 
 // Owner/admin delete an outgoing relation from a userless, active profile.
 export const deleteCommunityRelationFromProfile = createServerFn({ method: "POST" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			subjectId: z.string().trim().min(1, "Subject profile is required"),
@@ -422,24 +345,9 @@ export const deleteCommunityRelationFromProfile = createServerFn({ method: "POST
 		})
 	)
 	.handler(async ({ context, data }) => {
-		const canManageRelations = await auth.api.hasPermission({
-			headers: getRequestHeaders(),
-			body: {
-				permissions: {
-					communityProfile: ["manageRelations"],
-				},
-			},
-		});
+		assertCan(context.actor, { communityProfile: ["manageRelations"] });
 
-		if (!canManageRelations.success) {
-			throw new Error("You do not have permission to manage relations");
-		}
-
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		const subject = await db.query.communityProfile.findFirst({
 			where: (fields, operators) =>
@@ -455,7 +363,7 @@ export const deleteCommunityRelationFromProfile = createServerFn({ method: "POST
 		});
 
 		if (!subject) {
-			throw new Error("Subject profile not found");
+			throw new AppError("NotFound", "Subject profile not found");
 		}
 
 		if (subject.userId) {
@@ -479,7 +387,7 @@ export const deleteCommunityRelationFromProfile = createServerFn({ method: "POST
 		});
 
 		if (!relationship) {
-			throw new Error("Outgoing relation not found for this profile");
+			throw new AppError("NotFound", "Outgoing relation not found for this profile");
 		}
 
 		await db.delete(communityRelation).where(eq(communityRelation.id, relationship.id));

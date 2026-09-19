@@ -6,7 +6,7 @@ import z from "zod";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import { getSignupGateStateFn } from "@/handler/auth";
+import { getSignupGateStateFn } from "@/server/auth";
 import { RootLayout } from "@/components/RootLayout";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { OAuthErrorAlert } from "@/components/auth/OAuthErrorAlert";

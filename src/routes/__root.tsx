@@ -3,7 +3,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import appCss from "../styles.css?url";
-import { authStateFn } from "@/handler/auth";
+import { authStateFn } from "@/server/auth";
 import type { QueryClient } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { PostHogProvider } from "@posthog/react";
