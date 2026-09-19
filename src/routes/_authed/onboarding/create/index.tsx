@@ -5,7 +5,7 @@ import { OnboardingForm } from "./-components/OnboardingForm";
 import { RootLayout } from "@/components/RootLayout";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getMyOrganizationCountQuery } from "@/api/organization";
+import { getMyOrganizationCountQuery } from "@/queries/organization";
 import { canJoinOrganization, LIMIT_COPY } from "@/lib/limits";
 
 export const Route = createFileRoute("/_authed/onboarding/create/")({

@@ -1,5 +1,6 @@
-import { getMyCommunityProfileQuery, upsertMyCommunityProfile } from "@/api/communityProfile";
-import { getOrganizationCustomFieldsQuery } from "@/api/fields";
+import { upsertMyCommunityProfile } from "@/server/communityProfile";
+import { getMyCommunityProfileQuery } from "@/queries/communityProfile";
+import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
 import { CustomFieldsForm, type CustomField } from "@/components/CustomFieldsForm";
 import {
 	Breadcrumb,
@@ -37,7 +38,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { safeAsync } from "@/lib/safe";
-import { getOrgUsageQuery } from "@/api/organization";
+import { getOrgUsageQuery } from "@/queries/organization";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authed/_community/profile/info/")({

@@ -1,4 +1,4 @@
-import { getCommunityMembersQuery } from "@/api/communityProfile";
+import { getCommunityMembersQuery } from "@/queries/communityProfile";
 import { useEffect, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";

@@ -7,14 +7,14 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "../ui/sidebar";
-import { authClient } from "@/lib/auth-client";
+import { useActor } from "@/hooks/useActor";
 import { IconAffiliate, IconInputSearch, IconUser } from "@tabler/icons-react";
 
 export function SettingNav() {
 	const { toggleSidebar, isMobile, open } = useSidebar();
-	const { data: activeMemberRole } = authClient.useActiveMemberRole();
+	const actor = useActor();
 
-	if (activeMemberRole?.role !== "owner") {
+	if (actor?.role !== "owner") {
 		return null;
 	}
 

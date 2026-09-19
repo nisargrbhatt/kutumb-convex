@@ -1,16 +1,17 @@
 import {
 	acceptCommunityProfile,
-	getActiveProfilesForRelationQuery,
 	getCommunityMemberById,
 	reassignProfileToUser,
 	rejectCommunityProfile,
-} from "@/api/communityProfile";
+} from "@/server/communityProfile";
+import { getActiveProfilesForRelationQuery } from "@/queries/communityProfile";
 import {
 	addCommunityRelationToProfile,
 	deleteCommunityRelationFromProfile,
-} from "@/api/communityRelation";
+} from "@/server/communityRelation";
 import { COMMUNITY_RELATION_TYPE } from "@/db/constants";
 import { safeAsync } from "@/lib/safe";
+import { isAppError } from "@/domain/errors";
 import { createFileRoute, notFound, Link, useRouter } from "@tanstack/react-router";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,7 @@ import {
 	BadgeCheckIcon,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { useCan } from "@/hooks/useCan";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -95,7 +97,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getOrgUsageQuery } from "@/api/organization";
+import { getOrgUsageQuery } from "@/queries/organization";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -122,7 +124,10 @@ export const Route = createFileRoute("/_authed/_community/members/$id/")({
 		);
 
 		if (!result.success) {
-			throw notFound();
+			if (isAppError(result.error) && result.error.kind === "NotFound") {
+				throw notFound();
+			}
+			throw result.error;
 		}
 
 		return result.data;
@@ -403,19 +408,18 @@ function MemberActions() {
 function RouteComponent() {
 	const { profile, addresses, customFields, outgoingRelations, incomingRelations } =
 		Route.useLoaderData();
-	const { data: activeMemberRole } = authClient.useActiveMemberRole();
+	const canApprove = useCan({ communityProfile: ["approve"] });
+	const canManageProfileRelations = useCan({ communityProfile: ["manageRelations"] });
 
 	const fullName = [profile.firstName, profile.middleName, profile.lastName]
 		.filter(Boolean)
 		.join(" ");
 	const initials = (profile.firstName?.[0] || "") + (profile.lastName?.[0] || "");
 
-	const showActionBlock = activeMemberRole?.role === "admin" || activeMemberRole?.role === "owner";
+	const showActionBlock = canApprove;
 
 	const canManageRelations =
-		(activeMemberRole?.role === "admin" || activeMemberRole?.role === "owner") &&
-		profile.userId == null &&
-		profile.status === "active";
+		canManageProfileRelations && profile.userId == null && profile.status === "active";
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 overflow-y-auto p-2">

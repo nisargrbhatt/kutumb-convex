@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-quer
 import {
 	getFocusedCommunityGraphQuery,
 	searchCommunityProfilesLiteQuery,
-} from "@/api/communityProfile";
+} from "@/queries/communityProfile";
 import type { GraphEdge, SubgraphNode } from "@/lib/communityGraphCache";
 import {
 	ReactFlow,

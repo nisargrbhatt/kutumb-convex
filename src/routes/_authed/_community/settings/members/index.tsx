@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useActor } from "@/hooks/useActor";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -57,7 +58,7 @@ import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/lib/limits";
-import { getOrgUsageQuery } from "@/api/organization";
+import { getOrgUsageQuery } from "@/queries/organization";
 import {
 	Table,
 	TableBody,
@@ -333,13 +334,11 @@ function ChangeRoleDrawer({ member }: { member: OrganizationMember }) {
 
 function OrganizationMemberList() {
 	const { data: activeOrganization } = authClient.useActiveOrganization();
-	const { data: session } = authClient.useSession();
 	const posthog = usePostHog();
 	const queryClient = useQueryClient();
+	const actor = useActor();
 
-	const currentUserId = session?.user?.id;
-	const currentRole = activeOrganization?.members?.find((m) => m.user.id === currentUserId)?.role;
-	const canRemove = currentRole === "owner";
+	const canRemove = actor?.role === "owner";
 
 	const handleRemoveFromOrg = async (memberId: string) => {
 		const { error } = await authClient.organization.removeMember({
@@ -400,7 +399,7 @@ function OrganizationMemberList() {
 									</span>
 								</TableCell>
 								<TableCell className="text-right">
-									{canRemove && member.user.id !== currentUserId ? (
+									{canRemove && member.user.id !== actor?.userId ? (
 										<div className="flex items-center justify-end gap-2">
 											<ChangeRoleDrawer member={member} />
 											<AlertDialog>

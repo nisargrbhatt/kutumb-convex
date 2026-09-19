@@ -1,7 +1,7 @@
 import { authMiddleware } from "@/middleware/auth";
+import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { queryOptions } from "@tanstack/react-query";
 import { auth } from "@/lib/auth";
 import { ORG_LIMIT, MEMBER_LIMIT } from "@/lib/limits";
 import { countUserMemberships, countOrgMembersAndPending, countOrgProfiles } from "@/lib/limits-db";
@@ -22,20 +22,10 @@ export const getMyOrganizationCount = createServerFn({ method: "GET" })
 		return { count, limit: ORG_LIMIT };
 	});
 
-export const getMyOrganizationCountQuery = () =>
-	queryOptions({
-		queryKey: ["get-my-organization-count"],
-		queryFn: async () => await getMyOrganizationCount(),
-	});
-
 export const getOrgUsage = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([orgMiddleware])
 	.handler(async ({ context }) => {
-		const organizationId = context?.session?.session?.activeOrganizationId;
-
-		if (typeof organizationId !== "string") {
-			throw new Error("No Organization Id found");
-		}
+		const { organizationId } = context.actor;
 
 		const [members, profiles] = await Promise.all([
 			countOrgMembersAndPending(organizationId),
@@ -43,10 +33,4 @@ export const getOrgUsage = createServerFn({ method: "GET" })
 		]);
 
 		return { members, profiles, limit: MEMBER_LIMIT };
-	});
-
-export const getOrgUsageQuery = () =>
-	queryOptions({
-		queryKey: ["get-org-usage"],
-		queryFn: async () => await getOrgUsage(),
 	});

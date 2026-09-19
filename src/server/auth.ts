@@ -5,12 +5,27 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
 import z from "zod";
+import type { Role } from "@/domain/permission";
 
 export const authStateFn = createServerFn({ method: "GET" }).handler(async () => {
 	const headers = getRequestHeaders();
 	const session = await auth.api.getSession({ headers });
 
-	return { session: session };
+	const organizationId = session?.session?.activeOrganizationId;
+
+	const member =
+		session && typeof organizationId === "string"
+			? await db.query.member.findFirst({
+					where: (fields, operators) =>
+						operators.and(
+							operators.eq(fields.organizationId, organizationId),
+							operators.eq(fields.userId, session.user.id)
+						),
+					columns: { role: true },
+				})
+			: null;
+
+	return { session, member: member ? { role: member.role as Role } : null };
 });
 
 /**

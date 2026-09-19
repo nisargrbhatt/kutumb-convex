@@ -32,6 +32,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
+import { useActor } from "@/hooks/useActor";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
@@ -40,7 +41,7 @@ import { toast } from "sonner";
 import z from "zod";
 import { usePostHog } from "@posthog/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { getOrgUsageQuery } from "@/api/organization";
+import { getOrgUsageQuery } from "@/queries/organization";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authed/_community/settings/overview/")({
@@ -245,9 +246,9 @@ function UsageCard() {
 }
 
 function DangerZone(props: { organizationId: string; name: string }) {
-	const { data: activeMemberRole } = authClient.useActiveMemberRole();
+	const actor = useActor();
 
-	if (activeMemberRole?.role !== "owner") {
+	if (actor?.role !== "owner") {
 		return null;
 	}
 

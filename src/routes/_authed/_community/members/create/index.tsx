@@ -1,5 +1,5 @@
-import { getOrganizationCustomFieldsQuery } from "@/api/fields";
-import { getOrgUsageQuery } from "@/api/organization";
+import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
+import { getOrgUsageQuery } from "@/queries/organization";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { safeAsync } from "@/lib/safe";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CustomFieldsForm, type CustomField } from "@/components/CustomFieldsForm";
-import { addMissingMember } from "@/api/communityProfile";
+import { addMissingMember } from "@/server/communityProfile";
 import { toast } from "sonner";
 import { usePostHog } from "@posthog/react";
 
