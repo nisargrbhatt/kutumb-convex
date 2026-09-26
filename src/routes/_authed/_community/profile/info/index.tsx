@@ -1,43 +1,30 @@
-import { PageHeader } from "@/components/CommunityLayout/PageHeader";
-import { upsertMyCommunityProfile } from "@/server/communityProfile";
-import { getMyCommunityProfileQuery } from "@/queries/communityProfile";
-import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
-import { CustomFieldsSection } from "@/components/custom-fields/CustomFieldsSection";
-import type { CustomFieldDefinition } from "@/domain/customFields";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { COMMUNITY_PROFILE_BLOOD_GROUP, GENDERS } from "@/db/constants";
-import {
-	communityProfileFormSchema,
-	toFormValues,
-	toInput,
-	type CommunityProfileFormValues,
-} from "@/domain/communityProfile";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { PencilIcon, UserPlusIcon, UserRoundIcon } from "lucide-react";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
+import { ProfileForm } from "@/components/profile/ProfileForm";
+import { ProfileIdentityHeader } from "@/components/profile/ProfileIdentityHeader";
+import { ProfileInfoView } from "@/components/profile/ProfileInfoView";
 import { Button } from "@/components/ui/button";
 import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
-import { toast } from "sonner";
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "@/components/ui/empty";
+import { toFormValues, type CommunityProfileInput } from "@/domain/communityProfile";
+import { isAppError } from "@/domain/errors";
+import { LIMIT_COPY } from "@/domain/limits";
 import { authClient } from "@/lib/auth-client";
 import { safeAsync } from "@/lib/safe";
+import { getMyCommunityProfileQuery } from "@/queries/communityProfile";
+import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
 import { getOrgUsageQuery } from "@/queries/organization";
-import { useQueryClient } from "@tanstack/react-query";
+import { upsertMyCommunityProfile } from "@/server/communityProfile";
 
 export const Route = createFileRoute("/_authed/_community/profile/info/")({
 	component: RouteComponent,
@@ -50,213 +37,101 @@ export const Route = createFileRoute("/_authed/_community/profile/info/")({
 	pendingComponent: () => <p>Loading...</p>,
 });
 
-function CommunityProfileForm({
-	defaultValues,
-	customFields,
-}: {
-	defaultValues: CommunityProfileFormValues;
-	customFields: CustomFieldDefinition[];
-}) {
-	const form = useForm<CommunityProfileFormValues>({
-		resolver: zodResolver(communityProfileFormSchema),
-		defaultValues: defaultValues,
-	});
+// TODO(issue 09): replace with useUpsertMyProfile().
+function useSaveMyProfile() {
 	const queryClient = useQueryClient();
+	const [isPending, setIsPending] = useState(false);
 
-	const onSubmit = form.handleSubmit(async (data) => {
-		const result = await safeAsync(upsertMyCommunityProfile({ data: toInput(data) }));
+	const save = async (input: CommunityProfileInput) => {
+		setIsPending(true);
+		const result = await safeAsync(upsertMyCommunityProfile({ data: input }));
+		setIsPending(false);
 
 		if (!result.success) {
 			console.error(result.error);
-			toast.error("Profile", {
-				description: result.error?.message ?? "Failed to update profile",
+			const limit =
+				isAppError(result.error) && result.error.kind === "LimitReached"
+					? LIMIT_COPY.profileSelf
+					: undefined;
+			toast.error(limit?.title ?? "Profile", {
+				description: limit?.description ?? result.error?.message ?? "Failed to save profile",
 			});
-			return;
+			return false;
 		}
 
-		toast.success("Community Profile", {
-			description: "Community Profile updated successfully",
-		});
-		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
-	});
+		toast.success("Profile saved");
+		await Promise.all([
+			queryClient.invalidateQueries({ queryKey: getMyCommunityProfileQuery().queryKey }),
+			queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey }),
+		]);
+		return true;
+	};
 
-	return (
-		<Form {...form}>
-			<form onSubmit={onSubmit} className="w-full space-y-6">
-				<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-					<FormField
-						control={form.control}
-						name="firstName"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>First Name</FormLabel>
-								<FormControl>
-									<Input placeholder="First Name" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="middleName"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Middle Name</FormLabel>
-								<FormControl>
-									<Input placeholder="Middle Name" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="lastName"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Last Name</FormLabel>
-								<FormControl>
-									<Input placeholder="Last Name" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-
-					<FormField
-						control={form.control}
-						name="nickName"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Nick Name</FormLabel>
-								<FormControl>
-									<Input placeholder="Nick Name" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="gender"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Gender</FormLabel>
-								<Select onValueChange={field.onChange} defaultValue={field.value}>
-									<FormControl>
-										<SelectTrigger>
-											<SelectValue placeholder="Select Gender" />
-										</SelectTrigger>
-									</FormControl>
-									<SelectContent>
-										{Object.values(GENDERS).map((gender) => (
-											<SelectItem key={gender} value={gender}>
-												{gender}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-
-					<FormField
-						control={form.control}
-						name="email"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Email</FormLabel>
-								<FormControl>
-									<Input placeholder="Email" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="mobileNumber"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Mobile Number</FormLabel>
-								<FormControl>
-									<Input placeholder="Mobile Number" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-
-					<FormField
-						control={form.control}
-						name="bloodGroup"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Blood Group</FormLabel>
-								<Select onValueChange={field.onChange} defaultValue={field.value}>
-									<FormControl>
-										<SelectTrigger>
-											<SelectValue placeholder="Select Blood Group" />
-										</SelectTrigger>
-									</FormControl>
-									<SelectContent>
-										{Object.values(COMMUNITY_PROFILE_BLOOD_GROUP).map((bg) => (
-											<SelectItem key={bg} value={bg}>
-												{bg}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-
-					<FormField
-						control={form.control}
-						name="dateOfBirth"
-						render={({ field }) => (
-							<FormItem className="flex flex-col">
-								<FormLabel>Date of Birth</FormLabel>
-								<DatePicker
-									date={field.value}
-									setDate={field.onChange}
-									placeholder="Pick date of birth"
-								/>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-				</div>
-
-				<CustomFieldsSection defs={customFields} />
-
-				<Button type="submit" disabled={form.formState.isSubmitting}>
-					Submit
-				</Button>
-			</form>
-		</Form>
-	);
+	return { save, isPending };
 }
 
 function RouteComponent() {
 	const { data: session } = authClient.useSession();
-	const { data } = useSuspenseQuery(getMyCommunityProfileQuery());
+	const { data: profile } = useSuspenseQuery(getMyCommunityProfileQuery());
 	const { data: customFieldDefs } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
+	const [open, setOpen] = useState(false);
+	const { save, isPending } = useSaveMyProfile();
 
 	return (
-		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
+		<div className="flex h-full w-full flex-col items-start justify-start gap-4 overflow-y-auto p-2">
 			<PageHeader
 				crumbs={[{ label: "Profile", to: "/profile/info" }, { label: "Info" }]}
 				title="Profile"
-				description="Add your community profile information. This will be visible to other members of the community."
+				description="Your community profile, visible to other members of this community."
+				actions={
+					profile ? (
+						<Button onClick={() => setOpen(true)}>
+							<PencilIcon />
+							Edit
+						</Button>
+					) : null
+				}
 			/>
 
-			<CommunityProfileForm
-				customFields={customFieldDefs}
-				defaultValues={toFormValues(data, { gender: "male", email: session?.user?.email ?? "" })}
+			<div className="flex w-full flex-col gap-6 pb-12">
+				{profile ? (
+					<>
+						<ProfileIdentityHeader profile={profile} />
+						<ProfileInfoView profile={profile} customFieldDefs={customFieldDefs} />
+					</>
+				) : (
+					<Empty className="border border-dashed">
+						<EmptyHeader>
+							<EmptyMedia variant="icon">
+								<UserRoundIcon />
+							</EmptyMedia>
+							<EmptyTitle>No profile yet</EmptyTitle>
+							<EmptyDescription>
+								Create your community profile so other members can find and relate to you.
+							</EmptyDescription>
+						</EmptyHeader>
+						<EmptyContent>
+							<Button onClick={() => setOpen(true)}>
+								<UserPlusIcon />
+								Create profile
+							</Button>
+						</EmptyContent>
+					</Empty>
+				)}
+			</div>
+
+			<ProfileForm
+				mode="self"
+				isNew={!profile}
+				open={open}
+				onOpenChange={setOpen}
+				defaultValues={toFormValues(profile, {
+					gender: "male",
+					email: session?.user?.email ?? "",
+				})}
+				customFieldDefs={customFieldDefs}
+				onSubmit={save}
+				isPending={isPending}
 			/>
 		</div>
 	);

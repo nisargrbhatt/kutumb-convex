@@ -60,7 +60,7 @@ export function FormDrawer<TIn extends FieldValues, TOut = TIn>({
 	return (
 		<Sheet open={open} onOpenChange={handleOpenChange}>
 			{trigger ? <SheetTrigger render={trigger} /> : null}
-			<SheetContent side="right" className={cn("w-full gap-0", SIZE_CLASS[size])}>
+			<SheetContent side="right" className={cn("gap-0 data-[side=right]:w-full", SIZE_CLASS[size])}>
 				<SheetHeader className="border-b pr-12">
 					<SheetTitle>{title}</SheetTitle>
 					{description ? <SheetDescription>{description}</SheetDescription> : null}
