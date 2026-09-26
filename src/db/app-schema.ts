@@ -6,6 +6,7 @@ import {
 	COMMUNITY_RELATION_TYPE,
 	CUSTOM_FIELD_TYPE,
 	GENDERS,
+	enumValues,
 } from "./constants";
 import { relations } from "drizzle-orm";
 import { organization, user } from "./auth-schema";
@@ -15,12 +16,7 @@ export const communityProfileCustomField = sqliteTable("communityProfileCustomFi
 	label: text("label").notNull(),
 	type: text("type", {
 		mode: "text",
-		enum: [
-			CUSTOM_FIELD_TYPE.text,
-			CUSTOM_FIELD_TYPE.number,
-			CUSTOM_FIELD_TYPE.date,
-			CUSTOM_FIELD_TYPE.boolean,
-		],
+		enum: enumValues(CUSTOM_FIELD_TYPE),
 	})
 		.notNull()
 		.default(CUSTOM_FIELD_TYPE.text),
@@ -41,29 +37,16 @@ export const communityProfile = sqliteTable(
 		nickName: text("nickName"),
 		gender: text("gender", {
 			mode: "text",
-			enum: [GENDERS.male, GENDERS.female, GENDERS.other],
+			enum: enumValues(GENDERS),
 		}),
 		email: text("email"),
 		status: text("status", {
 			mode: "text",
-			enum: [
-				COMMUNITY_PROFILE_STATUS.active,
-				COMMUNITY_PROFILE_STATUS.inactive,
-				COMMUNITY_PROFILE_STATUS.draft,
-			],
+			enum: enumValues(COMMUNITY_PROFILE_STATUS),
 		}).notNull(),
 		bloodGroup: text("bloodGroup", {
 			mode: "text",
-			enum: [
-				COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
-				COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
-				COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
-				COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
-				COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
-				COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
-				COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
-				COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
-			],
+			enum: enumValues(COMMUNITY_PROFILE_BLOOD_GROUP),
 		}),
 		mobileNumber: text("mobileNumber"),
 		dateOfBirth: text("dateOfBirth"),
@@ -104,7 +87,7 @@ export const communityAddress = sqliteTable("communityAddress", {
 	postalCode: text("postalCode").notNull(),
 	type: text("type", {
 		mode: "text",
-		enum: [COMMUNITY_ADDRESS_TYPE.home, COMMUNITY_ADDRESS_TYPE.work, COMMUNITY_ADDRESS_TYPE.other],
+		enum: enumValues(COMMUNITY_ADDRESS_TYPE),
 	}),
 	note: text("note"),
 	digipin: text("digipin"),
@@ -135,21 +118,7 @@ export const communityRelation = sqliteTable(
 		}),
 		type: text("type", {
 			mode: "text",
-			enum: [
-				COMMUNITY_RELATION_TYPE.brother,
-				COMMUNITY_RELATION_TYPE.brother_in_law,
-				COMMUNITY_RELATION_TYPE.child,
-				COMMUNITY_RELATION_TYPE.father,
-				COMMUNITY_RELATION_TYPE.father_in_law,
-				COMMUNITY_RELATION_TYPE.mother,
-				COMMUNITY_RELATION_TYPE.mother_in_law,
-				COMMUNITY_RELATION_TYPE.sister,
-				COMMUNITY_RELATION_TYPE.sister_in_law,
-				COMMUNITY_RELATION_TYPE.wife,
-				COMMUNITY_RELATION_TYPE.husband,
-				COMMUNITY_RELATION_TYPE.uncle,
-				COMMUNITY_RELATION_TYPE.aunt,
-			],
+			enum: enumValues(COMMUNITY_RELATION_TYPE),
 		}),
 		note: text("note"),
 		bloodRelation: integer({ mode: "boolean" }).default(false),

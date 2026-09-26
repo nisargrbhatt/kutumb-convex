@@ -14,9 +14,14 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { COMMUNITY_PROFILE_BLOOD_GROUP, GENDERS } from "@/db/constants";
+import {
+	communityProfileFormSchema,
+	toFormValues,
+	toInput,
+	type CommunityProfileFormValues,
+} from "@/domain/communityProfile";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -75,68 +80,21 @@ function PageHeader() {
 	);
 }
 
-const communityProfileSchema = z.object({
-	firstName: z.string().min(1, "First name is required"),
-	middleName: z.string().optional(),
-	lastName: z.string().min(1, "Last name is required"),
-	nickName: z.string().optional(),
-	gender: z.enum([GENDERS.male, GENDERS.female, GENDERS.other]).optional(),
-	email: z.email().optional(),
-	bloodGroup: z
-		.enum([
-			COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
-		])
-		.optional(),
-	mobileNumber: z.string().optional(),
-	dateOfBirth: z.date().optional(),
-	dateOfDeath: z.date().optional(),
-	customFieldData: z.record(z.string(), z.any()).optional(),
-});
-
-type CommunityProfileFormValues = z.infer<typeof communityProfileSchema>;
-
 function CommunityProfileForm({
 	defaultValues,
 	customFields,
 }: {
-	defaultValues?: CommunityProfileFormValues;
+	defaultValues: CommunityProfileFormValues;
 	customFields: CustomField[];
 }) {
 	const form = useForm<CommunityProfileFormValues>({
-		resolver: zodResolver(communityProfileSchema),
+		resolver: zodResolver(communityProfileFormSchema),
 		defaultValues: defaultValues,
 	});
 	const queryClient = useQueryClient();
 
 	const onSubmit = form.handleSubmit(async (data) => {
-		const result = await safeAsync(
-			upsertMyCommunityProfile({
-				data: {
-					firstName: data.firstName,
-					lastName: data.lastName,
-					middleName:
-						data?.middleName && data?.middleName?.length > 0 ? data?.middleName : undefined,
-					nickName: data?.nickName && data?.nickName?.length > 0 ? data?.nickName : undefined,
-					gender: data?.gender && data?.gender?.length > 0 ? data?.gender : undefined,
-					email: data?.email && data?.email?.length > 0 ? data?.email : undefined,
-					bloodGroup:
-						data?.bloodGroup && data?.bloodGroup?.length > 0 ? data?.bloodGroup : undefined,
-					mobileNumber:
-						data?.mobileNumber && data?.mobileNumber?.length > 0 ? data?.mobileNumber : undefined,
-					dateOfBirth: data?.dateOfBirth ? data?.dateOfBirth?.toJSON() : undefined,
-					dateOfDeath: data?.dateOfDeath ? data?.dateOfDeath?.toJSON() : undefined,
-					customFieldData:
-						Object.keys(data?.customFieldData ?? {}).length > 0 ? data?.customFieldData : undefined,
-				},
-			})
-		);
+		const result = await safeAsync(upsertMyCommunityProfile({ data: toInput(data) }));
 
 		if (!result.success) {
 			console.error(result.error);
@@ -339,28 +297,7 @@ function RouteComponent() {
 
 			<CommunityProfileForm
 				customFields={customFieldsResponse?.data ?? []}
-				defaultValues={
-					data
-						? {
-								firstName: data.firstName,
-								lastName: data.lastName,
-								middleName: data.middleName ?? undefined,
-								nickName: data.nickName ?? undefined,
-								email: data.email ?? undefined,
-								mobileNumber: data.mobileNumber ?? undefined,
-								dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
-								dateOfDeath: data.dateOfDeath ? new Date(data.dateOfDeath) : undefined,
-								gender: data.gender as any,
-								bloodGroup: data.bloodGroup as any,
-								customFieldData: data.customFieldData as Record<string, any> | undefined,
-							}
-						: {
-								firstName: "",
-								lastName: "",
-								gender: "male",
-								email: session?.user?.email ?? "",
-							}
-				}
+				defaultValues={toFormValues(data, { gender: "male", email: session?.user?.email ?? "" })}
 			/>
 		</div>
 	);

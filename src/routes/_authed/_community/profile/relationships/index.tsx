@@ -42,6 +42,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { COMMUNITY_RELATION_TYPE } from "@/db/constants";
+import { formatRelationType, relationTypeSchema } from "@/domain/relation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -86,21 +87,7 @@ function PageHeader() {
 }
 
 const relationshipFormSchema = z.object({
-	type: z.enum([
-		COMMUNITY_RELATION_TYPE.brother,
-		COMMUNITY_RELATION_TYPE.brother_in_law,
-		COMMUNITY_RELATION_TYPE.child,
-		COMMUNITY_RELATION_TYPE.father,
-		COMMUNITY_RELATION_TYPE.father_in_law,
-		COMMUNITY_RELATION_TYPE.mother,
-		COMMUNITY_RELATION_TYPE.mother_in_law,
-		COMMUNITY_RELATION_TYPE.sister,
-		COMMUNITY_RELATION_TYPE.sister_in_law,
-		COMMUNITY_RELATION_TYPE.wife,
-		COMMUNITY_RELATION_TYPE.husband,
-		COMMUNITY_RELATION_TYPE.uncle,
-		COMMUNITY_RELATION_TYPE.aunt,
-	]),
+	type: relationTypeSchema,
 	toId: z.string().min(1, "Target profile is required"),
 	note: z.string().optional(),
 	bloodRelation: z.boolean().default(false).optional(),
@@ -159,7 +146,7 @@ function RouteComponent() {
 										<ItemHeader>
 											<ItemTitle>
 												<div className="flex flex-col items-start gap-1">
-													<span className="capitalize">{(rel.type || "").replace(/_/g, " ")}</span>
+													<span className="capitalize">{formatRelationType(rel.type)}</span>
 													{rel.bloodRelation && (
 														<span className="text-xs font-medium text-destructive">
 															Blood Relation
@@ -313,7 +300,7 @@ function RelationshipFormModal({
 												<SelectContent>
 													{Object.values(COMMUNITY_RELATION_TYPE).map((type) => (
 														<SelectItem key={type} value={type} className="capitalize">
-															{type.replace(/_/g, " ")}
+															{formatRelationType(type)}
 														</SelectItem>
 													))}
 												</SelectContent>

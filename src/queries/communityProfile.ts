@@ -1,3 +1,4 @@
+import type { MemberFilter } from "@/domain/communityProfile";
 import { queryOptions } from "@tanstack/react-query";
 import {
 	getActiveMemberCount,
@@ -47,35 +48,10 @@ export const getActiveProfilesForRelationQuery = (subjectId: string) =>
 		},
 	});
 
-export const getCommunityMembersQuery = (props: {
-	search?: string;
-	status?: string;
-	gender?: string;
-	page?: number;
-	pageSize?: number;
-}) =>
+export const getCommunityMembersQuery = (filter: MemberFilter) =>
 	queryOptions({
-		queryKey: [
-			"get-community-members",
-
-			props.search ?? "",
-			props.status ?? "",
-			props.gender ?? "",
-			props.page ?? 1,
-			props.pageSize ?? 10,
-		],
-		queryFn: async () => {
-			const result = await getCommunityMembers({
-				data: {
-					search: props.search,
-					status: props.status as "active" | "inactive" | "draft" | undefined,
-					gender: props.gender as "male" | "female" | "other" | undefined,
-					page: props.page ?? 1,
-					pageSize: props.pageSize ?? 10,
-				},
-			});
-			return result;
-		},
+		queryKey: ["get-community-members", filter],
+		queryFn: () => getCommunityMembers({ data: filter }),
 	});
 
 export const getFocusedCommunityGraphQuery = (props?: { focusId?: string; depth?: number }) =>
