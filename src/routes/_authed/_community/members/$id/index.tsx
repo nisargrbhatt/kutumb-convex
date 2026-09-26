@@ -1,5 +1,4 @@
-import { ProfileAvatar } from "@/components/profile/ProfileName";
-import { ProfileStatusBadge } from "@/components/profile/ProfileStatusBadge";
+import { ProfileIdentityHeader } from "@/components/profile/ProfileIdentityHeader";
 import { ProfileInfoView } from "@/components/profile/ProfileInfoView";
 import { FormDrawer } from "@/components/ui/form-drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -24,7 +23,7 @@ import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Mail, Phone, User, CheckIcon, XIcon, BadgeCheckIcon } from "lucide-react";
+import { MapPin, User, CheckIcon, XIcon, BadgeCheckIcon } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -330,45 +329,11 @@ function RouteComponent() {
 			<PageHeader crumbs={[{ label: "Members", to: "/members" }, { label: name }]} />
 
 			<div className="flex w-full flex-col gap-6 pb-12">
-				{/* Identity header */}
-				<div className="flex flex-col justify-between gap-4 rounded-lg border p-6 sm:flex-row sm:items-center">
-					<div className="flex items-center gap-4">
-						<ProfileAvatar
-							profile={profile}
-							className="size-16 sm:size-20"
-							fallbackClassName="text-xl"
-						/>
-
-						<div className="flex min-w-0 flex-col gap-1.5">
-							<div className="flex flex-wrap items-center gap-2">
-								<h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{name}</h1>
-								<ProfileStatusBadge status={profile.status} />
-							</div>
-							{profile.nickName && (
-								<p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-									<User className="size-4" />"{profile.nickName}"
-								</p>
-							)}
-							{(profile.email || profile.mobileNumber) && (
-								<div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-									{profile.email && (
-										<span className="flex items-center gap-1.5">
-											<Mail className="size-3.5" />
-											{profile.email}
-										</span>
-									)}
-									{profile.mobileNumber && (
-										<span className="flex items-center gap-1.5">
-											<Phone className="size-3.5" />
-											{profile.mobileNumber}
-										</span>
-									)}
-								</div>
-							)}
-						</div>
-					</div>
-					{showActionBlock ? <MemberActions /> : null}
-				</div>
+				<ProfileIdentityHeader
+					profile={profile}
+					headingLevel="h1"
+					actions={showActionBlock ? <MemberActions /> : null}
+				/>
 
 				<ProfileInfoView profile={profile} customFieldDefs={customFieldDefs} />
 
