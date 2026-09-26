@@ -1,18 +1,12 @@
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { getActiveMemberCountQuery, getMyCommunityProfileQuery } from "@/queries/communityProfile";
 import { getMyCommunityAddressesQuery } from "@/queries/communityAddress";
 import {
 	getMyIncomingRelationCountQuery,
 	getMyOutgoingRelationCountQuery,
 } from "@/queries/communityRelation";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbList,
-	BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
 import { CtaCard } from "@/components/dashboard/CtaCard";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -30,21 +24,6 @@ export const Route = createFileRoute("/_authed/_community/dashboard/")({
 	},
 	component: RouteComponent,
 });
-
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbPage>Home</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
 
 function RouteComponent() {
 	const { data: activeOrg } = authClient.useActiveOrganization();

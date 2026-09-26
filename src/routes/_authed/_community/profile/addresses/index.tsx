@@ -1,28 +1,10 @@
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { addMyCommunityAddress, deleteMyCommunityAddress } from "@/server/communityAddress";
 import { getMyCommunityAddressesQuery } from "@/queries/communityAddress";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import {
-	Form,
 	FormControl,
 	FormDescription,
 	FormField,
@@ -38,7 +20,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
 	Table,
 	TableBody,
@@ -65,29 +46,6 @@ export const Route = createFileRoute("/_authed/_community/profile/addresses/")({
 	component: RouteComponent,
 });
 
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/profile/info"} />}>Profile</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Addresses</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
-
 const addressFormSchema = z.object({
 	line1: z.string().min(1, "Line 1 is required"),
 	line2: z.string().optional(),
@@ -109,20 +67,15 @@ function RouteComponent() {
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
-			<PageHeader />
+			<PageHeader
+				crumbs={[{ label: "Profile", to: "/profile/info" }, { label: "Addresses" }]}
+				title="Addresses"
+				description="Manage your residential, work, and other addresses."
+				actions={<AddressFormDrawer open={isAddOpen} onOpenChange={setIsAddOpen} />}
+			/>
 
-			<div className="flex w-full flex-col gap-6 pt-4">
-				<div className="flex items-center justify-between">
-					<div>
-						<h2 className="text-lg font-medium">Addresses</h2>
-						<p className="text-sm text-muted-foreground">
-							Manage your residential, work, and other addresses.
-						</p>
-					</div>
-					<AddressFormModal open={isAddOpen} onOpenChange={setIsAddOpen} />
-				</div>
-
-				<div className="rounded-lg border">
+			<div className="flex w-full flex-col gap-6">
+				<div className="w-full overflow-x-auto rounded-lg border">
 					<Table>
 						<TableHeader>
 							<TableRow>
@@ -209,37 +162,25 @@ function DeleteAddressDialog({ id }: { id: string }) {
 	});
 
 	return (
-		<AlertDialog open={open} onOpenChange={setOpen}>
-			<AlertDialogTrigger render={<Button variant="destructive" size="icon-sm" />}>
-				<Trash2 className="size-4" />
-				<span className="sr-only">Delete address</span>
-			</AlertDialogTrigger>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>Delete address?</AlertDialogTitle>
-					<AlertDialogDescription>
-						This will permanently delete this address. This action cannot be undone.
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-					<AlertDialogAction
-						variant="destructive"
-						disabled={isDeleting}
-						onClick={(e) => {
-							e.preventDefault();
-							deleteAddress({ data: { id } });
-						}}
-					>
-						{isDeleting ? "Deleting..." : "Delete"}
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+		<ConfirmDialog
+			open={open}
+			onOpenChange={setOpen}
+			trigger={
+				<Button variant="destructive" size="icon-sm" aria-label="Delete address">
+					<Trash2 className="size-4" />
+				</Button>
+			}
+			title="Delete address?"
+			description="This will permanently delete this address. This action cannot be undone."
+			confirmLabel="Delete"
+			destructive
+			onConfirm={() => deleteAddress({ data: { id } })}
+			isPending={isDeleting}
+		/>
 	);
 }
 
-function AddressFormModal({
+function AddressFormDrawer({
 	open,
 	onOpenChange,
 }: {
@@ -276,180 +217,167 @@ function AddressFormModal({
 		},
 	});
 
-	function onSubmit(values: z.infer<typeof addressFormSchema>) {
-		addAddress({
-			data: values,
-		});
-	}
+	const onSubmit = (values: z.infer<typeof addressFormSchema>) => addAddress({ data: values });
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogTrigger render={<Button size="sm" />}>
-				<MapPin className="size-4" />
-				Add Address
-			</DialogTrigger>
-			<DialogContent className="h-[90vh] max-w-2xl overflow-y-auto sm:max-w-[700px] md:h-auto">
-				<div className="flex flex-col space-y-1.5 p-6 pb-2">
-					<h2 className="text-2xl leading-none font-semibold tracking-tight">Address form</h2>
-					<p className="text-sm text-muted-foreground">Add your home, work or other address</p>
-				</div>
-				<div className="p-6 pt-0">
-					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-							<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-								<FormField
-									control={form.control}
-									name="type"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Type</FormLabel>
-											<Select onValueChange={field.onChange} defaultValue={field.value}>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select type" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{Object.values(COMMUNITY_ADDRESS_TYPE).map((type) => (
-														<SelectItem key={type} value={type} className="capitalize">
-															{type}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="line1"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Line1</FormLabel>
-											<FormControl>
-												<Input placeholder="Line 1" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="line2"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Line2</FormLabel>
-											<FormControl>
-												<Input placeholder="Line 2" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="country"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Country</FormLabel>
-											<FormControl>
-												<Input placeholder="Country" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="state"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>State</FormLabel>
-											<FormControl>
-												<Input placeholder="State" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="city"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>City</FormLabel>
-											<FormControl>
-												<Input placeholder="City" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="postalCode"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Postal Code</FormLabel>
-											<FormControl>
-												<Input placeholder="Postal Code" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="digipin"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Digipin</FormLabel>
-											<FormControl>
-												<Input placeholder="Digipin" {...field} />
-											</FormControl>
-											<FormDescription>
-												Get your Digipin{" "}
-												<a
-													href="https://dac.indiapost.gov.in/mydigipin/home"
-													target="_blank"
-													rel="noreferrer"
-													className="underline transition-colors hover:text-primary"
-												>
-													here
-												</a>
-											</FormDescription>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="note"
-									render={({ field }) => (
-										<FormItem className="col-span-1 md:col-span-2">
-											<FormLabel>Note</FormLabel>
-											<FormControl>
-												<Textarea placeholder="Note" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<div className="flex justify-end gap-2 pt-4">
-								<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-									Cancel
-								</Button>
-								<Button type="submit" disabled={isPending}>
-									{isPending ? "Adding..." : "Add address"}
-								</Button>
-							</div>
-						</form>
-					</Form>
-				</div>
-			</DialogContent>
-		</Dialog>
+		<FormDrawer
+			open={open}
+			onOpenChange={onOpenChange}
+			trigger={
+				<Button size="sm">
+					<MapPin className="size-4" />
+					Add Address
+				</Button>
+			}
+			title="Add address"
+			description="Add your home, work or other address."
+			form={form}
+			onSubmit={onSubmit}
+			submitLabel="Add address"
+			isPending={isPending}
+			size="lg"
+		>
+			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+				<FormField
+					control={form.control}
+					name="type"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Type</FormLabel>
+							<Select onValueChange={field.onChange} defaultValue={field.value}>
+								<FormControl>
+									<SelectTrigger>
+										<SelectValue placeholder="Select type" />
+									</SelectTrigger>
+								</FormControl>
+								<SelectContent>
+									{Object.values(COMMUNITY_ADDRESS_TYPE).map((type) => (
+										<SelectItem key={type} value={type} className="capitalize">
+											{type}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="line1"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Line1</FormLabel>
+							<FormControl>
+								<Input placeholder="Line 1" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="line2"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Line2</FormLabel>
+							<FormControl>
+								<Input placeholder="Line 2" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="country"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Country</FormLabel>
+							<FormControl>
+								<Input placeholder="Country" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="state"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>State</FormLabel>
+							<FormControl>
+								<Input placeholder="State" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="city"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>City</FormLabel>
+							<FormControl>
+								<Input placeholder="City" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="postalCode"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Postal Code</FormLabel>
+							<FormControl>
+								<Input placeholder="Postal Code" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="digipin"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Digipin</FormLabel>
+							<FormControl>
+								<Input placeholder="Digipin" {...field} />
+							</FormControl>
+							<FormDescription>
+								Get your Digipin{" "}
+								<a
+									href="https://dac.indiapost.gov.in/mydigipin/home"
+									target="_blank"
+									rel="noreferrer"
+									className="underline transition-colors hover:text-primary"
+								>
+									here
+								</a>
+							</FormDescription>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="note"
+					render={({ field }) => (
+						<FormItem className="col-span-1 md:col-span-2">
+							<FormLabel>Note</FormLabel>
+							<FormControl>
+								<Textarea placeholder="Note" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+			</div>
+		</FormDrawer>
 	);
 }

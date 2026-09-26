@@ -1,33 +1,9 @@
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { addOrganizationCustomField, deleteOrganizationCustomField } from "@/server/fields";
 import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -36,16 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetFooter,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import {
 	Table,
 	TableBody,
@@ -70,31 +37,6 @@ export const Route = createFileRoute("/_authed/_community/settings/fields/")({
 		await context.queryClient.ensureQueryData(getOrganizationCustomFieldsQuery());
 	},
 });
-
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/settings/overview"} />}>
-							Settings
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Fields</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
 
 const addFieldSchema = z.object({
 	label: z.string().min(1, "Label is required"),
@@ -132,74 +74,63 @@ function AddFieldDrawer() {
 		},
 	});
 
-	const onSubmit = form.handleSubmit((values) => {
-		addField({ data: values });
-	});
+	const onSubmit = (values: z.infer<typeof addFieldSchema>) => addField({ data: values });
 
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger render={<Button size="sm" />}>
-				<Plus className="size-4" />
-				Add Field
-			</SheetTrigger>
-			<SheetContent side="right" className="overflow-y-auto">
-				<SheetHeader>
-					<SheetTitle>Add New Field</SheetTitle>
-					<SheetDescription>
-						Add an extra field captured on every community profile.
-					</SheetDescription>
-				</SheetHeader>
-				<Form {...form}>
-					<form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-6">
-						<FormField
-							control={form.control}
-							name="label"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Label</FormLabel>
-									<FormControl>
-										<Input placeholder="e.g. Birthdate" {...field} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="type"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Type</FormLabel>
-									<Select onValueChange={field.onChange} defaultValue={field.value}>
-										<FormControl>
-											<SelectTrigger>
-												<SelectValue placeholder="Select a type" />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											{Object.values(CUSTOM_FIELD_TYPE).map((type) => (
-												<SelectItem key={type} value={type} className="capitalize">
-													{type}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<SheetFooter className="px-0">
-							<Button type="submit" disabled={isPending}>
-								{isPending ? "Adding..." : "Add Field"}
-							</Button>
-							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
-								Cancel
-							</Button>
-						</SheetFooter>
-					</form>
-				</Form>
-			</SheetContent>
-		</Sheet>
+		<FormDrawer
+			open={open}
+			onOpenChange={setOpen}
+			trigger={
+				<Button size="sm">
+					<Plus className="size-4" />
+					Add Field
+				</Button>
+			}
+			title="Add New Field"
+			description="Add an extra field captured on every community profile."
+			form={form}
+			onSubmit={onSubmit}
+			submitLabel="Add Field"
+			isPending={isPending}
+		>
+			<FormField
+				control={form.control}
+				name="label"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel>Label</FormLabel>
+						<FormControl>
+							<Input placeholder="e.g. Birthdate" {...field} />
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+			<FormField
+				control={form.control}
+				name="type"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel>Type</FormLabel>
+						<Select onValueChange={field.onChange} defaultValue={field.value}>
+							<FormControl>
+								<SelectTrigger>
+									<SelectValue placeholder="Select a type" />
+								</SelectTrigger>
+							</FormControl>
+							<SelectContent>
+								{Object.values(CUSTOM_FIELD_TYPE).map((type) => (
+									<SelectItem key={type} value={type} className="capitalize">
+										{type}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+		</FormDrawer>
 	);
 }
 
@@ -221,33 +152,21 @@ function DeleteFieldDialog({ id }: { id: string }) {
 	});
 
 	return (
-		<AlertDialog open={open} onOpenChange={setOpen}>
-			<AlertDialogTrigger render={<Button variant="destructive" size="icon-sm" />}>
-				<Trash2 className="size-4" />
-				<span className="sr-only">Delete field</span>
-			</AlertDialogTrigger>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>Delete field?</AlertDialogTitle>
-					<AlertDialogDescription>
-						This will permanently delete this field. This action cannot be undone.
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-					<AlertDialogAction
-						variant="destructive"
-						disabled={isDeleting}
-						onClick={(e) => {
-							e.preventDefault();
-							deleteField({ data: { fieldId: id } });
-						}}
-					>
-						{isDeleting ? "Deleting..." : "Delete"}
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+		<ConfirmDialog
+			open={open}
+			onOpenChange={setOpen}
+			trigger={
+				<Button variant="destructive" size="icon-sm" aria-label="Delete field">
+					<Trash2 className="size-4" />
+				</Button>
+			}
+			title="Delete field?"
+			description="This will permanently delete this field. This action cannot be undone."
+			confirmLabel="Delete"
+			destructive
+			onConfirm={() => deleteField({ data: { fieldId: id } })}
+			isPending={isDeleting}
+		/>
 	);
 }
 
@@ -295,16 +214,12 @@ function FieldsTable() {
 function RouteComponent() {
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
-			<PageHeader />
-			<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h2 className="text-lg font-medium">Custom Fields</h2>
-					<p className="text-sm text-muted-foreground">
-						Manage the extra fields captured on every community member's profile.
-					</p>
-				</div>
-				<AddFieldDrawer />
-			</div>
+			<PageHeader
+				crumbs={[{ label: "Settings", to: "/settings/overview" }, { label: "Fields" }]}
+				title="Custom Fields"
+				description="Manage the extra fields captured on every community member's profile."
+				actions={<AddFieldDrawer />}
+			/>
 			<FieldsTable />
 		</div>
 	);

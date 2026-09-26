@@ -1,17 +1,9 @@
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
 import { getOrgUsageQuery } from "@/queries/organization";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { safeAsync } from "@/lib/safe";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { COMMUNITY_PROFILE_BLOOD_GROUP, GENDERS } from "@/db/constants";
 import {
 	communityProfileFormSchema,
@@ -50,29 +42,6 @@ export const Route = createFileRoute("/_authed/_community/members/create/")({
 		await safeAsync(context.queryClient.ensureQueryData(getOrganizationCustomFieldsQuery()));
 	},
 });
-
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/members"} />}>Members</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Create</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
 
 function CommunityProfileForm({ customFields }: { customFields: CustomField[] }) {
 	const navigate = Route.useNavigate();
@@ -289,15 +258,11 @@ function RouteComponent() {
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
-			<PageHeader />
-			<div className="flex flex-col items-start justify-start gap-1">
-				<h1 className="text-2xl font-semibold">Add a missing Member's Profile</h1>
-				<p className="text-sm text-muted-foreground">
-					Add a missing member's profile to the community. This profile will be added as a Draft
-					Record and will be visible to all members of the community. Owner/Admin will
-					approve/reject the profile based on the information's correctness.
-				</p>
-			</div>
+			<PageHeader
+				crumbs={[{ label: "Members", to: "/members" }, { label: "Create" }]}
+				title="Add a missing Member's Profile"
+				description="Add a missing member's profile to the community. This profile will be added as a Draft Record and will be visible to all members of the community. Owner/Admin will approve/reject the profile based on the information's correctness."
+			/>
 			{!isLoading && customFieldsResponse ? (
 				<CommunityProfileForm customFields={customFieldsResponse?.data ?? []} />
 			) : null}
