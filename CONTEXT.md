@@ -56,3 +56,23 @@ The maximum size of one organization. Fixed at 1000, applied separately to **Org
 role, with a **pending invitation reserving a slot**) and to **Community Profiles** (any status,
 linked or userless). Reaching it blocks inviting a new Org Member or creating a new Community
 Profile respectively. There is no exemption for an Org Member creating their own Community Profile.
+
+## Actor
+
+The subject of any action against a community: an Org Member identified by their user, the
+organization they are acting in, and their role there. Every read or write of community data is
+performed by exactly one Actor. Today an Actor comes from a signed-in session; in future it may come
+from an API token carrying the same three facts. _Avoid_: "current user", "session user".
+
+## Custom Field Definition
+
+An organization-level declaration of an extra attribute every Community Profile in that community
+may carry: a label and a type (`text | number | date | boolean`). Identified by a stable id — the
+label is display text and may change. _Avoid_: "custom field" alone when the definition (not the
+value) is meant.
+
+## Custom Field Value
+
+The value one Community Profile holds for one Custom Field Definition. Keyed by the definition's id,
+never by its label, so renaming a definition does not orphan values. A definition with no value on a
+profile is simply absent.
