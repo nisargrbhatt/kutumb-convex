@@ -313,7 +313,7 @@ function MemberActions() {
 }
 
 function RouteComponent() {
-	const { profile, addresses, customFields, outgoingRelations, incomingRelations } =
+	const { profile, addresses, customFieldDefs, outgoingRelations, incomingRelations } =
 		Route.useLoaderData();
 	const canApprove = useCan({ communityProfile: ["approve"] });
 	const canManageProfileRelations = useCan({ communityProfile: ["manageRelations"] });
@@ -370,10 +370,7 @@ function RouteComponent() {
 					{showActionBlock ? <MemberActions /> : null}
 				</div>
 
-				<ProfileInfoView
-					profile={profile}
-					customFieldDefs={customFields.map((label) => ({ label }))}
-				/>
+				<ProfileInfoView profile={profile} customFieldDefs={customFieldDefs} />
 
 				{/* Addresses */}
 				<div className="flex flex-col gap-3">

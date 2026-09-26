@@ -2,6 +2,8 @@ import { format } from "date-fns";
 import { Building, Calendar, Droplet, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoItem } from "@/components/profile/InfoItem";
+import { CustomFieldValue } from "@/components/custom-fields/CustomFieldValue";
+import { valuesForDefs, type CustomFieldDefinition } from "@/domain/customFields";
 
 type InfoProfile = {
 	dateOfBirth: string | null;
@@ -12,20 +14,14 @@ type InfoProfile = {
 	customFieldData: Record<string, unknown> | null;
 };
 
-// Label-keyed until custom fields move to id keys (issue 05).
-type CustomFieldDef = { label: string };
-
 const formatDate = (value: string | null) => (value ? format(new Date(value), "PPP") : "-");
-
-const formatCustomValue = (value: unknown) =>
-	value === undefined || value === null || value === "" ? "-" : String(value);
 
 export function ProfileInfoView({
 	profile,
 	customFieldDefs,
 }: {
 	profile: InfoProfile;
-	customFieldDefs: CustomFieldDef[];
+	customFieldDefs: CustomFieldDefinition[];
 }) {
 	return (
 		<>
@@ -78,11 +74,11 @@ export function ProfileInfoView({
 					</CardHeader>
 					<CardContent className="p-6">
 						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-							{customFieldDefs.map((def) => (
+							{valuesForDefs(customFieldDefs, profile.customFieldData).map(({ def, value }) => (
 								<InfoItem
-									key={def.label}
+									key={def.id}
 									label={def.label}
-									value={formatCustomValue(profile.customFieldData?.[def.label])}
+									value={<CustomFieldValue def={def} value={value} />}
 								/>
 							))}
 						</div>

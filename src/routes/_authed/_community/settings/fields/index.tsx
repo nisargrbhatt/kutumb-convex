@@ -171,9 +171,7 @@ function DeleteFieldDialog({ id }: { id: string }) {
 }
 
 function FieldsTable() {
-	const { data } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
-
-	const fields = data?.data ?? [];
+	const { data: fields } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
 
 	return (
 		<div className="w-full overflow-x-auto rounded-lg border">

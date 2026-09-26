@@ -18,6 +18,7 @@ import { LIMIT_COPY, LimitError } from "@/domain/limits";
 import { limits } from "@/lib/limits";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
+import type { CustomFieldDefinition } from "@/domain/customFields";
 import { communityProfileInput, memberFilterSchema } from "@/domain/communityProfile";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
@@ -281,11 +282,9 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 			},
 		});
 
-		const customFields = await db.query.communityProfileCustomField.findMany({
+		const customFieldDefs = await db.query.communityProfileCustomField.findMany({
 			where: (fields, ops) => ops.eq(fields.organizationId, organizationId),
-			columns: {
-				label: true,
-			},
+			columns: { id: true, label: true, type: true },
 		});
 
 		const counterpartColumns = {
@@ -317,7 +316,7 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 		return {
 			profile: foundProfile,
 			addresses: profileAddresses,
-			customFields: customFields?.map((i) => i.label),
+			customFieldDefs: customFieldDefs satisfies CustomFieldDefinition[],
 			outgoingRelations,
 			incomingRelations,
 		};
