@@ -16,8 +16,8 @@ export function getPostHogClient() {
 
 export function captureLimitReached(props: {
 	limit: "org" | "member" | "profile";
-	organizationId: string;
-	userId: string;
+	organizationId?: string;
+	userId?: string;
 }) {
 	try {
 		getPostHogClient().capture({

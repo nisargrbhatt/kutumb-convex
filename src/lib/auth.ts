@@ -12,16 +12,8 @@ import VerifyEmail from "@/emails/VerifyEmail";
 import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
 import { EMAIL_CONFIG } from "./common";
 import { createKvRateLimitStorage } from "./rate-limit-kv";
-import {
-	ORG_LIMIT,
-	MEMBER_LIMIT,
-	LIMIT_ERROR_CODES,
-	LIMIT_COPY,
-	canJoinOrganization,
-	canInviteMember,
-} from "./limits";
-import { countUserMemberships, countOrgMembersAndPending } from "./limits-db";
-import { captureLimitReached } from "./posthog-server";
+import { ORG_LIMIT, MEMBER_LIMIT, LIMIT_COPY, LimitError } from "@/domain/limits";
+import { limits } from "./limits";
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -40,32 +32,30 @@ export const auth = betterAuth({
 			membershipLimit: MEMBER_LIMIT,
 			invitationLimit: MEMBER_LIMIT,
 			organizationHooks: {
-				beforeAcceptInvitation: async ({ user, invitation }) => {
-					const n = await countUserMemberships(user.id);
-					if (!canJoinOrganization(n)) {
-						captureLimitReached({
-							limit: "org",
-							organizationId: invitation.organizationId,
-							userId: user.id,
-						});
-						throw new APIError("FORBIDDEN", {
-							code: LIMIT_ERROR_CODES.org,
-							message: LIMIT_COPY.orgAccept.description,
-						});
+				beforeAcceptInvitation: async ({ user }) => {
+					try {
+						await limits.assertOrgSlot(user.id);
+					} catch (e) {
+						if (e instanceof LimitError) {
+							throw new APIError("FORBIDDEN", {
+								code: e.code,
+								message: LIMIT_COPY.orgAccept.description,
+							});
+						}
+						throw e;
 					}
 				},
-				beforeCreateInvitation: async ({ organization, inviter }) => {
-					const n = await countOrgMembersAndPending(organization.id);
-					if (!canInviteMember(n)) {
-						captureLimitReached({
-							limit: "member",
-							organizationId: organization.id,
-							userId: inviter.id,
-						});
-						throw new APIError("FORBIDDEN", {
-							code: LIMIT_ERROR_CODES.member,
-							message: LIMIT_COPY.memberInvite.description,
-						});
+				beforeCreateInvitation: async ({ organization }) => {
+					try {
+						await limits.assertMemberSlot(organization.id);
+					} catch (e) {
+						if (e instanceof LimitError) {
+							throw new APIError("FORBIDDEN", {
+								code: e.code,
+								message: LIMIT_COPY.memberInvite.description,
+							});
+						}
+						throw e;
 					}
 				},
 			},

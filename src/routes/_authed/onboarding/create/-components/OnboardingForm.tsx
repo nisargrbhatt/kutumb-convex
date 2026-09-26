@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { Link, useRouter } from "@tanstack/react-router";
 import { usePostHog } from "@posthog/react";
 import type { ReactNode } from "react";
-import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/lib/limits";
+import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/domain/limits";
 
 const formSchema = z.object({
 	name: z
