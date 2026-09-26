@@ -31,7 +31,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { CustomFieldsForm, type CustomField } from "@/components/CustomFieldsForm";
+import { CustomFieldsSection } from "@/components/custom-fields/CustomFieldsSection";
+import type { CustomFieldDefinition } from "@/domain/customFields";
 import { addMissingMember } from "@/server/communityProfile";
 import { toast } from "sonner";
 import { usePostHog } from "@posthog/react";
@@ -43,7 +44,7 @@ export const Route = createFileRoute("/_authed/_community/members/create/")({
 	},
 });
 
-function CommunityProfileForm({ customFields }: { customFields: CustomField[] }) {
+function CommunityProfileForm({ customFields }: { customFields: CustomFieldDefinition[] }) {
 	const navigate = Route.useNavigate();
 	const posthog = usePostHog();
 	const queryClient = useQueryClient();
@@ -238,12 +239,7 @@ function CommunityProfileForm({ customFields }: { customFields: CustomField[] })
 					/>
 				</div>
 
-				{customFields && customFields.length > 0 && (
-					<>
-						<div className="my-2 border-t" />
-						<CustomFieldsForm customFields={customFields} />
-					</>
-				)}
+				<CustomFieldsSection defs={customFields} />
 
 				<Button type="submit" disabled={form.formState.isSubmitting}>
 					Submit
@@ -254,7 +250,7 @@ function CommunityProfileForm({ customFields }: { customFields: CustomField[] })
 }
 
 function RouteComponent() {
-	const { data: customFieldsResponse, isLoading } = useQuery(getOrganizationCustomFieldsQuery());
+	const { data: customFieldDefs, isLoading } = useQuery(getOrganizationCustomFieldsQuery());
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
@@ -263,8 +259,8 @@ function RouteComponent() {
 				title="Add a missing Member's Profile"
 				description="Add a missing member's profile to the community. This profile will be added as a Draft Record and will be visible to all members of the community. Owner/Admin will approve/reject the profile based on the information's correctness."
 			/>
-			{!isLoading && customFieldsResponse ? (
-				<CommunityProfileForm customFields={customFieldsResponse?.data ?? []} />
+			{!isLoading && customFieldDefs ? (
+				<CommunityProfileForm customFields={customFieldDefs} />
 			) : null}
 		</div>
 	);

@@ -10,6 +10,7 @@ import {
 } from "./constants";
 import { relations } from "drizzle-orm";
 import { organization, user } from "./auth-schema";
+import type { CustomFieldValues } from "@/domain/customFields";
 
 export const communityProfileCustomField = sqliteTable("communityProfileCustomField", {
 	id: text("id").primaryKey(),
@@ -60,7 +61,7 @@ export const communityProfile = sqliteTable(
 				onDelete: "cascade",
 			})
 			.notNull(),
-		customFieldData: blob({ mode: "json" }).$type<Record<string, any>>(),
+		customFieldData: blob({ mode: "json" }).$type<CustomFieldValues>(),
 	},
 	(table) => [index("communityProfile_org_status_idx").on(table.organizationId, table.status)]
 );

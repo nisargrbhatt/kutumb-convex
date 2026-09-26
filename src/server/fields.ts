@@ -1,5 +1,4 @@
 import { db } from "@/db";
-import { CUSTOM_FIELD_TYPE } from "@/db/constants";
 import { communityProfileCustomField } from "@/db/app-schema";
 import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
@@ -7,38 +6,25 @@ import { and, eq } from "drizzle-orm";
 import * as z from "zod";
 import { generatePrimaryKey } from "@/lib/generate";
 import { assertCan } from "@/domain/permission";
+import { customFieldTypeSchema, type CustomFieldDefinition } from "@/domain/customFields";
 
 export const getOrganizationCustomFields = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
-	.handler(async ({ context }) => {
-		const { organizationId } = context.actor;
-
-		const customFields = await db.query.communityProfileCustomField.findMany({
-			where: (fields, operators) => operators.eq(fields.organizationId, organizationId),
-			columns: {
-				id: true,
-				label: true,
-				type: true,
-			},
-		});
-
-		return {
-			message: "Custom fields retrieved successfully",
-			data: customFields,
-		};
-	});
+	.handler(
+		async ({ context }): Promise<CustomFieldDefinition[]> =>
+			db.query.communityProfileCustomField.findMany({
+				where: (fields, operators) =>
+					operators.eq(fields.organizationId, context.actor.organizationId),
+				columns: { id: true, label: true, type: true },
+			})
+	);
 
 export const addOrganizationCustomField = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
 	.validator(
 		z.object({
 			label: z.string().min(1, "Label is required"),
-			type: z.enum([
-				CUSTOM_FIELD_TYPE.text,
-				CUSTOM_FIELD_TYPE.number,
-				CUSTOM_FIELD_TYPE.date,
-				CUSTOM_FIELD_TYPE.boolean,
-			]),
+			type: customFieldTypeSchema,
 		})
 	)
 	.handler(async ({ context, data }) => {
@@ -67,6 +53,8 @@ export const deleteOrganizationCustomField = createServerFn({ method: "POST" })
 	)
 	.handler(async ({ context, data }) => {
 		assertCan(context.actor, { customFields: ["delete"] });
+
+		// Profile values keyed by this id are left in place; `valuesForDefs` drops orphans.
 
 		const { organizationId } = context.actor;
 

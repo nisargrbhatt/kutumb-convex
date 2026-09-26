@@ -2,7 +2,8 @@ import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { upsertMyCommunityProfile } from "@/server/communityProfile";
 import { getMyCommunityProfileQuery } from "@/queries/communityProfile";
 import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
-import { CustomFieldsForm, type CustomField } from "@/components/CustomFieldsForm";
+import { CustomFieldsSection } from "@/components/custom-fields/CustomFieldsSection";
+import type { CustomFieldDefinition } from "@/domain/customFields";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { COMMUNITY_PROFILE_BLOOD_GROUP, GENDERS } from "@/db/constants";
@@ -54,7 +55,7 @@ function CommunityProfileForm({
 	customFields,
 }: {
 	defaultValues: CommunityProfileFormValues;
-	customFields: CustomField[];
+	customFields: CustomFieldDefinition[];
 }) {
 	const form = useForm<CommunityProfileFormValues>({
 		resolver: zodResolver(communityProfileFormSchema),
@@ -230,12 +231,7 @@ function CommunityProfileForm({
 					/>
 				</div>
 
-				{customFields && customFields.length > 0 && (
-					<>
-						<div className="my-2 border-t" />
-						<CustomFieldsForm customFields={customFields} />
-					</>
-				)}
+				<CustomFieldsSection defs={customFields} />
 
 				<Button type="submit" disabled={form.formState.isSubmitting}>
 					Submit
@@ -248,7 +244,7 @@ function CommunityProfileForm({
 function RouteComponent() {
 	const { data: session } = authClient.useSession();
 	const { data } = useSuspenseQuery(getMyCommunityProfileQuery());
-	const { data: customFieldsResponse } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
+	const { data: customFieldDefs } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
@@ -259,7 +255,7 @@ function RouteComponent() {
 			/>
 
 			<CommunityProfileForm
-				customFields={customFieldsResponse?.data ?? []}
+				customFields={customFieldDefs}
 				defaultValues={toFormValues(data, { gender: "male", email: session?.user?.email ?? "" })}
 			/>
 		</div>

@@ -1,15 +1,13 @@
 import { z } from "zod";
 import { COMMUNITY_PROFILE_BLOOD_GROUP, COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
 import type { communityProfile } from "@/db/app-schema";
+import { customFieldValuesSchema, toCustomFieldValues } from "@/domain/customFields";
 
 export type CommunityProfileRow = typeof communityProfile.$inferSelect;
 
 export const genderSchema = z.enum(GENDERS);
 export const bloodGroupSchema = z.enum(COMMUNITY_PROFILE_BLOOD_GROUP);
 export const profileStatusSchema = z.enum(COMMUNITY_PROFILE_STATUS);
-
-// Replaced by id-keyed CustomFieldValues in issue 05.
-const customFieldDataSchema = z.record(z.string(), z.unknown());
 
 const nullableText = z.string().trim().min(1).nullable();
 
@@ -28,7 +26,7 @@ export const communityProfileInput = z.object({
 	mobileNumber: nullableText,
 	dateOfBirth: z.iso.datetime().nullable(),
 	dateOfDeath: z.iso.datetime().nullable(),
-	customFieldData: customFieldDataSchema.nullable(),
+	customFieldData: customFieldValuesSchema.nullable(),
 });
 export type CommunityProfileInput = z.infer<typeof communityProfileInput>;
 
@@ -44,7 +42,8 @@ export const communityProfileFormSchema = z.object({
 	mobileNumber: z.string().optional(),
 	dateOfBirth: z.date().optional(),
 	dateOfDeath: z.date().optional(),
-	customFieldData: z.record(z.string(), z.any()).optional(),
+	// Keyed by definition id; inputs may hold `undefined`/`""` until `toInput` strips them.
+	customFieldData: z.record(z.string(), z.unknown()).optional(),
 });
 export type CommunityProfileFormValues = z.infer<typeof communityProfileFormSchema>;
 
@@ -111,7 +110,7 @@ export function toInput(values: CommunityProfileFormValues): CommunityProfileInp
 		mobileNumber: blankToNull(values.mobileNumber),
 		dateOfBirth: values.dateOfBirth?.toISOString() ?? null,
 		dateOfDeath: values.dateOfDeath?.toISOString() ?? null,
-		customFieldData: values.customFieldData ?? null,
+		customFieldData: toCustomFieldValues(values.customFieldData),
 	};
 }
 
