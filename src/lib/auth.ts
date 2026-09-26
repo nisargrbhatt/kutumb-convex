@@ -2,87 +2,31 @@ import { db } from "@/db";
 import { betterAuth } from "better-auth/minimal";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { organization } from "better-auth/plugins";
-import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "cloudflare:workers";
 import { ac, member, owner, admin } from "./permission";
-import { resend } from "./resend";
-import InviteEmail from "@/emails/InviteEmail";
-import VerifyEmail from "@/emails/VerifyEmail";
-import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
-import { EMAIL_CONFIG } from "./common";
 import { createKvRateLimitStorage } from "./rate-limit-kv";
-import { ORG_LIMIT, MEMBER_LIMIT, LIMIT_COPY, LimitError } from "@/domain/limits";
-import { limits } from "./limits";
+import { ORG_LIMIT, MEMBER_LIMIT } from "@/domain/limits";
+import {
+	databaseHooks,
+	organizationHooks,
+	sendInvitationEmail,
+	sendResetPassword,
+	sendVerificationEmail,
+} from "./auth-hooks";
 
 export const auth = betterAuth({
-	database: drizzleAdapter(db, {
-		provider: "sqlite",
-	}),
+	database: drizzleAdapter(db, { provider: "sqlite" }),
 	plugins: [
 		tanstackStartCookies(),
 		organization({
 			ac: ac,
-			roles: {
-				owner: owner,
-				admin: admin,
-				member: member,
-			},
+			roles: { owner, admin, member },
 			organizationLimit: ORG_LIMIT,
 			membershipLimit: MEMBER_LIMIT,
 			invitationLimit: MEMBER_LIMIT,
-			organizationHooks: {
-				beforeAcceptInvitation: async ({ user }) => {
-					try {
-						await limits.assertOrgSlot(user.id);
-					} catch (e) {
-						if (e instanceof LimitError) {
-							throw new APIError("FORBIDDEN", {
-								code: e.code,
-								message: LIMIT_COPY.orgAccept.description,
-							});
-						}
-						throw e;
-					}
-				},
-				beforeCreateInvitation: async ({ organization }) => {
-					try {
-						await limits.assertMemberSlot(organization.id);
-					} catch (e) {
-						if (e instanceof LimitError) {
-							throw new APIError("FORBIDDEN", {
-								code: e.code,
-								message: LIMIT_COPY.memberInvite.description,
-							});
-						}
-						throw e;
-					}
-				},
-			},
-			sendInvitationEmail: async (payload) => {
-				const inviteLink = `${env.BETTER_AUTH_URL}/login?redirectTo=${encodeURIComponent("/onboarding/invitations")}&invitation=${encodeURIComponent(payload.id)}`;
-
-				try {
-					const { error } = await resend.emails.send({
-						from: EMAIL_CONFIG.from,
-						to: payload.email,
-						subject: `You've been invited to join ${payload.organization.name}`,
-						react: InviteEmail({
-							organizationName: payload.organization.name,
-							inviterName: payload.inviter?.user?.name,
-							inviterEmail: payload.inviter?.user?.email,
-							inviteLink: inviteLink,
-							role: payload.role,
-						}),
-					});
-
-					if (error) {
-						console.error("Resend API correctly returned error:", error);
-					}
-				} catch (error) {
-					console.error("Failed to send invitation email", error);
-				}
-			},
+			organizationHooks,
+			sendInvitationEmail,
 		}),
 	],
 	// 🔒 account.accountLinking.requireLocalEmailVerified defaults to true — left unset,
@@ -96,41 +40,11 @@ export const auth = betterAuth({
 		requireEmailVerification: false,
 		autoSignIn: true,
 		minPasswordLength: 8,
-		sendResetPassword: async ({ user, url }) => {
-			try {
-				const { error } = await resend.emails.send({
-					from: EMAIL_CONFIG.from,
-					to: user.email,
-					subject: "Reset your Kutumb password",
-					react: ResetPasswordEmail({ resetLink: url }),
-				});
-
-				if (error) {
-					console.error("Resend API correctly returned error:", error);
-				}
-			} catch (error) {
-				console.error("Failed to send reset password email", error);
-			}
-		},
+		sendResetPassword,
 	},
 	emailVerification: {
 		sendOnSignUp: true,
-		sendVerificationEmail: async ({ user, url }) => {
-			try {
-				const { error } = await resend.emails.send({
-					from: EMAIL_CONFIG.from,
-					to: user.email,
-					subject: "Verify your email for Kutumb",
-					react: VerifyEmail({ verifyLink: url }),
-				});
-
-				if (error) {
-					console.error("Resend API correctly returned error:", error);
-				}
-			} catch (error) {
-				console.error("Failed to send verification email", error);
-			}
-		},
+		sendVerificationEmail,
 	},
 	// Only the rate limiter points at KV — not secondaryStorage, which would also
 	// relocate session storage onto KV's eventual consistency (every request, plus
@@ -146,35 +60,10 @@ export const auth = betterAuth({
 			clientSecret: env.GOOGLE_CLIENT_SECRET,
 		},
 	},
-	databaseHooks: {
-		session: {
-			create: {
-				before: async (session) => {
-					const firstOrganization = await db.query.member.findFirst({
-						where: (fields, operators) => operators.eq(fields.userId, session.userId),
-						columns: {
-							organizationId: true,
-						},
-					});
-
-					return {
-						data: {
-							...session,
-							activeOrganizationId: firstOrganization?.organizationId ?? null,
-						},
-					};
-				},
-			},
-		},
-	},
+	databaseHooks,
 	baseURL: env.BETTER_AUTH_URL,
 	logger: {
-		disabled: false,
-		disableColors: false,
 		level: "debug",
-		log: (level, message, ...args) => {
-			// Custom logging implementation
-			console.log(`[${level}] ${message}`, ...args);
-		},
+		log: (level, message, ...args) => console.log(`[${level}] ${message}`, ...args),
 	},
 });

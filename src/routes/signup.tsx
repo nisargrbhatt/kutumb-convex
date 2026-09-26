@@ -7,18 +7,10 @@ import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { getSignupGateStateFn } from "@/server/auth";
-import { RootLayout } from "@/components/RootLayout";
+import { AuthCardShell } from "@/components/auth/AuthCardShell";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { OAuthErrorAlert } from "@/components/auth/OAuthErrorAlert";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
 import {
 	Field,
 	FieldDescription,
@@ -30,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Form } from "@/components/ui/form";
 import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
-import { authSearchSchema, buildAuthCallbackPath } from "@/lib/auth-search-params";
+import { LOGIN_PATH, authHref, authSearchSchema, postAuthDestination } from "@/domain/authRoutes";
 import { AUTH_COPY, SIGNUP_EMAIL_COLLISION_CODE } from "@/lib/auth-copy";
 
 const signupSchema = z
@@ -68,8 +60,8 @@ function RouteComponent() {
 
 	const [emailCollision, setEmailCollision] = useState(false);
 
-	const destination = redirectTo || "/dashboard";
-	const errorCallbackURL = buildAuthCallbackPath("/signup", { redirectTo, invitation });
+	const destination = postAuthDestination({ redirectTo });
+	const errorCallbackURL = authHref("/signup", { redirectTo, invitation });
 
 	const form = useForm<z.infer<typeof signupSchema>>({
 		defaultValues: {
@@ -104,173 +96,145 @@ function RouteComponent() {
 		navigate({ to: destination });
 	});
 
+	const backToLogin = (label: string) => (
+		<Route.Link to={LOGIN_PATH} search={{ redirectTo, invitation }} className="link">
+			{label}
+		</Route.Link>
+	);
+
 	if (signupDisabled) {
 		return (
-			<RootLayout>
-				<div className="flex h-full w-full items-center justify-center py-10">
-					<Card className="w-full max-w-sm">
-						<CardHeader>
-							<CardTitle className="text-lg md:text-xl">Sign Up</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<Alert>
-								<AlertDescription>{AUTH_COPY.signupsClosed}</AlertDescription>
-							</Alert>
-						</CardContent>
-						<CardFooter>
-							<FieldDescription className="text-center">
-								<Route.Link to="/login" search={{ redirectTo, invitation }} className="link">
-									Back to sign in
-								</Route.Link>
-							</FieldDescription>
-						</CardFooter>
-					</Card>
-				</div>
-			</RootLayout>
+			<AuthCardShell title="Sign Up" footer={backToLogin("Back to sign in")}>
+				<Alert>
+					<AlertDescription>{AUTH_COPY.signupsClosed}</AlertDescription>
+				</Alert>
+			</AuthCardShell>
 		);
 	}
 
 	return (
-		<RootLayout>
-			<div className="flex h-full w-full items-center justify-center py-10">
-				<Card className="w-full max-w-sm">
-					<CardHeader>
-						<CardTitle className="text-lg md:text-xl">Create an account</CardTitle>
-						<CardDescription className="text-xs md:text-sm">
-							Enter your details below to create your account
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<FieldGroup>
-							{emailCollision ? (
-								<Alert variant="destructive">
-									<AlertDescription>{AUTH_COPY.emailCollision}</AlertDescription>
-									<AlertAction>
-										<Route.Link
-											to="/login"
-											search={{ redirectTo, invitation }}
-											className="link text-xs"
-										>
-											Sign in
-										</Route.Link>
-									</AlertAction>
-								</Alert>
-							) : null}
-							<OAuthErrorAlert error={error} />
-							<Form {...form}>
-								<form onSubmit={onSubmit} id={formId}>
-									<FieldGroup>
-										<Controller
-											control={form.control}
-											name="name"
-											render={({ field, fieldState }) => (
-												<Field data-invalid={fieldState.invalid}>
-													<FieldLabel htmlFor="signup-name">Name</FieldLabel>
-													<Input
-														{...field}
-														id="signup-name"
-														autoComplete="name"
-														aria-invalid={fieldState.invalid}
-														placeholder="Ada Lovelace"
-													/>
-													{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-												</Field>
-											)}
-										/>
-										<Controller
-											control={form.control}
-											name="email"
-											render={({ field, fieldState }) => (
-												<Field data-invalid={fieldState.invalid}>
-													<FieldLabel htmlFor="signup-email">Email</FieldLabel>
-													<Input
-														{...field}
-														id="signup-email"
-														type="email"
-														autoComplete="email"
-														disabled={!!invitedEmail}
-														aria-invalid={fieldState.invalid}
-														placeholder="you@example.com"
-													/>
-													{invitedEmail ? (
-														<FieldDescription>
-															You're accepting an invite sent to this email.
-														</FieldDescription>
-													) : null}
-													{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-												</Field>
-											)}
-										/>
-										<Controller
-											control={form.control}
-											name="password"
-											render={({ field, fieldState }) => (
-												<Field data-invalid={fieldState.invalid}>
-													<FieldLabel htmlFor="signup-password">Password</FieldLabel>
-													<Input
-														{...field}
-														id="signup-password"
-														type="password"
-														autoComplete="new-password"
-														aria-invalid={fieldState.invalid}
-													/>
-													<FieldDescription>At least 8 characters.</FieldDescription>
-													{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-												</Field>
-											)}
-										/>
-										<Controller
-											control={form.control}
-											name="confirmPassword"
-											render={({ field, fieldState }) => (
-												<Field data-invalid={fieldState.invalid}>
-													<FieldLabel htmlFor="signup-confirm-password">
-														Confirm password
-													</FieldLabel>
-													<Input
-														{...field}
-														id="signup-confirm-password"
-														type="password"
-														autoComplete="new-password"
-														aria-invalid={fieldState.invalid}
-													/>
-													{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-												</Field>
-											)}
-										/>
-									</FieldGroup>
-								</form>
-							</Form>
-							<Field orientation="horizontal">
-								<Button
-									type="submit"
-									form={formId}
-									className="w-full"
-									disabled={form.formState.isSubmitting}
-								>
-									Create account
-								</Button>
-							</Field>
-							<FieldSeparator>Or</FieldSeparator>
-							<Field orientation="horizontal">
-								<GoogleAuthButton
-									mode="sign_up"
-									destination={destination}
-									errorCallbackURL={errorCallbackURL}
-								/>
-							</Field>
-						</FieldGroup>
-					</CardContent>
-					<CardFooter>
-						<FieldDescription className="text-center">
-							Already have an account?{" "}
-							<Route.Link to="/login" search={{ redirectTo, invitation }} className="link">
+		<AuthCardShell
+			title="Create an account"
+			description="Enter your details below to create your account"
+			footer={<>Already have an account? {backToLogin("Sign in")}</>}
+		>
+			<FieldGroup>
+				{emailCollision ? (
+					<Alert variant="destructive">
+						<AlertDescription>{AUTH_COPY.emailCollision}</AlertDescription>
+						<AlertAction>
+							<Route.Link
+								to={LOGIN_PATH}
+								search={{ redirectTo, invitation }}
+								className="link text-xs"
+							>
 								Sign in
 							</Route.Link>
-						</FieldDescription>
-					</CardFooter>
-				</Card>
-			</div>
-		</RootLayout>
+						</AlertAction>
+					</Alert>
+				) : null}
+				<OAuthErrorAlert error={error} />
+				<Form {...form}>
+					<form onSubmit={onSubmit} id={formId}>
+						<FieldGroup>
+							<Controller
+								control={form.control}
+								name="name"
+								render={({ field, fieldState }) => (
+									<Field data-invalid={fieldState.invalid}>
+										<FieldLabel htmlFor="signup-name">Name</FieldLabel>
+										<Input
+											{...field}
+											id="signup-name"
+											autoComplete="name"
+											aria-invalid={fieldState.invalid}
+											placeholder="Ada Lovelace"
+										/>
+										{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+									</Field>
+								)}
+							/>
+							<Controller
+								control={form.control}
+								name="email"
+								render={({ field, fieldState }) => (
+									<Field data-invalid={fieldState.invalid}>
+										<FieldLabel htmlFor="signup-email">Email</FieldLabel>
+										<Input
+											{...field}
+											id="signup-email"
+											type="email"
+											autoComplete="email"
+											disabled={!!invitedEmail}
+											aria-invalid={fieldState.invalid}
+											placeholder="you@example.com"
+										/>
+										{invitedEmail ? (
+											<FieldDescription>
+												You're accepting an invite sent to this email.
+											</FieldDescription>
+										) : null}
+										{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+									</Field>
+								)}
+							/>
+							<Controller
+								control={form.control}
+								name="password"
+								render={({ field, fieldState }) => (
+									<Field data-invalid={fieldState.invalid}>
+										<FieldLabel htmlFor="signup-password">Password</FieldLabel>
+										<Input
+											{...field}
+											id="signup-password"
+											type="password"
+											autoComplete="new-password"
+											aria-invalid={fieldState.invalid}
+										/>
+										<FieldDescription>At least 8 characters.</FieldDescription>
+										{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+									</Field>
+								)}
+							/>
+							<Controller
+								control={form.control}
+								name="confirmPassword"
+								render={({ field, fieldState }) => (
+									<Field data-invalid={fieldState.invalid}>
+										<FieldLabel htmlFor="signup-confirm-password">Confirm password</FieldLabel>
+										<Input
+											{...field}
+											id="signup-confirm-password"
+											type="password"
+											autoComplete="new-password"
+											aria-invalid={fieldState.invalid}
+										/>
+										{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+									</Field>
+								)}
+							/>
+						</FieldGroup>
+					</form>
+				</Form>
+				<Field orientation="horizontal">
+					<Button
+						type="submit"
+						form={formId}
+						className="w-full"
+						disabled={form.formState.isSubmitting}
+					>
+						Create account
+					</Button>
+				</Field>
+				<FieldSeparator>Or</FieldSeparator>
+				<Field orientation="horizontal">
+					<GoogleAuthButton
+						mode="sign_up"
+						destination={destination}
+						errorCallbackURL={errorCallbackURL}
+					/>
+				</Field>
+			</FieldGroup>
+		</AuthCardShell>
 	);
 }
