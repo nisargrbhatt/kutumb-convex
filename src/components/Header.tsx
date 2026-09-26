@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { loginHref } from "@/domain/authRoutes";
 import Logo from "@/assets/favicon.png";
 import { Button } from "./ui/button";
 import { LogOut } from "lucide-react";
@@ -31,7 +32,7 @@ export default function Header() {
 								title="Logout"
 								onClick={async () => {
 									await authClient.signOut();
-									window.location.href = new URL("/login", window.location.origin).toString();
+									window.location.href = loginHref();
 								}}
 							>
 								<LogOut />

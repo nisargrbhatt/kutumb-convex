@@ -6,29 +6,14 @@ import z from "zod";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import { RootLayout } from "@/components/RootLayout";
+import { AuthCardShell } from "@/components/auth/AuthCardShell";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { OAuthErrorAlert } from "@/components/auth/OAuthErrorAlert";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import {
-	Field,
-	FieldDescription,
-	FieldError,
-	FieldGroup,
-	FieldLabel,
-	FieldSeparator,
-} from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Form } from "@/components/ui/form";
-import { authSearchSchema, buildAuthCallbackPath } from "@/lib/auth-search-params";
+import { SIGNUP_PATH, authSearchSchema, loginHref, postAuthDestination } from "@/domain/authRoutes";
 
 const loginSchema = z.object({
 	email: z.email("Enter a valid email address."),
@@ -58,7 +43,7 @@ function RouteComponent() {
 		resolver: zodResolver(loginSchema),
 	});
 
-	const destination = redirectTo || "/dashboard";
+	const destination = postAuthDestination({ redirectTo });
 
 	const onSubmit = form.handleSubmit(async (values) => {
 		posthog.capture("sign_in_initiated", { provider: "password" });
@@ -78,97 +63,88 @@ function RouteComponent() {
 	});
 
 	return (
-		<RootLayout>
-			<div className="flex h-full w-full items-center justify-center py-10">
-				<Card className="w-full max-w-sm">
-					<CardHeader>
-						<CardTitle className="text-lg md:text-xl">Sign In</CardTitle>
-						<CardDescription className="text-xs md:text-sm">
-							Enter your email below to login to your account
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
+		<AuthCardShell
+			title="Sign In"
+			description="Enter your email below to login to your account"
+			footer={
+				<>
+					New here?{" "}
+					<Route.Link to={SIGNUP_PATH} search={{ redirectTo, invitation }} className="link">
+						Create an account
+					</Route.Link>
+				</>
+			}
+		>
+			<FieldGroup>
+				<OAuthErrorAlert error={error} />
+				<Form {...form}>
+					<form onSubmit={onSubmit} id={formId}>
 						<FieldGroup>
-							<OAuthErrorAlert error={error} />
-							<Form {...form}>
-								<form onSubmit={onSubmit} id={formId}>
-									<FieldGroup>
-										<Controller
-											control={form.control}
-											name="email"
-											render={({ field, fieldState }) => (
-												<Field data-invalid={fieldState.invalid}>
-													<FieldLabel htmlFor="login-email">Email</FieldLabel>
-													<Input
-														{...field}
-														id="login-email"
-														type="email"
-														autoComplete="email"
-														aria-invalid={fieldState.invalid}
-														placeholder="you@example.com"
-													/>
-													{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-												</Field>
-											)}
+							<Controller
+								control={form.control}
+								name="email"
+								render={({ field, fieldState }) => (
+									<Field data-invalid={fieldState.invalid}>
+										<FieldLabel htmlFor="login-email">Email</FieldLabel>
+										<Input
+											{...field}
+											id="login-email"
+											type="email"
+											autoComplete="email"
+											aria-invalid={fieldState.invalid}
+											placeholder="you@example.com"
 										/>
-										<Controller
-											control={form.control}
-											name="password"
-											render={({ field, fieldState }) => (
-												<Field data-invalid={fieldState.invalid}>
-													<div className="flex items-center justify-between">
-														<FieldLabel htmlFor="login-password">Password</FieldLabel>
-														<Route.Link
-															to="/forgot-password"
-															className="link text-xs text-muted-foreground"
-														>
-															Forgot password?
-														</Route.Link>
-													</div>
-													<Input
-														{...field}
-														id="login-password"
-														type="password"
-														autoComplete="current-password"
-														aria-invalid={fieldState.invalid}
-													/>
-													{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-												</Field>
-											)}
+										{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+									</Field>
+								)}
+							/>
+							<Controller
+								control={form.control}
+								name="password"
+								render={({ field, fieldState }) => (
+									<Field data-invalid={fieldState.invalid}>
+										<div className="flex items-center justify-between">
+											<FieldLabel htmlFor="login-password">Password</FieldLabel>
+											<Route.Link
+												to="/forgot-password"
+												className="link text-xs text-muted-foreground"
+											>
+												Forgot password?
+											</Route.Link>
+										</div>
+										<Input
+											{...field}
+											id="login-password"
+											type="password"
+											autoComplete="current-password"
+											aria-invalid={fieldState.invalid}
 										/>
-									</FieldGroup>
-								</form>
-							</Form>
-							<Field orientation="horizontal">
-								<Button
-									type="submit"
-									form={formId}
-									className="w-full"
-									disabled={form.formState.isSubmitting}
-								>
-									Sign in
-								</Button>
-							</Field>
-							<FieldSeparator>Or</FieldSeparator>
-							<Field orientation="horizontal">
-								<GoogleAuthButton
-									mode="sign_in"
-									destination={destination}
-									errorCallbackURL={buildAuthCallbackPath("/login", { redirectTo, invitation })}
-								/>
-							</Field>
+										{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+									</Field>
+								)}
+							/>
 						</FieldGroup>
-					</CardContent>
-					<CardFooter>
-						<FieldDescription className="text-center">
-							New here?{" "}
-							<Route.Link to="/signup" search={{ redirectTo, invitation }} className="link">
-								Create an account
-							</Route.Link>
-						</FieldDescription>
-					</CardFooter>
-				</Card>
-			</div>
-		</RootLayout>
+					</form>
+				</Form>
+				<Field orientation="horizontal">
+					<Button
+						type="submit"
+						form={formId}
+						className="w-full"
+						disabled={form.formState.isSubmitting}
+					>
+						Sign in
+					</Button>
+				</Field>
+				<FieldSeparator>Or</FieldSeparator>
+				<Field orientation="horizontal">
+					<GoogleAuthButton
+						mode="sign_in"
+						destination={destination}
+						errorCallbackURL={loginHref({ redirectTo, invitation })}
+					/>
+				</Field>
+			</FieldGroup>
+		</AuthCardShell>
 	);
 }

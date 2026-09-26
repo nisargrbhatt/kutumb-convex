@@ -1,4 +1,5 @@
 import { ChevronsUpDown, LogOut } from "lucide-react";
+import { loginHref } from "@/domain/authRoutes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -77,7 +78,7 @@ export function AuthUser() {
 							<DropdownMenuItem
 								onClick={async () => {
 									await authClient.signOut();
-									window.location.href = new URL("/login", window.location.origin).toString();
+									window.location.href = loginHref();
 								}}
 							>
 								<LogOut />
