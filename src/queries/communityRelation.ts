@@ -1,5 +1,4 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import {
@@ -12,6 +11,8 @@ import {
 	getMyOutgoingRelationCount,
 } from "@/server/communityRelation";
 import type { RelationType } from "@/domain/relation";
+import { profileKeys, relationKeys } from "./keys";
+import { toastMutationError, useOrgId } from "./mutation";
 
 export type RelationFormValues = {
 	toId: string;
@@ -20,52 +21,39 @@ export type RelationFormValues = {
 	note?: string;
 };
 
-export const getMyCommunityRelationshipsQuery = () =>
+export const myRelationshipsQuery = (orgId: string) =>
 	queryOptions({
-		queryKey: ["get-my-community-relationships"],
-		queryFn: async () => {
-			const result = await getMyCommunityRelationships();
-			return result;
-		},
+		queryKey: relationKeys.mine(orgId),
+		queryFn: () => getMyCommunityRelationships(),
 	});
 
-export const getMyIncomingRelationCountQuery = () =>
+export const myIncomingRelationCountQuery = (orgId: string) =>
 	queryOptions({
-		queryKey: ["get-my-incoming-relation-count"],
-		queryFn: async () => {
-			const result = await getMyIncomingRelationCount();
-			return result;
-		},
+		queryKey: relationKeys.incomingCount(orgId),
+		queryFn: () => getMyIncomingRelationCount(),
 	});
 
-export const getMyOutgoingRelationCountQuery = () =>
+export const myOutgoingRelationCountQuery = (orgId: string) =>
 	queryOptions({
-		queryKey: ["get-my-outgoing-relation-count"],
-		queryFn: async () => {
-			const result = await getMyOutgoingRelationCount();
-			return result;
-		},
+		queryKey: relationKeys.outgoingCount(orgId),
+		queryFn: () => getMyOutgoingRelationCount(),
 	});
 
-const onRelationError = (fallback: string) => (error: Error) => {
-	console.error(error);
-	toast.error("Relation", { description: error.message || fallback });
-};
-
-function useInvalidateMyRelations() {
-	const queryClient = useQueryClient();
+/** Relations feed my lists/counts, member details (both directions) and the graph. */
+function useInvalidateRelations() {
+	const qc = useQueryClient();
+	const orgId = useOrgId();
 	return () =>
-		Promise.all(
-			[
-				getMyCommunityRelationshipsQuery(),
-				getMyIncomingRelationCountQuery(),
-				getMyOutgoingRelationCountQuery(),
-			].map((q) => queryClient.invalidateQueries({ queryKey: q.queryKey }))
-		);
+		Promise.all([
+			qc.invalidateQueries({ queryKey: relationKeys.all(orgId) }),
+			qc.invalidateQueries({ queryKey: profileKeys.all(orgId) }),
+		]);
 }
 
+const onRelationError = (fallback: string) => toastMutationError("Relation", fallback);
+
 export function useAddMyRelation() {
-	const invalidate = useInvalidateMyRelations();
+	const invalidate = useInvalidateRelations();
 	return useMutation({
 		mutationFn: (values: RelationFormValues) => addMyCommunityRelationship({ data: values }),
 		onSuccess: async () => {
@@ -77,7 +65,7 @@ export function useAddMyRelation() {
 }
 
 export function useDeleteMyRelation() {
-	const invalidate = useInvalidateMyRelations();
+	const invalidate = useInvalidateRelations();
 	return useMutation({
 		mutationFn: (relationId: string) => deleteMyCommunityRelationship({ data: { id: relationId } }),
 		onSuccess: async () => {
@@ -88,9 +76,9 @@ export function useDeleteMyRelation() {
 	});
 }
 
-/** Admin: outgoing relation on behalf of a userless profile; refreshes the member route loader. */
+/** Admin: outgoing relation on behalf of a userless profile. */
 export function useAddRelationToProfile(subjectId: string) {
-	const router = useRouter();
+	const invalidate = useInvalidateRelations();
 	const posthog = usePostHog();
 	return useMutation({
 		mutationFn: (values: RelationFormValues) =>
@@ -98,14 +86,14 @@ export function useAddRelationToProfile(subjectId: string) {
 		onSuccess: async () => {
 			posthog.capture("member_relation_added", { member_id: subjectId });
 			toast.success("Relation", { description: "Relation added successfully" });
-			await router.invalidate();
+			await invalidate();
 		},
 		onError: onRelationError("Failed to add relation"),
 	});
 }
 
 export function useDeleteRelationFromProfile(subjectId: string) {
-	const router = useRouter();
+	const invalidate = useInvalidateRelations();
 	const posthog = usePostHog();
 	return useMutation({
 		mutationFn: (relationId: string) =>
@@ -113,7 +101,7 @@ export function useDeleteRelationFromProfile(subjectId: string) {
 		onSuccess: async () => {
 			posthog.capture("member_relation_deleted", { member_id: subjectId });
 			toast.success("Relation", { description: "Relation deleted successfully" });
-			await router.invalidate();
+			await invalidate();
 		},
 		onError: onRelationError("Failed to delete relation"),
 	});

@@ -16,12 +16,14 @@ import {
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { Link } from "@tanstack/react-router";
+import { useSwitchOrganization } from "@/queries/organization";
 
 export function CommunityPicker() {
 	const { data: organizations } = authClient.useListOrganizations();
 	const { data: activeOrg } = authClient.useActiveOrganization();
 
 	const { isMobile } = useSidebar();
+	const switchOrganization = useSwitchOrganization();
 
 	return (
 		<SidebarMenu>
@@ -55,13 +57,7 @@ export function CommunityPicker() {
 							{organizations?.map((team) => (
 								<DropdownMenuItem
 									key={team.slug}
-									onClick={async () => {
-										await authClient.organization.setActive({
-											organizationId: team.id,
-											organizationSlug: team.slug,
-										});
-										window.location.reload();
-									}}
+									onClick={() => switchOrganization(team.id)}
 									className="gap-2 p-2"
 								>
 									<div className="flex size-6 items-center justify-center rounded-md border">

@@ -33,7 +33,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { COMMUNITY_RELATION_TYPE } from "@/db/constants";
 import { fullName } from "@/domain/communityProfile";
 import { formatRelationType, RELATION_TYPES, relationTypeSchema } from "@/domain/relation";
-import { getActiveProfilesForRelationQuery } from "@/queries/communityProfile";
+import { activeProfilesForRelationQuery } from "@/queries/communityProfile";
+import { useOrgId } from "@/queries/mutation";
 import type { RelationFormValues } from "@/queries/communityRelation";
 
 const relationFormSchema = z.object({
@@ -70,8 +71,9 @@ export function RelationForm({
 	onSubmit: (values: RelationFormValues) => Promise<unknown>;
 	isPending: boolean;
 }) {
+	const orgId = useOrgId();
 	const { data = [], isLoading } = useQuery({
-		...getActiveProfilesForRelationQuery(subjectId),
+		...activeProfilesForRelationQuery(orgId, subjectId),
 		enabled: open,
 	});
 	const profiles = data.filter((p) => !excludeIds.includes(p.id));

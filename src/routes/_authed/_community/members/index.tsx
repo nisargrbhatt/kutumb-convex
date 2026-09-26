@@ -1,7 +1,7 @@
 import { ProfileName } from "@/components/profile/ProfileName";
 import { ProfileStatusBadge } from "@/components/profile/ProfileStatusBadge";
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
-import { getCommunityMembersQuery } from "@/queries/communityProfile";
+import { communityMembersQuery, useAddMissingMember } from "@/queries/communityProfile";
 import { useEffect, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
@@ -17,27 +17,19 @@ import {
 } from "@/components/ui/select";
 import { COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Plus, Search, Users, X } from "lucide-react";
-import { toast } from "sonner";
-import { usePostHog } from "@posthog/react";
 import { z } from "zod";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import {
 	MEMBER_FILTER_DEFAULTS,
 	memberFilterSchema,
 	toFormValues,
-	type CommunityProfileInput,
 	type MemberFilter,
 } from "@/domain/communityProfile";
-import { isAppError } from "@/domain/errors";
-import { limitMessage } from "@/domain/limits";
 import { useCan } from "@/hooks/useCan";
-import { safeAsync } from "@/lib/safe";
-import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
-import { getOrgUsageQuery } from "@/queries/organization";
-import { addMissingMember } from "@/server/communityProfile";
+import { customFieldsQuery } from "@/queries/fields";
 
 /** `create=1` (e.g. from a CTA elsewhere) opens the Add member drawer, then is stripped. */
 const membersSearchSchema = memberFilterSchema.extend({
@@ -50,44 +42,10 @@ export const Route = createFileRoute("/_authed/_community/members/")({
 	search: { middlewares: [stripSearchParams(MEMBER_FILTER_DEFAULTS)] },
 	loaderDeps: ({ search: { create: _create, ...filter } }) => filter,
 	loader: async ({ context, deps }) => {
-		await context.queryClient.ensureQueryData(getCommunityMembersQuery(deps));
+		await context.queryClient.ensureQueryData(communityMembersQuery(context.organizationId, deps));
 	},
 	component: RouteComponent,
 });
-
-// TODO(issue 09): replace with useAddMissingMember().
-function useAddMissingMember() {
-	const queryClient = useQueryClient();
-	const posthog = usePostHog();
-	const [isPending, setIsPending] = useState(false);
-
-	const add = async (input: CommunityProfileInput) => {
-		setIsPending(true);
-		const result = await safeAsync(addMissingMember({ data: input }));
-		setIsPending(false);
-
-		if (!result.success) {
-			console.error(result.error);
-			const limit = isAppError(result.error) ? limitMessage(result.error) : undefined;
-			toast.error(limit?.title ?? "Add member", {
-				description: limit?.description ?? result.error?.message ?? "Failed to add member",
-			});
-			return false;
-		}
-
-		posthog.capture("member_added", {});
-		toast.success("Member added", {
-			description: "Added as a Draft Record. An owner/admin will approve the profile.",
-		});
-		await Promise.all([
-			queryClient.invalidateQueries({ queryKey: ["get-community-members"] }),
-			queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey }),
-		]);
-		return true;
-	};
-
-	return { add, isPending };
-}
 
 function AddMemberDrawer({
 	open,
@@ -96,11 +54,9 @@ function AddMemberDrawer({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
-	const { data: customFieldDefs } = useQuery({
-		...getOrganizationCustomFieldsQuery(),
-		enabled: open,
-	});
-	const { add, isPending } = useAddMissingMember();
+	const { organizationId: orgId } = Route.useRouteContext();
+	const { data: customFieldDefs } = useQuery({ ...customFieldsQuery(orgId), enabled: open });
+	const addMember = useAddMissingMember();
 
 	return (
 		<ProfileForm
@@ -110,8 +66,13 @@ function AddMemberDrawer({
 			onOpenChange={onOpenChange}
 			defaultValues={toFormValues(null)}
 			customFieldDefs={customFieldDefs ?? []}
-			onSubmit={add}
-			isPending={isPending}
+			onSubmit={(input) =>
+				addMember.mutateAsync(input).then(
+					() => true,
+					() => false
+				)
+			}
+			isPending={addMember.isPending}
 		/>
 	);
 }
@@ -376,7 +337,8 @@ function RouteComponent() {
 	const canCreate = useCan({ communityProfile: ["create"] });
 	const [addOpen, setAddOpen] = useState(false);
 
-	const { data: result } = useSuspenseQuery(getCommunityMembersQuery(search));
+	const { organizationId: orgId } = Route.useRouteContext();
+	const { data: result } = useSuspenseQuery(communityMembersQuery(orgId, search));
 
 	useEffect(() => {
 		if (!create) return;

@@ -11,13 +11,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { authClient } from "@/lib/auth-client";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { useAcceptInvitation, useRejectInvitation } from "@/queries/organization";
 import { GalleryVerticalEnd } from "lucide-react";
-import { useTransition } from "react";
-import { toast } from "sonner";
-import { usePostHog } from "@posthog/react";
-import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/domain/limits";
 
 export const Route = createFileRoute("/_authed/onboarding/invitations/")({
 	component: RouteComponent,
@@ -28,38 +24,9 @@ export const Route = createFileRoute("/_authed/onboarding/invitations/")({
 });
 
 function AcceptInvitationAction(props: { invitationId: string; organizationName?: string }) {
-	const [isPending, startTransition] = useTransition();
-	const posthog = usePostHog();
-	const router = useRouter();
-
-	const handleAccept = async () => {
-		startTransition(async () => {
-			const { error } = await authClient.organization.acceptInvitation({
-				invitationId: props.invitationId,
-			});
-			if (error) {
-				console.error(error);
-				if (error.code === LIMIT_ERROR_CODES.org) {
-					toast.error(LIMIT_COPY.orgAccept.title, {
-						description: LIMIT_COPY.orgAccept.description,
-					});
-					return;
-				}
-				toast.error("Invitation", {
-					description: "Failed to accept invitation",
-				});
-				return;
-			}
-			posthog.capture("invitation_accepted", {
-				invitation_id: props.invitationId,
-				organization_name: props.organizationName,
-			});
-			toast.success("Invitation", {
-				description: "Invitation accepted successfully",
-			});
-			router.navigate({ to: "/dashboard" });
-		});
-	};
+	const accept = useAcceptInvitation();
+	const isPending = accept.isPending;
+	const handleAccept = () => accept.mutate(props);
 
 	return (
 		<Button type="button" size="sm" variant={"outline"} onClick={handleAccept} disabled={isPending}>
@@ -69,32 +36,9 @@ function AcceptInvitationAction(props: { invitationId: string; organizationName?
 }
 
 function RejectInvitationAction(props: { invitationId: string; organizationName?: string }) {
-	const [isPending, startTransition] = useTransition();
-	const posthog = usePostHog();
-	const router = useRouter();
-
-	const handleReject = async () => {
-		startTransition(async () => {
-			const { error } = await authClient.organization.rejectInvitation({
-				invitationId: props.invitationId,
-			});
-			if (error) {
-				console.error(error);
-				toast.error("Invitation", {
-					description: "Failed to reject invitation",
-				});
-				return;
-			}
-			posthog.capture("invitation_rejected", {
-				invitation_id: props.invitationId,
-				organization_name: props.organizationName,
-			});
-			toast.success("Invitation", {
-				description: "Invitation rejected successfully",
-			});
-			router.invalidate();
-		});
-	};
+	const reject = useRejectInvitation();
+	const isPending = reject.isPending;
+	const handleReject = () => reject.mutate(props);
 
 	return (
 		<Button

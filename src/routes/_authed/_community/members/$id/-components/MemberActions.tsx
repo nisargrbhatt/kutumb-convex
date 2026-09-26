@@ -1,11 +1,7 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { usePostHog } from "@posthog/react";
 import { BadgeCheckIcon, CheckIcon, User, XIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,13 +24,11 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
 import { FormDrawer } from "@/components/ui/form-drawer";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { authClient } from "@/lib/auth-client";
-import { safeAsync } from "@/lib/safe";
-import { getOrgUsageQuery } from "@/queries/organization";
 import {
-	acceptCommunityProfile,
-	reassignProfileToUser,
-	rejectCommunityProfile,
-} from "@/server/communityProfile";
+	useApproveProfile,
+	useReassignProfile,
+	useRejectProfile,
+} from "@/queries/communityProfile";
 
 const formSchema = z.object({
 	userId: z.string().trim().min(1, "User is required"),
@@ -45,11 +39,8 @@ export function MemberActions({
 }: {
 	profile: { id: string; status: string; userId: string | null };
 }) {
-	const router = useRouter();
 	const [showReassignDialog, setShowReassignDialog] = useState(false);
 	const { data: activeOrg } = authClient.useActiveOrganization();
-	const posthog = usePostHog();
-	const queryClient = useQueryClient();
 
 	const orgMembers = activeOrg?.members ?? [];
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -59,86 +50,17 @@ export function MemberActions({
 		},
 	});
 
-	const acceptMember = async () => {
-		const result = await safeAsync(
-			acceptCommunityProfile({
-				data: {
-					memberId: profile.id,
-				},
-			})
-		);
+	const approve = useApproveProfile(profile.id);
+	const reject = useRejectProfile(profile.id);
+	const reassign = useReassignProfile(profile.id);
 
-		if (!result.success) {
-			console.error(result.error);
-			toast.error("Profile", {
-				description: "Failed to accept profile",
-			});
-			return;
-		}
-
-		posthog.capture("member_profile_accepted", { member_id: profile.id });
-		toast.success("Profile", {
-			description: "Profile accepted successfully",
+	const handleReassign = (values: z.infer<typeof formSchema>) =>
+		reassign.mutate(values.userId, {
+			onSuccess: () => {
+				setShowReassignDialog(false);
+				form.reset();
+			},
 		});
-
-		router.invalidate();
-	};
-	const rejectMember = async () => {
-		const result = await safeAsync(
-			rejectCommunityProfile({
-				data: {
-					memberId: profile.id,
-				},
-			})
-		);
-
-		if (!result.success) {
-			console.error(result.error);
-			toast.error("Profile", {
-				description: "Failed to reject profile",
-			});
-			return;
-		}
-
-		posthog.capture("member_profile_rejected", { member_id: profile.id });
-		toast.success("Profile", {
-			description: "Profile rejected successfully",
-		});
-		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
-
-		router.invalidate();
-	};
-
-	const handleReassign = async (values: z.infer<typeof formSchema>) => {
-		const result = await safeAsync(
-			reassignProfileToUser({
-				data: {
-					userId: values.userId,
-					memberId: profile.id,
-				},
-			})
-		);
-
-		if (!result.success) {
-			console.error(result.error);
-			toast.error("Profile", {
-				description: "Failed to reassign profile",
-			});
-			return;
-		}
-
-		posthog.capture("member_profile_reassigned", {
-			member_id: profile.id,
-			assigned_user_id: values.userId,
-		});
-		toast.success("Profile", {
-			description: "Profile reassigned successfully",
-		});
-
-		router.invalidate();
-		setShowReassignDialog(false);
-		form.reset();
-	};
 
 	const showProfileActions = profile?.status === "draft";
 	const showReassignAction = typeof profile?.userId !== "string";
@@ -155,11 +77,11 @@ export function MemberActions({
 					{showProfileActions ? (
 						<DropdownMenuGroup>
 							<DropdownMenuLabel>Profile Decision</DropdownMenuLabel>
-							<DropdownMenuItem onClick={acceptMember}>
+							<DropdownMenuItem onClick={() => approve.mutate()} disabled={approve.isPending}>
 								<CheckIcon />
 								Accept
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={rejectMember}>
+							<DropdownMenuItem onClick={() => reject.mutate()} disabled={reject.isPending}>
 								<XIcon />
 								Reject
 							</DropdownMenuItem>
@@ -184,6 +106,7 @@ export function MemberActions({
 				form={form}
 				onSubmit={handleReassign}
 				submitLabel="Assign"
+				isPending={reassign.isPending}
 			>
 				<FormField
 					control={form.control}

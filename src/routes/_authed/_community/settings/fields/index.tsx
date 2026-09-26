@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
-import { addOrganizationCustomField, deleteOrganizationCustomField } from "@/server/fields";
-import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
+import { customFieldsQuery, useCreateCustomField, useDeleteCustomField } from "@/queries/fields";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -23,18 +22,17 @@ import {
 } from "@/components/ui/table";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import { z } from "zod";
 
 export const Route = createFileRoute("/_authed/_community/settings/fields/")({
 	component: RouteComponent,
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(getOrganizationCustomFieldsQuery());
+		await context.queryClient.ensureQueryData(customFieldsQuery(context.organizationId));
 	},
 });
 
@@ -59,22 +57,15 @@ function AddFieldDrawer() {
 		},
 	});
 
-	const { mutate: addField, isPending } = useMutation({
-		mutationFn: addOrganizationCustomField,
-		onSuccess: (_d, _v, _r, context) => {
-			toast.success("Field added successfully");
-			form.reset();
-			setOpen(false);
-			context.client.invalidateQueries({
-				queryKey: getOrganizationCustomFieldsQuery().queryKey,
-			});
-		},
-		onError: (error) => {
-			toast.error(error.message);
-		},
-	});
+	const addField = useCreateCustomField();
 
-	const onSubmit = (values: z.infer<typeof addFieldSchema>) => addField({ data: values });
+	const onSubmit = (values: z.infer<typeof addFieldSchema>) =>
+		addField.mutate(values, {
+			onSuccess: () => {
+				form.reset();
+				setOpen(false);
+			},
+		});
 
 	return (
 		<FormDrawer
@@ -91,7 +82,7 @@ function AddFieldDrawer() {
 			form={form}
 			onSubmit={onSubmit}
 			submitLabel="Add Field"
-			isPending={isPending}
+			isPending={addField.isPending}
 		>
 			<FormField
 				control={form.control}
@@ -137,19 +128,7 @@ function AddFieldDrawer() {
 function DeleteFieldDialog({ id }: { id: string }) {
 	const [open, setOpen] = useState(false);
 
-	const { mutate: deleteField, isPending: isDeleting } = useMutation({
-		mutationFn: deleteOrganizationCustomField,
-		onSuccess: (_d, _v, _r, context) => {
-			toast.success("Field deleted successfully");
-			setOpen(false);
-			context.client.invalidateQueries({
-				queryKey: getOrganizationCustomFieldsQuery().queryKey,
-			});
-		},
-		onError: (error) => {
-			toast.error(error.message);
-		},
-	});
+	const deleteField = useDeleteCustomField();
 
 	return (
 		<ConfirmDialog
@@ -164,14 +143,15 @@ function DeleteFieldDialog({ id }: { id: string }) {
 			description="This will permanently delete this field. This action cannot be undone."
 			confirmLabel="Delete"
 			destructive
-			onConfirm={() => deleteField({ data: { fieldId: id } })}
-			isPending={isDeleting}
+			onConfirm={() => deleteField.mutate(id, { onSuccess: () => setOpen(false) })}
+			isPending={deleteField.isPending}
 		/>
 	);
 }
 
 function FieldsTable() {
-	const { data: fields } = useSuspenseQuery(getOrganizationCustomFieldsQuery());
+	const { organizationId: orgId } = Route.useRouteContext();
+	const { data: fields } = useSuspenseQuery(customFieldsQuery(orgId));
 
 	return (
 		<div className="w-full overflow-x-auto rounded-lg border">

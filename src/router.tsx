@@ -3,15 +3,17 @@ import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { NotFound } from "./components/NotFound";
 import { DefaultCatchBoundary } from "./components/DefaultCatchBoundary";
-import queryClient from "./lib/query-client";
+import { QueryClient } from "@tanstack/react-query";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 
 // Create a new router instance
 export const getRouter = () => {
+	// Per router = per SSR request: a module singleton would share cache across users/tenants.
+	const queryClient = new QueryClient();
 	const router = createRouter({
 		routeTree,
 		context: {
-			queryClient: queryClient,
+			queryClient,
 		},
 		scrollRestoration: true,
 		defaultPreloadStaleTime: 0,
