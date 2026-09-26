@@ -16,19 +16,21 @@ import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress
 import { authClient } from "@/lib/auth-client";
 import { useActor } from "@/hooks/useActor";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import z from "zod";
-import { usePostHog } from "@posthog/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { getOrgUsageQuery } from "@/queries/organization";
+import {
+	orgUsageQuery,
+	useDeleteOrganization,
+	useUpdateOrganization,
+} from "@/queries/organization";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authed/_community/settings/overview/")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(getOrgUsageQuery());
+		await context.queryClient.ensureQueryData(orgUsageQuery(context.organizationId));
 	},
 	component: RouteComponent,
 });
@@ -45,8 +47,8 @@ const formSchema = z.object({
 		),
 });
 
-function OrganizationForm(props: { name: string; slug: string; organizationId: string }) {
-	const posthog = usePostHog();
+function OrganizationForm(props: { name: string; slug: string }) {
+	const update = useUpdateOrganization();
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
@@ -54,29 +56,7 @@ function OrganizationForm(props: { name: string; slug: string; organizationId: s
 		},
 	});
 
-	const onSubmit = form.handleSubmit(async (values) => {
-		const { data, error } = await authClient.organization.update({
-			organizationId: props.organizationId,
-			data: {
-				name: values.name,
-			},
-		});
-
-		if (!data) {
-			console.error(error);
-			toast.error("Failed to update organization", {
-				description: "Please try again later.",
-			});
-			return;
-		}
-
-		posthog.capture("organization_settings_updated", {
-			organization_id: props.organizationId,
-		});
-		toast.success("Organization", {
-			description: "Organization updated successfully",
-		});
-	});
+	const onSubmit = form.handleSubmit((values) => update.mutateAsync(values).catch(() => {}));
 
 	return (
 		<Form {...form}>
@@ -101,7 +81,7 @@ function OrganizationForm(props: { name: string; slug: string; organizationId: s
 						<Input type="text" placeholder="Org slug" value={props.slug} disabled />
 					</Field>
 				</div>
-				<Button type="submit" disabled={form.formState.isSubmitting}>
+				<Button type="submit" disabled={update.isPending}>
 					Save
 				</Button>
 			</form>
@@ -109,37 +89,9 @@ function OrganizationForm(props: { name: string; slug: string; organizationId: s
 	);
 }
 
-function DeleteOrganizationDialog(props: { organizationId: string; name: string }) {
-	const posthog = usePostHog();
-	const router = useRouter();
+function DeleteOrganizationDialog(props: { name: string }) {
 	const [open, setOpen] = useState(false);
-	const [isDeleting, setIsDeleting] = useState(false);
-
-	const handleDelete = async () => {
-		setIsDeleting(true);
-		const { error } = await authClient.organization.delete({
-			organizationId: props.organizationId,
-		});
-
-		if (error) {
-			console.error(error);
-			toast.error("Failed to delete organization", {
-				description: "Please try again later.",
-			});
-			setIsDeleting(false);
-			return;
-		}
-
-		posthog.capture("organization_deleted", {
-			organization_id: props.organizationId,
-		});
-		toast.success("Organization", {
-			description: "Organization deleted successfully",
-		});
-		setOpen(false);
-		await router.invalidate();
-		router.navigate({ to: "/onboarding/create" });
-	};
+	const deleteOrg = useDeleteOrganization();
 
 	return (
 		<ConfirmDialog
@@ -150,8 +102,8 @@ function DeleteOrganizationDialog(props: { organizationId: string; name: string 
 			description="This will permanently delete this organization and all its data, including members and profiles. This action cannot be undone."
 			confirmLabel="Delete"
 			destructive
-			onConfirm={handleDelete}
-			isPending={isDeleting}
+			onConfirm={() => deleteOrg.mutate(undefined, { onSuccess: () => setOpen(false) })}
+			isPending={deleteOrg.isPending}
 		/>
 	);
 }
@@ -160,7 +112,8 @@ const usageTone = (used: number, limit: number) =>
 	used >= limit ? "text-destructive" : used >= limit * 0.9 ? "text-amber-600" : "";
 
 function UsageCard() {
-	const { data: usage } = useSuspenseQuery(getOrgUsageQuery());
+	const { organizationId: orgId } = Route.useRouteContext();
+	const { data: usage } = useSuspenseQuery(orgUsageQuery(orgId));
 	const rows = [
 		{ label: "Org Members", used: usage.members },
 		{ label: "Community Profiles", used: usage.profiles },
@@ -186,7 +139,7 @@ function UsageCard() {
 	);
 }
 
-function DangerZone(props: { organizationId: string; name: string }) {
+function DangerZone(props: { name: string }) {
 	const actor = useActor();
 
 	if (actor?.role !== "owner") {
@@ -202,7 +155,7 @@ function DangerZone(props: { organizationId: string; name: string }) {
 				</p>
 			</div>
 			<div>
-				<DeleteOrganizationDialog organizationId={props.organizationId} name={props.name} />
+				<DeleteOrganizationDialog name={props.name} />
 			</div>
 		</div>
 	);
@@ -217,13 +170,9 @@ function RouteComponent() {
 			/>
 			{activeOrg ? (
 				<>
-					<OrganizationForm
-						name={activeOrg?.name}
-						slug={activeOrg?.slug}
-						organizationId={activeOrg.id}
-					/>
+					<OrganizationForm name={activeOrg.name} slug={activeOrg.slug} />
 					<UsageCard />
-					<DangerZone organizationId={activeOrg.id} name={activeOrg.name} />
+					<DangerZone name={activeOrg.name} />
 				</>
 			) : null}
 		</div>

@@ -17,5 +17,7 @@ export const Route = createFileRoute("/_authed")({
 		) {
 			throw redirect({ to: "/onboarding/create" });
 		}
+
+		return { userId: context.session.user.id };
 	},
 });

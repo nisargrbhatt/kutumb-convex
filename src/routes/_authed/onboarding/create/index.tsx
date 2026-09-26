@@ -5,18 +5,19 @@ import { OnboardingForm } from "./-components/OnboardingForm";
 import { RootLayout } from "@/components/RootLayout";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getMyOrganizationCountQuery } from "@/queries/organization";
+import { myOrganizationCountQuery } from "@/queries/organization";
 import { canJoinOrganization, LIMIT_COPY } from "@/domain/limits";
 
 export const Route = createFileRoute("/_authed/onboarding/create/")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(getMyOrganizationCountQuery());
+		await context.queryClient.ensureQueryData(myOrganizationCountQuery(context.userId));
 	},
 	component: RouteComponent,
 });
 
 function RouteComponent() {
-	const { data } = useSuspenseQuery(getMyOrganizationCountQuery());
+	const { userId } = Route.useRouteContext();
+	const { data } = useSuspenseQuery(myOrganizationCountQuery(userId));
 	const atCap = !canJoinOrganization(data.count);
 
 	return (

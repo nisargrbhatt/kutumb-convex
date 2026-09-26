@@ -1,3 +1,4 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { MapPin } from "lucide-react";
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
@@ -9,19 +10,15 @@ import { fullName } from "@/domain/communityProfile";
 import { isAppError } from "@/domain/errors";
 import { useCan } from "@/hooks/useCan";
 import { safeAsync } from "@/lib/safe";
-import { getCommunityMemberById } from "@/server/communityProfile";
+import { memberDetailQuery } from "@/queries/communityProfile";
 import { MemberActions } from "./-components/MemberActions";
 import { MemberRelations } from "./-components/MemberRelations";
 
 export const Route = createFileRoute("/_authed/_community/members/$id/")({
 	component: RouteComponent,
-	loader: async ({ params }) => {
+	loader: async ({ context, params }) => {
 		const result = await safeAsync(
-			getCommunityMemberById({
-				data: {
-					id: params.id,
-				},
-			})
+			context.queryClient.ensureQueryData(memberDetailQuery(context.organizationId, params.id))
 		);
 
 		if (!result.success) {
@@ -30,14 +27,15 @@ export const Route = createFileRoute("/_authed/_community/members/$id/")({
 			}
 			throw result.error;
 		}
-
-		return result.data;
 	},
 });
 
 function RouteComponent() {
-	const { profile, addresses, customFieldDefs, outgoingRelations, incomingRelations } =
-		Route.useLoaderData();
+	const { organizationId: orgId } = Route.useRouteContext();
+	const { id } = Route.useParams();
+	const {
+		data: { profile, addresses, customFieldDefs, outgoingRelations, incomingRelations },
+	} = useSuspenseQuery(memberDetailQuery(orgId, id));
 	const canApprove = useCan({ communityProfile: ["approve"] });
 	const name = fullName(profile);
 

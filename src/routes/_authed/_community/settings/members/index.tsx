@@ -18,14 +18,19 @@ import {
 import { FormDrawer } from "@/components/ui/form-drawer";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { usePostHog } from "@posthog/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import type { Role } from "@/domain/permission";
 import { Spinner } from "@/components/ui/spinner";
-import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/domain/limits";
-import { getOrgUsageQuery } from "@/queries/organization";
+import {
+	orgInvitationsQuery,
+	useCancelInvitation,
+	useChangeRole,
+	useInviteMember,
+	useRemoveMember,
+	useResendInvitation,
+} from "@/queries/organization";
 import {
 	Table,
 	TableBody,
@@ -52,8 +57,7 @@ const changeRoleSchema = z.object({
 
 function AddMemberDrawer() {
 	const [open, setOpen] = useState(false);
-	const posthog = usePostHog();
-	const queryClient = useQueryClient();
+	const invite = useInviteMember();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -63,36 +67,13 @@ function AddMemberDrawer() {
 		},
 	});
 
-	const onSubmit = async (values: z.infer<typeof formSchema>) => {
-		const { error } = await authClient.organization.inviteMember({
-			role: values.role,
-			email: values.email,
-			resend: true,
+	const onSubmit = (values: z.infer<typeof formSchema>) =>
+		invite.mutate(values, {
+			onSuccess: () => {
+				form.reset();
+				setOpen(false);
+			},
 		});
-
-		if (error) {
-			console.error(error);
-			if (error.code === LIMIT_ERROR_CODES.member) {
-				toast.error(LIMIT_COPY.memberInvite.title, {
-					description: LIMIT_COPY.memberInvite.description,
-				});
-				return;
-			}
-			toast.error("Member", {
-				description: "Member could not be invited",
-			});
-			return;
-		}
-		posthog.capture("org_member_invited", {
-			role: values.role,
-		});
-		toast.success("Member", {
-			description: "Member invited successfully",
-		});
-		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
-		form.reset();
-		setOpen(false);
-	};
 
 	return (
 		<FormDrawer
@@ -109,6 +90,7 @@ function AddMemberDrawer() {
 			form={form}
 			onSubmit={onSubmit}
 			submitLabel="Invite"
+			isPending={invite.isPending}
 		>
 			<FormField
 				control={form.control}
@@ -161,7 +143,7 @@ type OrganizationMember = NonNullable<
 
 function ChangeRoleDrawer({ member }: { member: OrganizationMember }) {
 	const [open, setOpen] = useState(false);
-	const posthog = usePostHog();
+	const changeRole = useChangeRole();
 
 	const form = useForm<z.infer<typeof changeRoleSchema>>({
 		resolver: zodResolver(changeRoleSchema),
@@ -176,28 +158,11 @@ function ChangeRoleDrawer({ member }: { member: OrganizationMember }) {
 		}
 	}, [open, member.role, form]);
 
-	const onSubmit = async (values: z.infer<typeof changeRoleSchema>) => {
-		const { error } = await authClient.organization.updateMemberRole({
-			memberId: member.id,
-			role: values.role,
-		});
-
-		if (error) {
-			console.error(error);
-			toast.error("Member", {
-				description: error?.message ?? "Role could not be changed",
-			});
-			return;
-		}
-		posthog.capture("org_member_role_changed", {
-			member_id: member.id,
-			role: values.role,
-		});
-		toast.success("Member", {
-			description: "Role changed successfully",
-		});
-		setOpen(false);
-	};
+	const onSubmit = (values: z.infer<typeof changeRoleSchema>) =>
+		changeRole.mutate(
+			{ memberId: member.id, role: values.role },
+			{ onSuccess: () => setOpen(false) }
+		);
 
 	return (
 		<FormDrawer
@@ -213,6 +178,7 @@ function ChangeRoleDrawer({ member }: { member: OrganizationMember }) {
 			form={form}
 			onSubmit={onSubmit}
 			submitLabel="Save"
+			isPending={changeRole.isPending}
 		>
 			<FormField
 				control={form.control}
@@ -250,30 +216,9 @@ function ChangeRoleDrawer({ member }: { member: OrganizationMember }) {
 
 function OrganizationMemberList() {
 	const { data: activeOrganization } = authClient.useActiveOrganization();
-	const posthog = usePostHog();
-	const queryClient = useQueryClient();
 	const actor = useActor();
 
 	const canRemove = actor?.role === "owner";
-
-	const handleRemoveFromOrg = async (memberId: string) => {
-		const { error } = await authClient.organization.removeMember({
-			memberIdOrEmail: memberId,
-		});
-
-		if (error) {
-			console.error(error);
-			toast.error("Member", {
-				description: error?.message ?? "Member could not be removed",
-			});
-			return;
-		}
-		posthog.capture("org_member_removed", { member_id: memberId });
-		toast.success("Member", {
-			description: "Member removed successfully",
-		});
-		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
-	};
 
 	const members = activeOrganization?.members ?? [];
 
@@ -318,7 +263,7 @@ function OrganizationMemberList() {
 									{canRemove && member.user.id !== actor?.userId ? (
 										<div className="flex items-center justify-end gap-2">
 											<ChangeRoleDrawer member={member} />
-											<RemoveMemberDialog onConfirm={() => handleRemoveFromOrg(member.id)} />
+											<RemoveMemberDialog memberId={member.id} />
 										</div>
 									) : (
 										<span className="text-muted-foreground">-</span>
@@ -333,9 +278,9 @@ function OrganizationMemberList() {
 	);
 }
 
-function RemoveMemberDialog({ onConfirm }: { onConfirm: () => Promise<void> }) {
+function RemoveMemberDialog({ memberId }: { memberId: string }) {
 	const [open, setOpen] = useState(false);
-	const [isPending, setIsPending] = useState(false);
+	const removeMember = useRemoveMember();
 
 	return (
 		<ConfirmDialog
@@ -350,87 +295,24 @@ function RemoveMemberDialog({ onConfirm }: { onConfirm: () => Promise<void> }) {
 			description="This action cannot be undone. This will permanently remove the member from your organization."
 			confirmLabel="Remove"
 			destructive
-			isPending={isPending}
-			onConfirm={async () => {
-				setIsPending(true);
-				await onConfirm();
-				setIsPending(false);
-				setOpen(false);
-			}}
+			isPending={removeMember.isPending}
+			onConfirm={() => removeMember.mutate(memberId, { onSuccess: () => setOpen(false) })}
 		/>
 	);
 }
 
 function OrganizationInviteList() {
-	const posthog = usePostHog();
+	const { organizationId: orgId } = Route.useRouteContext();
 	const { data: activeOrg } = authClient.useActiveOrganization();
-	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: ["org_invites"],
-		queryFn: async () => {
-			const { data, error } = await authClient.organization.listInvitations();
-
-			if (error) {
-				throw error;
-			}
-
-			return data;
-		},
-	});
+	const { data, isLoading, error } = useQuery(orgInvitationsQuery(orgId));
+	const cancelInvite = useCancelInvitation();
+	const resendInvite = useResendInvitation();
 
 	useEffect(() => {
 		if (error) {
 			console.error(error);
 		}
 	}, [error]);
-
-	const deleteInvite = async (inviteId: string) => {
-		const { error } = await authClient.organization.cancelInvitation({
-			invitationId: inviteId,
-		});
-
-		if (error) {
-			console.error(error);
-			toast.error("Invitation", {
-				description: error?.message ?? "Invitation could not be cancelled",
-			});
-			return;
-		}
-
-		toast.success("Invitation", {
-			description: "Invitation cancelled successfully",
-		});
-		refetch();
-	};
-
-	const resendInvite = async (inviteId: string) => {
-		const inviteObj = data?.find((i) => i.id === inviteId);
-
-		if (!inviteObj) {
-			return;
-		}
-
-		const { error } = await authClient.organization.inviteMember({
-			resend: true,
-			email: inviteObj.email,
-			role: inviteObj.role,
-		});
-
-		if (error) {
-			console.error(error);
-			toast.error("Invitation", {
-				description: error?.message ?? "Invitation could not be resent",
-			});
-			return;
-		}
-
-		toast.success("Invitation", {
-			description: "Invitation resent successfully",
-		});
-		posthog.capture("org_member_invite_resend", {
-			inviteId: inviteId,
-		});
-		refetch();
-	};
 
 	if (isLoading) {
 		return (
@@ -485,9 +367,8 @@ function OrganizationInviteList() {
 											type="button"
 											variant={"ghost"}
 											size={"icon-sm"}
-											onClick={() => {
-												deleteInvite(i.id);
-											}}
+											disabled={cancelInvite.isPending}
+											onClick={() => cancelInvite.mutate(i.id)}
 											title="Cancel Invite"
 										>
 											<DeleteIcon />
@@ -498,9 +379,10 @@ function OrganizationInviteList() {
 											type="button"
 											variant={"ghost"}
 											size={"icon-sm"}
-											onClick={() => {
-												resendInvite(i.id);
-											}}
+											disabled={resendInvite.isPending}
+											onClick={() =>
+												resendInvite.mutate({ id: i.id, email: i.email, role: i.role as Role })
+											}
 											title="Resend Invite"
 										>
 											<IconReload />

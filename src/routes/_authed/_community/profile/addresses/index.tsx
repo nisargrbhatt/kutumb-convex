@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
-import { addMyCommunityAddress, deleteMyCommunityAddress } from "@/server/communityAddress";
-import { getMyCommunityAddressesQuery } from "@/queries/communityAddress";
+import { myAddressesQuery, useAddMyAddress, useDeleteMyAddress } from "@/queries/communityAddress";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormDrawer } from "@/components/ui/form-drawer";
@@ -31,17 +30,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { COMMUNITY_ADDRESS_TYPE } from "@/db/constants";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { MapPin, MapPinOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import { z } from "zod";
 
 export const Route = createFileRoute("/_authed/_community/profile/addresses/")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(getMyCommunityAddressesQuery());
+		await context.queryClient.ensureQueryData(myAddressesQuery(context.organizationId));
 	},
 	component: RouteComponent,
 });
@@ -63,7 +61,8 @@ const addressFormSchema = z.object({
 function RouteComponent() {
 	const [isAddOpen, setIsAddOpen] = useState(false);
 
-	const { data: addresses } = useSuspenseQuery(getMyCommunityAddressesQuery());
+	const { organizationId: orgId } = Route.useRouteContext();
+	const { data: addresses } = useSuspenseQuery(myAddressesQuery(orgId));
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
@@ -147,19 +146,7 @@ function RouteComponent() {
 function DeleteAddressDialog({ id }: { id: string }) {
 	const [open, setOpen] = useState(false);
 
-	const { mutate: deleteAddress, isPending: isDeleting } = useMutation({
-		mutationFn: deleteMyCommunityAddress,
-		onSuccess: (_d, _v, _r, context) => {
-			toast.success("Address deleted successfully");
-			setOpen(false);
-			context.client.invalidateQueries({
-				queryKey: getMyCommunityAddressesQuery().queryKey,
-			});
-		},
-		onError: (error) => {
-			toast.error(error.message);
-		},
-	});
+	const deleteAddress = useDeleteMyAddress();
 
 	return (
 		<ConfirmDialog
@@ -174,8 +161,8 @@ function DeleteAddressDialog({ id }: { id: string }) {
 			description="This will permanently delete this address. This action cannot be undone."
 			confirmLabel="Delete"
 			destructive
-			onConfirm={() => deleteAddress({ data: { id } })}
-			isPending={isDeleting}
+			onConfirm={() => deleteAddress.mutate(id, { onSuccess: () => setOpen(false) })}
+			isPending={deleteAddress.isPending}
 		/>
 	);
 }
@@ -202,22 +189,15 @@ function AddressFormDrawer({
 		},
 	});
 
-	const { mutate: addAddress, isPending } = useMutation({
-		mutationFn: addMyCommunityAddress,
-		onSuccess: (_d, _v, _r, context) => {
-			toast.success("Address added successfully");
-			form.reset();
-			onOpenChange(false);
-			context.client.invalidateQueries({
-				queryKey: getMyCommunityAddressesQuery().queryKey,
-			});
-		},
-		onError: (error) => {
-			toast.error(error.message);
-		},
-	});
+	const addAddress = useAddMyAddress();
 
-	const onSubmit = (values: z.infer<typeof addressFormSchema>) => addAddress({ data: values });
+	const onSubmit = (values: z.infer<typeof addressFormSchema>) =>
+		addAddress.mutate(values, {
+			onSuccess: () => {
+				form.reset();
+				onOpenChange(false);
+			},
+		});
 
 	return (
 		<FormDrawer
@@ -234,7 +214,7 @@ function AddressFormDrawer({
 			form={form}
 			onSubmit={onSubmit}
 			submitLabel="Add address"
-			isPending={isPending}
+			isPending={addAddress.isPending}
 			size="lg"
 		>
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -7,21 +7,23 @@ import { RelationForm } from "@/components/relations/RelationForm";
 import { RelationsTable } from "@/components/relations/RelationsTable";
 import { Button } from "@/components/ui/button";
 import {
-	getMyCommunityRelationshipsQuery,
+	myRelationshipsQuery,
 	useAddMyRelation,
 	useDeleteMyRelation,
 } from "@/queries/communityRelation";
 
 export const Route = createFileRoute("/_authed/_community/profile/relationships/")({
-	loader: ({ context }) => context.queryClient.ensureQueryData(getMyCommunityRelationshipsQuery()),
+	loader: ({ context }) =>
+		context.queryClient.ensureQueryData(myRelationshipsQuery(context.organizationId)),
 	component: RouteComponent,
 });
 
 function RouteComponent() {
 	const [isAddOpen, setIsAddOpen] = useState(false);
+	const { organizationId: orgId } = Route.useRouteContext();
 	const {
 		data: { profileId, outgoing, incoming },
-	} = useSuspenseQuery(getMyCommunityRelationshipsQuery());
+	} = useSuspenseQuery(myRelationshipsQuery(orgId));
 	const addRelation = useAddMyRelation();
 	const deleteRelation = useDeleteMyRelation();
 

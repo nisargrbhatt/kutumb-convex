@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
-	getFocusedCommunityGraphQuery,
+	focusedCommunityGraphQuery,
 	searchCommunityProfilesLiteQuery,
 } from "@/queries/communityProfile";
 import type { GraphEdge, SubgraphNode } from "@/lib/communityGraphCache";
@@ -57,7 +57,7 @@ const EXPAND_CAP = 300;
 
 export const Route = createFileRoute("/_authed/_community/community-tree/")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(getFocusedCommunityGraphQuery());
+		await context.queryClient.ensureQueryData(focusedCommunityGraphQuery(context.organizationId));
 	},
 	component: RouteComponent,
 });
@@ -212,8 +212,9 @@ const edgeTypes = { relation: RelationEdge };
 
 function SearchBox(props: { onSelect: (id: string) => void }) {
 	const [open, setOpen] = useState(false);
+	const { organizationId: orgId } = Route.useRouteContext();
 	const [query, setQuery] = useState("");
-	const { data: results } = useQuery(searchCommunityProfilesLiteQuery(query));
+	const { data: results } = useQuery(searchCommunityProfilesLiteQuery(orgId, query));
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
@@ -314,6 +315,7 @@ function ProfilePanel(props: {
 function Flow() {
 	const reducedMotion = usePrefersReducedMotion();
 	const queryClient = useQueryClient();
+	const { organizationId: orgId } = Route.useRouteContext();
 	const { fitView } = useReactFlow();
 
 	const [focusId, setFocusId] = useState<string | undefined>(undefined);
@@ -323,7 +325,7 @@ function Flow() {
 
 	// Base subgraph for the current anchor (server BFS over cached org blob).
 	const { data: base } = useSuspenseQuery(
-		getFocusedCommunityGraphQuery({ focusId, depth: DEFAULT_DEPTH })
+		focusedCommunityGraphQuery(orgId, { focusId, depth: DEFAULT_DEPTH })
 	);
 
 	// Additive expansions merged client-side. Reset whenever the anchor changes (re-root).
@@ -435,7 +437,7 @@ function Flow() {
 				return;
 			}
 			const sub = await queryClient.fetchQuery(
-				getFocusedCommunityGraphQuery({ focusId: id, depth: 1 })
+				focusedCommunityGraphQuery(orgId, { focusId: id, depth: 1 })
 			);
 			const baseMaxHop = Math.max(0, ...combinedNodes.map((n) => n.hop));
 			const offsetNodes = sub.nodes.map((n) => ({ ...n, hop: baseMaxHop + n.hop }));
@@ -443,7 +445,7 @@ function Flow() {
 			setExtraEdges((prev) => [...prev, ...sub.edges]);
 			setExpandedIds((prev) => new Set(prev).add(id));
 		},
-		[expandedIds, nodeById, queryClient, combinedNodes, reRoot]
+		[expandedIds, nodeById, queryClient, orgId, combinedNodes, reRoot]
 	);
 
 	const onNodeClick = useCallback(

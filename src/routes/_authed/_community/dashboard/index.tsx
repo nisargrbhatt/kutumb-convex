@@ -1,9 +1,9 @@
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
-import { getActiveMemberCountQuery, getMyCommunityProfileQuery } from "@/queries/communityProfile";
-import { getMyCommunityAddressesQuery } from "@/queries/communityAddress";
+import { activeMemberCountQuery, myProfileQuery } from "@/queries/communityProfile";
+import { myAddressesQuery } from "@/queries/communityAddress";
 import {
-	getMyIncomingRelationCountQuery,
-	getMyOutgoingRelationCountQuery,
+	myIncomingRelationCountQuery,
+	myOutgoingRelationCountQuery,
 } from "@/queries/communityRelation";
 import { CtaCard } from "@/components/dashboard/CtaCard";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -14,12 +14,13 @@ import { ArrowDownLeft, ArrowUpRight, MapPin, UserPlus, Users } from "lucide-rea
 
 export const Route = createFileRoute("/_authed/_community/dashboard/")({
 	loader: async ({ context }) => {
+		const { queryClient: qc, organizationId: orgId } = context;
 		await Promise.allSettled([
-			context.queryClient.ensureQueryData(getActiveMemberCountQuery()),
-			context.queryClient.ensureQueryData(getMyIncomingRelationCountQuery()),
-			context.queryClient.ensureQueryData(getMyOutgoingRelationCountQuery()),
-			context.queryClient.ensureQueryData(getMyCommunityProfileQuery()),
-			context.queryClient.ensureQueryData(getMyCommunityAddressesQuery()),
+			qc.ensureQueryData(activeMemberCountQuery(orgId)),
+			qc.ensureQueryData(myIncomingRelationCountQuery(orgId)),
+			qc.ensureQueryData(myOutgoingRelationCountQuery(orgId)),
+			qc.ensureQueryData(myProfileQuery(orgId)),
+			qc.ensureQueryData(myAddressesQuery(orgId)),
 		]);
 	},
 	component: RouteComponent,
@@ -28,11 +29,12 @@ export const Route = createFileRoute("/_authed/_community/dashboard/")({
 function RouteComponent() {
 	const { data: activeOrg } = authClient.useActiveOrganization();
 
-	const { data: memberCount } = useSuspenseQuery(getActiveMemberCountQuery());
-	const { data: incomingCount } = useSuspenseQuery(getMyIncomingRelationCountQuery());
-	const { data: outgoingCount } = useSuspenseQuery(getMyOutgoingRelationCountQuery());
-	const { data: profile } = useSuspenseQuery(getMyCommunityProfileQuery());
-	const { data: addresses } = useSuspenseQuery(getMyCommunityAddressesQuery());
+	const { organizationId: orgId } = Route.useRouteContext();
+	const { data: memberCount } = useSuspenseQuery(activeMemberCountQuery(orgId));
+	const { data: incomingCount } = useSuspenseQuery(myIncomingRelationCountQuery(orgId));
+	const { data: outgoingCount } = useSuspenseQuery(myOutgoingRelationCountQuery(orgId));
+	const { data: profile } = useSuspenseQuery(myProfileQuery(orgId));
+	const { data: addresses } = useSuspenseQuery(myAddressesQuery(orgId));
 
 	const hasProfile = profile !== null;
 	const showAddRelationCta = hasProfile && incomingCount + outgoingCount === 0;

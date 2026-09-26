@@ -15,12 +15,9 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
 import { useId } from "react";
-import { authClient } from "@/lib/auth-client";
-import { toast } from "sonner";
-import { Link, useRouter } from "@tanstack/react-router";
-import { usePostHog } from "@posthog/react";
+import { Link } from "@tanstack/react-router";
+import { isSlugTaken, useCreateOrganization } from "@/queries/organization";
 import type { ReactNode } from "react";
-import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/domain/limits";
 
 const formSchema = z.object({
 	name: z
@@ -47,9 +44,8 @@ type OnboardingFormProps = {
 };
 
 export function OnboardingForm({ titleAdornment, beforeForm, disabled }: OnboardingFormProps = {}) {
-	const router = useRouter();
 	const formId = useId();
-	const posthog = usePostHog();
+	const createOrg = useCreateOrganization();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		defaultValues: {
@@ -59,81 +55,13 @@ export function OnboardingForm({ titleAdornment, beforeForm, disabled }: Onboard
 		resolver: zodResolver(formSchema),
 	});
 
-	const onSubmit = form.handleSubmit(async (values) => {
-		const { data } = await authClient.organization.checkSlug({
-			slug: values.slug,
-		});
-
-		if (!data) {
-			posthog.capture("organization_create_failed", {
-				reason: "slug_conflict",
-				slug: values.slug,
-			});
-			toast.error("Organization slug already exist", {
-				description: "Please try another slug.",
-			});
-			form.setError("slug", {
-				message: "Organization slug already exist. Try another",
-			});
-			return;
-		}
-		if (data?.status === false) {
-			posthog.capture("organization_create_failed", {
-				reason: "slug_conflict",
-				slug: values.slug,
-			});
-			toast.error("Organization slug already exist", {
-				description: "Please try another slug.",
-			});
-			form.setError("slug", {
-				message: "Organization slug already exist. Try another",
-			});
-			return;
-		}
-
-		const { error: createOrgError } = await authClient.organization.create({
-			name: values.name,
-			slug: values.slug,
-			keepCurrentActiveOrganization: false,
-			metadata: {},
-		});
-
-		if (createOrgError) {
-			if (createOrgError.code === LIMIT_ERROR_CODES.org) {
-				posthog.capture("organization_create_failed", {
-					reason: "org_limit",
-					name: values.name,
-					slug: values.slug,
-				});
-				toast.error(LIMIT_COPY.orgCreate.title, {
-					description: LIMIT_COPY.orgCreate.description,
-				});
-				return;
+	const onSubmit = form.handleSubmit((values) =>
+		createOrg.mutateAsync(values).catch((error) => {
+			if (isSlugTaken(error)) {
+				form.setError("slug", { message: "Organization slug already exist. Try another" });
 			}
-			posthog.capture("organization_create_failed", {
-				reason: "server_error",
-				name: values.name,
-				slug: values.slug,
-			});
-			toast.error("Failed to create organization", {
-				description: "Please try again later.",
-			});
-			return;
-		}
-
-		posthog.capture("organization_created", {
-			organization_name: values.name,
-			organization_slug: values.slug,
-		});
-
-		toast.success("Organization created successfully", {
-			description: "You can now access your organization. Redirecting you to dashboard",
-		});
-
-		router.navigate({
-			to: "/dashboard",
-		});
-	});
+		})
+	);
 
 	return (
 		<div className={cn("flex flex-col gap-6")}>
