@@ -57,7 +57,7 @@ import {
 import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
-import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/lib/limits";
+import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/domain/limits";
 import { getOrgUsageQuery } from "@/queries/organization";
 import {
 	Table,

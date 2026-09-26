@@ -14,9 +14,8 @@ import {
 	resolveAnchorId,
 	searchProfiles,
 } from "@/lib/communityGraphCache";
-import { canCreateProfile, LIMIT_COPY } from "@/lib/limits";
-import { countOrgProfiles } from "@/lib/limits-db";
-import { captureLimitReached } from "@/lib/posthog-server";
+import { LIMIT_COPY, LimitError } from "@/domain/limits";
+import { limits } from "@/lib/limits";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
 
@@ -103,14 +102,13 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 			},
 		});
 		if (!communityProfileItem) {
-			const existingProfileCount = await countOrgProfiles(organizationId);
-			if (!canCreateProfile(existingProfileCount)) {
-				captureLimitReached({
-					limit: "profile",
-					organizationId: organizationId,
-					userId: userId,
-				});
-				throw new AppError("LimitReached", LIMIT_COPY.profileSelf.description);
+			try {
+				await limits.assertProfileSlot(organizationId, userId);
+			} catch (e) {
+				if (e instanceof LimitError) {
+					throw new AppError("LimitReached", LIMIT_COPY.profileSelf.description, e.code);
+				}
+				throw e;
 			}
 
 			await db.insert(communityProfile).values({
@@ -588,14 +586,13 @@ export const addMissingMember = createServerFn({ method: "POST" })
 
 		const { organizationId, userId } = context.actor;
 
-		const existingProfileCount = await countOrgProfiles(organizationId);
-		if (!canCreateProfile(existingProfileCount)) {
-			captureLimitReached({
-				limit: "profile",
-				organizationId: organizationId,
-				userId: userId,
-			});
-			throw new AppError("LimitReached", LIMIT_COPY.profileAdmin.description);
+		try {
+			await limits.assertProfileSlot(organizationId, userId);
+		} catch (e) {
+			if (e instanceof LimitError) {
+				throw new AppError("LimitReached", LIMIT_COPY.profileAdmin.description, e.code);
+			}
+			throw e;
 		}
 
 		const result = await safeAsync(

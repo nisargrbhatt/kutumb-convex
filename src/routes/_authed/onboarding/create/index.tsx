@@ -6,7 +6,7 @@ import { RootLayout } from "@/components/RootLayout";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getMyOrganizationCountQuery } from "@/queries/organization";
-import { canJoinOrganization, LIMIT_COPY } from "@/lib/limits";
+import { canJoinOrganization, LIMIT_COPY } from "@/domain/limits";
 
 export const Route = createFileRoute("/_authed/onboarding/create/")({
 	loader: async ({ context }) => {

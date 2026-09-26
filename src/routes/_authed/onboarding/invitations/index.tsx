@@ -17,7 +17,7 @@ import { GalleryVerticalEnd } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { usePostHog } from "@posthog/react";
-import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/lib/limits";
+import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/domain/limits";
 
 export const Route = createFileRoute("/_authed/onboarding/invitations/")({
 	component: RouteComponent,
