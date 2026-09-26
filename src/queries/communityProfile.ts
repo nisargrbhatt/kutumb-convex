@@ -4,7 +4,6 @@ import {
 	getActiveMemberCount,
 	getActiveProfilesForRelation,
 	getCommunityMembers,
-	getCommunityProfileList,
 	getFocusedCommunityGraph,
 	getMyCommunityProfile,
 	searchCommunityProfilesLite,
@@ -26,15 +25,6 @@ export const getActiveMemberCountQuery = () =>
 		queryKey: ["get-active-member-count"],
 		queryFn: async () => {
 			const result = await getActiveMemberCount();
-			return result;
-		},
-	});
-
-export const getCommunityProfileListQuery = () =>
-	queryOptions({
-		queryKey: ["get-community-profile-list"],
-		queryFn: async () => {
-			const result = await getCommunityProfileList();
 			return result;
 		},
 	});

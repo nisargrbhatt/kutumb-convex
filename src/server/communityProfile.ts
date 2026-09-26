@@ -109,25 +109,6 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 		};
 	});
 
-export const getCommunityProfileList = createServerFn({ method: "GET" })
-	.middleware([orgMiddleware])
-	.handler(async ({ context }) => {
-		const { organizationId } = context.actor;
-
-		const communityProfiles = await db.query.communityProfile.findMany({
-			where: (fields, operators) => operators.eq(fields.organizationId, organizationId),
-			columns: {
-				id: true,
-				firstName: true,
-				lastName: true,
-				middleName: true,
-				nickName: true,
-			},
-		});
-
-		return communityProfiles;
-	});
-
 export const getActiveProfilesForRelation = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
 	.validator(
