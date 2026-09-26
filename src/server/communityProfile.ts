@@ -19,7 +19,7 @@ import { limits } from "@/lib/limits";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
 import type { CustomFieldDefinition } from "@/domain/customFields";
-import { communityProfileInput, memberFilterSchema } from "@/domain/communityProfile";
+import { communityProfileInput, fullName, memberFilterSchema } from "@/domain/communityProfile";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
@@ -481,11 +481,20 @@ export const addMissingMember = createServerFn({ method: "POST" })
 			throw e;
 		}
 
+		const actorProfile = await db.query.communityProfile.findFirst({
+			where: (fields, operators) =>
+				operators.and(
+					operators.eq(fields.userId, userId),
+					operators.eq(fields.organizationId, organizationId)
+				),
+			columns: { firstName: true, middleName: true, lastName: true },
+		});
+
 		const result = await safeAsync(
 			db.insert(communityProfile).values({
 				...data,
 				id: generatePrimaryKey(),
-				comment: `Added by ${context?.session?.user?.name}(${context?.session?.user?.email})(${userId})`,
+				comment: `Added by ${actorProfile ? fullName(actorProfile) : context.session.user.email}`,
 				organizationId,
 				status: COMMUNITY_PROFILE_STATUS.draft,
 			})

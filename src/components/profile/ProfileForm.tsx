@@ -60,7 +60,9 @@ export function ProfileForm({
 
 	const handleSubmit = async (values: CommunityProfileFormValues) => {
 		if (!(await onSubmit(toInput(values)))) return;
-		form.reset(values);
+		// admin = add-member: next open starts blank. self keeps the saved values.
+		// keepDirtyValues must be overridden: `reset` merges `resetOptions` in.
+		form.reset(mode === "admin" ? defaultValues : values, { keepDirtyValues: false });
 		onOpenChange(false);
 	};
 
