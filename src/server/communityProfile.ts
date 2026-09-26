@@ -2,7 +2,7 @@ import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
-import { COMMUNITY_PROFILE_BLOOD_GROUP, COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
+import { COMMUNITY_PROFILE_STATUS } from "@/db/constants";
 import { communityProfile } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { and, count, eq, like, sql } from "drizzle-orm";
@@ -18,6 +18,7 @@ import { LIMIT_COPY, LimitError } from "@/domain/limits";
 import { limits } from "@/lib/limits";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
+import { communityProfileInput, memberFilterSchema } from "@/domain/communityProfile";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
@@ -60,33 +61,7 @@ export const getActiveMemberCount = createServerFn({ method: "GET" })
 
 export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
-	.validator(
-		z.object({
-			firstName: z.string().min(1, "First name is required"),
-			middleName: z.string().optional(),
-			lastName: z.string().min(1, "Last name is required"),
-			nickName: z.string().optional(),
-			gender: z.enum([GENDERS.male, GENDERS.female, GENDERS.other]).optional(),
-			email: z.email().optional(),
-			bloodGroup: z
-				.enum([
-					COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
-				])
-				.optional(),
-			mobileNumber: z.string().optional(),
-			dateOfBirth: z.string().optional(),
-			dateOfDeath: z.string().optional(),
-			comment: z.string().optional(),
-			customFieldData: z.record(z.string(), z.any()).optional(),
-		})
-	)
+	.validator(communityProfileInput)
 	.handler(async ({ context, data }) => {
 		const { organizationId, userId } = context.actor;
 
@@ -112,66 +87,17 @@ export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
 			}
 
 			await db.insert(communityProfile).values({
+				...data,
 				id: generatePrimaryKey(),
-				organizationId: organizationId,
-				userId: userId,
-				firstName: data.firstName,
-				middleName: data.middleName,
-				lastName: data.lastName,
-				nickName: data.nickName,
-				gender: data.gender,
-				email: data.email,
-				bloodGroup: data.bloodGroup,
-				mobileNumber: data.mobileNumber,
-				...(data.dateOfBirth
-					? {
-							dateOfBirth: data.dateOfBirth,
-						}
-					: {}),
-				...(data.dateOfDeath
-					? {
-							dateOfDeath: data.dateOfDeath,
-						}
-					: {}),
-				comment: data.comment,
-				status: "active",
-				...(data?.customFieldData
-					? {
-							customFieldData: data?.customFieldData,
-						}
-					: {}),
+				organizationId,
+				userId,
+				status: COMMUNITY_PROFILE_STATUS.active,
 			});
 		} else {
 			const communityProfileId = communityProfileItem?.id;
 			await db
 				.update(communityProfile)
-				.set({
-					firstName: data.firstName,
-					middleName: data.middleName,
-					lastName: data.lastName,
-					nickName: data.nickName,
-					gender: data.gender,
-					email: data.email,
-					bloodGroup: data.bloodGroup,
-					mobileNumber: data.mobileNumber,
-					...(data.dateOfBirth
-						? {
-								dateOfBirth: data.dateOfBirth,
-							}
-						: {}),
-					...(data.dateOfDeath
-						? {
-								dateOfDeath: data.dateOfDeath,
-							}
-						: {}),
-					comment: data.comment,
-					status: "active",
-					...(data?.customFieldData
-						? {
-								customFieldData: data?.customFieldData,
-							}
-						: {}),
-				})
+				.set({ ...data, status: COMMUNITY_PROFILE_STATUS.active })
 				.where(eq(communityProfile.id, communityProfileId));
 		}
 
@@ -232,27 +158,13 @@ export const getActiveProfilesForRelation = createServerFn({ method: "GET" })
 
 export const getCommunityMembers = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
-	.validator(
-		z.object({
-			search: z.string().optional(),
-			status: z
-				.enum([
-					COMMUNITY_PROFILE_STATUS.active,
-					COMMUNITY_PROFILE_STATUS.inactive,
-					COMMUNITY_PROFILE_STATUS.draft,
-				])
-				.optional(),
-			gender: z.enum([GENDERS.male, GENDERS.female, GENDERS.other]).optional(),
-			page: z.number().int().min(1).default(1),
-			pageSize: z.number().int().min(1).max(100).default(10),
-		})
-	)
+	.validator(memberFilterSchema)
 	.handler(async ({ context, data }) => {
 		const { organizationId } = context.actor;
 
 		const conditions = [eq(communityProfile.organizationId, organizationId)];
 
-		if (data.search && data.search.trim().length > 0) {
+		if (data.search.trim().length > 0) {
 			const searchTerm = `%${data.search.trim()}%`;
 			conditions.push(
 				sql`(${like(communityProfile.firstName, searchTerm)} OR ${like(communityProfile.lastName, searchTerm)} OR ${like(communityProfile.email, searchTerm)})`
@@ -555,32 +467,7 @@ export const reassignProfileToUser = createServerFn({ method: "POST" })
 
 export const addMissingMember = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
-	.validator(
-		z.object({
-			firstName: z.string().min(1, "First name is required"),
-			middleName: z.string().optional(),
-			lastName: z.string().min(1, "Last name is required"),
-			nickName: z.string().optional(),
-			gender: z.enum([GENDERS.male, GENDERS.female, GENDERS.other]).optional(),
-			email: z.email().optional(),
-			bloodGroup: z
-				.enum([
-					COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
-					COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
-				])
-				.optional(),
-			mobileNumber: z.string().optional(),
-			dateOfBirth: z.string().optional(),
-			dateOfDeath: z.string().optional(),
-			customFieldData: z.record(z.string(), z.any()).optional(),
-		})
-	)
+	.validator(communityProfileInput)
 	.handler(async ({ context, data }) => {
 		assertCan(context.actor, { communityProfile: ["create"] });
 
@@ -597,21 +484,11 @@ export const addMissingMember = createServerFn({ method: "POST" })
 
 		const result = await safeAsync(
 			db.insert(communityProfile).values({
+				...data,
 				id: generatePrimaryKey(),
-				firstName: data.firstName,
-				middleName: data.middleName,
-				lastName: data.lastName,
-				nickName: data.nickName,
-				gender: data.gender,
-				email: data.email,
-				bloodGroup: data.bloodGroup,
-				mobileNumber: data.mobileNumber,
-				dateOfBirth: data.dateOfBirth,
-				dateOfDeath: data.dateOfDeath,
 				comment: `Added by ${context?.session?.user?.name}(${context?.session?.user?.email})(${userId})`,
-				customFieldData: data.customFieldData,
-				organizationId: organizationId,
-				status: "draft",
+				organizationId,
+				status: COMMUNITY_PROFILE_STATUS.draft,
 			})
 		);
 

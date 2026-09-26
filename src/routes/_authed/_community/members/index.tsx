@@ -24,33 +24,22 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Plus, Search, Users, X } from "lucide-react";
-import { z } from "zod";
+import {
+	MEMBER_FILTER_DEFAULTS,
+	memberFilterSchema,
+	type MemberFilter,
+} from "@/domain/communityProfile";
 
-const membersSearchSchema = z.object({
-	search: z.string().optional().catch(""),
-	status: z.string().optional().catch(""),
-	gender: z.string().optional().catch(""),
-	page: z.number().int().min(1).optional().catch(1),
-	pageSize: z.number().int().min(1).max(100).optional().catch(10),
-});
-
-type MembersSearch = z.infer<typeof membersSearchSchema>;
+type MembersSearch = MemberFilter;
 
 export const Route = createFileRoute("/_authed/_community/members/")({
-	validateSearch: membersSearchSchema,
+	validateSearch: memberFilterSchema,
+	search: { middlewares: [stripSearchParams(MEMBER_FILTER_DEFAULTS)] },
 	loaderDeps: ({ search }) => search,
 	loader: async ({ context, deps }) => {
-		await context.queryClient.ensureQueryData(
-			getCommunityMembersQuery({
-				search: deps.search || undefined,
-				status: deps.status || undefined,
-				gender: deps.gender || undefined,
-				page: deps.page ?? 1,
-				pageSize: deps.pageSize ?? 10,
-			})
-		);
+		await context.queryClient.ensureQueryData(getCommunityMembersQuery(deps));
 	},
 	component: RouteComponent,
 });
@@ -189,15 +178,15 @@ const columns: ColumnDef<CommunityMember>[] = [
 function MembersFilters() {
 	const navigate = Route.useNavigate();
 	const search = Route.useSearch();
-	const [searchValue, setSearchValue] = useState(search.search ?? "");
+	const [searchValue, setSearchValue] = useState(search.search);
 
 	useEffect(() => {
 		const timeout = setTimeout(() => {
-			if (searchValue !== (search.search ?? "")) {
+			if (searchValue !== search.search) {
 				navigate({
 					search: (prev: MembersSearch) => ({
 						...prev,
-						search: searchValue || undefined,
+						search: searchValue,
 						page: 1,
 					}),
 				});
@@ -218,12 +207,12 @@ function MembersFilters() {
 				/>
 			</div>
 			<Select
-				value={search.status ?? "all"}
+				value={search.status || "all"}
 				onValueChange={(value) => {
 					navigate({
 						search: (prev: MembersSearch) => ({
 							...prev,
-							status: value && value !== "all" ? value : undefined,
+							status: (value && value !== "all" ? value : "") as MemberFilter["status"],
 							page: 1,
 						}),
 					});
@@ -242,12 +231,12 @@ function MembersFilters() {
 				</SelectContent>
 			</Select>
 			<Select
-				value={search.gender ?? "all"}
+				value={search.gender || "all"}
 				onValueChange={(value) => {
 					navigate({
 						search: (prev: MembersSearch) => ({
 							...prev,
-							gender: value && value !== "all" ? value : undefined,
+							gender: (value && value !== "all" ? value : "") as MemberFilter["gender"],
 							page: 1,
 						}),
 					});
@@ -275,7 +264,7 @@ function MembersFilters() {
 						navigate({
 							search: {
 								page: 1,
-								pageSize: search.pageSize ?? 10,
+								pageSize: search.pageSize,
 							},
 						});
 					}}
@@ -315,7 +304,7 @@ function MembersPagination({
 						navigate({
 							search: (prev: MembersSearch) => ({
 								...prev,
-								page: (prev.page ?? 1) - 1,
+								page: prev.page - 1,
 							}),
 						});
 					}}
@@ -334,7 +323,7 @@ function MembersPagination({
 						navigate({
 							search: (prev: MembersSearch) => ({
 								...prev,
-								page: (prev.page ?? 1) + 1,
+								page: prev.page + 1,
 							}),
 						});
 					}}
@@ -350,15 +339,7 @@ function MembersPagination({
 function RouteComponent() {
 	const search = Route.useSearch();
 
-	const { data: result } = useSuspenseQuery(
-		getCommunityMembersQuery({
-			search: search.search || undefined,
-			status: search.status || undefined,
-			gender: search.gender || undefined,
-			page: search.page ?? 1,
-			pageSize: search.pageSize ?? 10,
-		})
-	);
+	const { data: result } = useSuspenseQuery(getCommunityMembersQuery(search));
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">

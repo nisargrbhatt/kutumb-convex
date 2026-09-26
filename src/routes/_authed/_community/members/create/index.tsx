@@ -12,8 +12,13 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import z from "zod";
 import { COMMUNITY_PROFILE_BLOOD_GROUP, GENDERS } from "@/db/constants";
+import {
+	communityProfileFormSchema,
+	toFormValues,
+	toInput,
+	type CommunityProfileFormValues,
+} from "@/domain/communityProfile";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -69,63 +74,17 @@ function PageHeader() {
 	);
 }
 
-const communityProfileSchema = z.object({
-	firstName: z.string().min(1, "First name is required"),
-	middleName: z.string().optional(),
-	lastName: z.string().min(1, "Last name is required"),
-	nickName: z.string().optional(),
-	gender: z.enum([GENDERS.male, GENDERS.female, GENDERS.other]).optional(),
-	email: z.email().optional(),
-	bloodGroup: z
-		.enum([
-			COMMUNITY_PROFILE_BLOOD_GROUP["A+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["A-"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["B+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["B-"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["AB+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["AB-"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["O+"],
-			COMMUNITY_PROFILE_BLOOD_GROUP["O-"],
-		])
-		.optional(),
-	mobileNumber: z.string().optional(),
-	dateOfBirth: z.date().optional(),
-	dateOfDeath: z.date().optional(),
-	customFieldData: z.record(z.string(), z.any()).optional(),
-});
-
-type CommunityProfileFormValues = z.infer<typeof communityProfileSchema>;
-
 function CommunityProfileForm({ customFields }: { customFields: CustomField[] }) {
 	const navigate = Route.useNavigate();
 	const posthog = usePostHog();
 	const queryClient = useQueryClient();
 	const form = useForm<CommunityProfileFormValues>({
-		resolver: zodResolver(communityProfileSchema),
-		defaultValues: {
-			firstName: "",
-			lastName: "",
-		},
+		resolver: zodResolver(communityProfileFormSchema),
+		defaultValues: toFormValues(null),
 	});
 
 	const onSubmit = form.handleSubmit(async (data) => {
-		const result = await safeAsync(
-			addMissingMember({
-				data: {
-					firstName: data.firstName,
-					middleName: data.middleName,
-					lastName: data.lastName,
-					nickName: data.nickName,
-					gender: data.gender,
-					email: data.email,
-					bloodGroup: data.bloodGroup,
-					mobileNumber: data.mobileNumber,
-					dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toJSON() : undefined,
-					dateOfDeath: data.dateOfDeath ? data.dateOfDeath.toJSON() : undefined,
-					customFieldData: data.customFieldData,
-				},
-			})
-		);
+		const result = await safeAsync(addMissingMember({ data: toInput(data) }));
 
 		if (!result.success) {
 			console.error(result.error);

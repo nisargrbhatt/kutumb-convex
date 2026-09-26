@@ -63,3 +63,7 @@ export const CUSTOM_FIELD_TYPE = {
 	date: "date",
 	boolean: "boolean",
 } as const;
+
+/** Non-empty tuple of an enum-like const's values, for Drizzle `text({ enum })`. */
+export const enumValues = <T extends Record<string, string>>(o: T) =>
+	Object.values(o) as [T[keyof T], ...T[keyof T][]];

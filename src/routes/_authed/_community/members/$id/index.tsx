@@ -10,6 +10,7 @@ import {
 	deleteCommunityRelationFromProfile,
 } from "@/server/communityRelation";
 import { COMMUNITY_RELATION_TYPE } from "@/db/constants";
+import { formatRelationType, relationTypeSchema } from "@/domain/relation";
 import { safeAsync } from "@/lib/safe";
 import { isAppError } from "@/domain/errors";
 import { createFileRoute, notFound, Link, useRouter } from "@tanstack/react-router";
@@ -639,14 +640,6 @@ function RouteComponent() {
 	);
 }
 
-function formatRelationType(type: string | null) {
-	if (!type) return "-";
-	return type
-		.split("_")
-		.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-		.join(" ");
-}
-
 type CounterpartProfile = {
 	firstName: string;
 	middleName: string | null;
@@ -747,21 +740,7 @@ function RelationsTable({
 
 const addRelationFormSchema = z.object({
 	toId: z.string().trim().min(1, "Relative is required"),
-	type: z.enum([
-		COMMUNITY_RELATION_TYPE.brother,
-		COMMUNITY_RELATION_TYPE.brother_in_law,
-		COMMUNITY_RELATION_TYPE.child,
-		COMMUNITY_RELATION_TYPE.father,
-		COMMUNITY_RELATION_TYPE.father_in_law,
-		COMMUNITY_RELATION_TYPE.mother,
-		COMMUNITY_RELATION_TYPE.mother_in_law,
-		COMMUNITY_RELATION_TYPE.sister,
-		COMMUNITY_RELATION_TYPE.sister_in_law,
-		COMMUNITY_RELATION_TYPE.wife,
-		COMMUNITY_RELATION_TYPE.husband,
-		COMMUNITY_RELATION_TYPE.uncle,
-		COMMUNITY_RELATION_TYPE.aunt,
-	]),
+	type: relationTypeSchema,
 	bloodRelation: z.boolean().default(false).optional(),
 	note: z.string().optional(),
 });
@@ -907,7 +886,7 @@ function AddRelationSheet({ subject }: { subject: { id: string } }) {
 											<SelectContent>
 												{Object.values(COMMUNITY_RELATION_TYPE).map((type) => (
 													<SelectItem key={type} value={type} className="capitalize">
-														{type.replace(/_/g, " ")}
+														{formatRelationType(type)}
 													</SelectItem>
 												))}
 											</SelectContent>

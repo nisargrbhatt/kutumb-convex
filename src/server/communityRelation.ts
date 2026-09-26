@@ -2,29 +2,14 @@ import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
-import { COMMUNITY_PROFILE_STATUS, COMMUNITY_RELATION_TYPE } from "@/db/constants";
+import { COMMUNITY_PROFILE_STATUS } from "@/db/constants";
 import { communityRelation } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
 import { count, eq } from "drizzle-orm";
 import { invalidateOrgGraph } from "@/lib/communityGraphCache";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
-
-const relationTypeSchema = z.enum([
-	COMMUNITY_RELATION_TYPE.brother,
-	COMMUNITY_RELATION_TYPE.brother_in_law,
-	COMMUNITY_RELATION_TYPE.child,
-	COMMUNITY_RELATION_TYPE.father,
-	COMMUNITY_RELATION_TYPE.father_in_law,
-	COMMUNITY_RELATION_TYPE.mother,
-	COMMUNITY_RELATION_TYPE.mother_in_law,
-	COMMUNITY_RELATION_TYPE.sister,
-	COMMUNITY_RELATION_TYPE.sister_in_law,
-	COMMUNITY_RELATION_TYPE.wife,
-	COMMUNITY_RELATION_TYPE.husband,
-	COMMUNITY_RELATION_TYPE.uncle,
-	COMMUNITY_RELATION_TYPE.aunt,
-]);
+import { relationTypeSchema } from "@/domain/relation";
 
 export const getMyCommunityRelationships = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
