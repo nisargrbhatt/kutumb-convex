@@ -1,15 +1,10 @@
+import { ProfileName } from "@/components/profile/ProfileName";
+import { ProfileStatusBadge } from "@/components/profile/ProfileStatusBadge";
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { getCommunityMembersQuery } from "@/queries/communityProfile";
 import { useEffect, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
@@ -20,7 +15,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -44,25 +38,6 @@ export const Route = createFileRoute("/_authed/_community/members/")({
 	component: RouteComponent,
 });
 
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Members</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
-
 type CommunityMember = {
 	id: string;
 	firstName: string;
@@ -81,21 +56,16 @@ const columns: ColumnDef<CommunityMember>[] = [
 	{
 		accessorKey: "name",
 		header: "Name",
-		cell: ({ row }) => {
-			const fullName = [row.original.firstName, row.original.middleName, row.original.lastName]
-				.filter(Boolean)
-				.join(" ");
-			return (
-				<Link to={"/members/$id"} params={{ id: row.original.id }}>
-					<div className="flex flex-col">
-						<span className="font-medium">{fullName}</span>
-						{row.original.nickName && (
-							<span className="text-xs text-muted-foreground">({row.original.nickName})</span>
-						)}
-					</div>
-				</Link>
-			);
-		},
+		cell: ({ row }) => (
+			<Link to={"/members/$id"} params={{ id: row.original.id }}>
+				<div className="flex flex-col">
+					<ProfileName profile={row.original} className="font-medium" />
+					{row.original.nickName && (
+						<span className="text-xs text-muted-foreground">({row.original.nickName})</span>
+					)}
+				</div>
+			</Link>
+		),
 	},
 	{
 		accessorKey: "email",
@@ -112,21 +82,7 @@ const columns: ColumnDef<CommunityMember>[] = [
 	{
 		accessorKey: "status",
 		header: "Status",
-		cell: ({ row }) => {
-			const status = row.original.status;
-			const colorMap: Record<string, string> = {
-				active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-				inactive: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-				draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-			};
-			return (
-				<span
-					className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${colorMap[status] || ""}`}
-				>
-					{status}
-				</span>
-			);
-		},
+		cell: ({ row }) => <ProfileStatusBadge status={row.original.status} />,
 	},
 	{
 		accessorKey: "bloodGroup",
@@ -343,28 +299,27 @@ function RouteComponent() {
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
-			<PageHeader />
-
-			<div className="flex w-full flex-col gap-6 pt-4">
-				<div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
-					<div>
-						<h2 className="text-lg font-medium">Community Members</h2>
-						<p className="text-sm text-muted-foreground">
-							Browse and search all community members.
-						</p>
+			<PageHeader
+				crumbs={[{ label: "Members" }]}
+				title="Community Members"
+				description="Browse and search all community members."
+				actions={
+					<>
+						<span className="flex items-center gap-2 text-sm text-muted-foreground">
+							<Users className="size-4" />
+							{result.total} members
+						</span>
 						<Route.Link to={"/members/create"}>
-							<Button type="button" variant={"outline"} size="sm">
+							<Button type="button" variant="outline" size="sm">
 								<Plus />
 								Add missing member
 							</Button>
 						</Route.Link>
-					</div>
-					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<Users className="size-4" />
-						<span>{result.total} members</span>
-					</div>
-				</div>
+					</>
+				}
+			/>
 
+			<div className="flex w-full flex-col gap-6">
 				<MembersFilters />
 
 				<DataTable columns={columns} data={result.data} />

@@ -1,3 +1,7 @@
+import { fullName, initials } from "@/domain/communityProfile";
+import { InfoItem } from "@/components/profile/InfoItem";
+import { ProfileAvatar } from "@/components/profile/ProfileName";
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
@@ -26,15 +30,6 @@ import {
 import "@xyflow/react/dist/style.css";
 import { layoutGraph, type Point, type RelationEdgeData } from "@/lib/communityGraphLayout";
 import { useEffect, useCallback, useMemo, useState } from "react";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -67,39 +62,9 @@ export const Route = createFileRoute("/_authed/_community/community-tree/")({
 	component: RouteComponent,
 });
 
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Community Tree</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
-
 function capitalizeFirstLetter(string: string) {
 	if (!string) return "";
 	return string.charAt(0).toUpperCase() + string.slice(1).replace(/_/g, " ");
-}
-
-function fullName(p: { firstName: string; middleName?: string | null; lastName: string }) {
-	return [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" ");
-}
-
-function initials(name: string) {
-	const parts = name.trim().split(/\s+/);
-	const first = parts[0]?.[0] ?? "";
-	const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-	return (first + last).toUpperCase() || "?";
 }
 
 function usePrefersReducedMotion() {
@@ -116,6 +81,7 @@ function usePrefersReducedMotion() {
 
 type MemberNodeData = {
 	name: string;
+	initials: string;
 	nickName: string | null;
 	hop: number;
 	deceased: boolean;
@@ -158,7 +124,7 @@ function MemberNode({ data }: NodeProps) {
 				].join(" ")}
 			>
 				<Avatar className="h-9 w-9 shrink-0">
-					<AvatarFallback className="text-xs font-medium">{initials(d.name)}</AvatarFallback>
+					<AvatarFallback className="text-xs font-medium">{d.initials}</AvatarFallback>
 				</Avatar>
 				<div className="flex flex-1 flex-col overflow-hidden">
 					<span className="truncate text-sm leading-tight font-semibold">{d.name}</span>
@@ -287,16 +253,6 @@ function SearchBox(props: { onSelect: (id: string) => void }) {
 	);
 }
 
-function InfoRow(props: { label: string; value: string | null | undefined }) {
-	if (!props.value) return null;
-	return (
-		<div className="flex flex-col gap-0.5">
-			<span className="text-xs text-muted-foreground">{props.label}</span>
-			<span className="text-sm">{props.value}</span>
-		</div>
-	);
-}
-
 function ProfilePanel(props: {
 	node: SubgraphNode | null;
 	relationLabel: string | null;
@@ -313,9 +269,7 @@ function ProfilePanel(props: {
 					<>
 						<SheetHeader>
 							<div className="flex items-center gap-3">
-								<Avatar className="h-12 w-12">
-									<AvatarFallback>{initials(name)}</AvatarFallback>
-								</Avatar>
+								<ProfileAvatar profile={node} className="h-12 w-12" />
 								<div className="flex flex-col">
 									<SheetTitle className="text-base">{name}</SheetTitle>
 									<SheetDescription>
@@ -330,16 +284,19 @@ function ProfilePanel(props: {
 									{props.relationLabel}
 								</Badge>
 							) : null}
-							<InfoRow label="Nickname" value={node.nickName} />
-							<InfoRow
-								label="Gender"
-								value={node.gender ? capitalizeFirstLetter(node.gender) : null}
-							/>
-							<InfoRow label="Blood group" value={node.bloodGroup} />
-							<InfoRow label="Date of birth" value={node.dateOfBirth} />
-							<InfoRow label="Date of death" value={node.dateOfDeath} />
-							<InfoRow label="Email" value={node.email} />
-							<InfoRow label="Mobile" value={node.mobileNumber} />
+							{[
+								{ label: "Nickname", value: node.nickName },
+								{ label: "Gender", value: node.gender ? capitalizeFirstLetter(node.gender) : null },
+								{ label: "Blood group", value: node.bloodGroup },
+								{ label: "Date of birth", value: node.dateOfBirth },
+								{ label: "Date of death", value: node.dateOfDeath },
+								{ label: "Email", value: node.email },
+								{ label: "Mobile", value: node.mobileNumber },
+							]
+								.filter((row) => row.value)
+								.map((row) => (
+									<InfoItem key={row.label} label={row.label} value={row.value} />
+								))}
 							<Route.Link to={"/members/$id"} params={{ id: node.id }} className="pt-2">
 								<Button variant="outline" size="sm" className="w-full gap-2">
 									<IconExternalLink className="size-4" />
@@ -403,6 +360,7 @@ function Flow() {
 				type: "member",
 				data: {
 					name: fullName(p),
+					initials: initials(p),
 					nickName: p.nickName,
 					hop: p.hop,
 					deceased: !!p.dateOfDeath,
@@ -604,15 +562,11 @@ function Flow() {
 function RouteComponent() {
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
-			<PageHeader />
-
-			<div className="flex w-full flex-col pt-4">
-				<h2 className="text-lg font-medium">Community Tree</h2>
-				<p className="text-sm text-muted-foreground">
-					Explore your community. Click a member for details, the dot to expand, or double-click to
-					recenter.
-				</p>
-			</div>
+			<PageHeader
+				crumbs={[{ label: "Community Tree" }]}
+				title="Community Tree"
+				description="Explore your community. Click a member for details, the dot to expand, or double-click to recenter."
+			/>
 
 			<ReactFlowProvider>
 				<Flow />

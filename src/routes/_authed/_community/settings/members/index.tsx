@@ -1,27 +1,12 @@
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { createFileRoute } from "@tanstack/react-router";
 import { useActor } from "@/hooks/useActor";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { BookKeyIcon, CrownIcon, DeleteIcon, Plus, UserIcon } from "lucide-react";
 import * as z from "zod";
 import { ORGANIZATION_ROLES } from "@/db/constants";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -30,30 +15,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetFooter,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
@@ -73,31 +40,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const Route = createFileRoute("/_authed/_community/settings/members/")({
 	component: RouteComponent,
 });
-
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/settings/overview"} />}>
-							Settings
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Members</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
 
 const formSchema = z.object({
 	email: z.email().min(1, "Email is required"),
@@ -121,7 +63,7 @@ function AddMemberDrawer() {
 		},
 	});
 
-	const onSubmit = form.handleSubmit(async (values) => {
+	const onSubmit = async (values: z.infer<typeof formSchema>) => {
 		const { error } = await authClient.organization.inviteMember({
 			role: values.role,
 			email: values.email,
@@ -150,78 +92,66 @@ function AddMemberDrawer() {
 		queryClient.invalidateQueries({ queryKey: getOrgUsageQuery().queryKey });
 		form.reset();
 		setOpen(false);
-	});
+	};
 
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger
-				render={
-					<Button size="sm">
-						<Plus className="size-4" />
-						Add Member
-					</Button>
-				}
-			></SheetTrigger>
-			<SheetContent side="right" className="overflow-y-auto">
-				<SheetHeader>
-					<SheetTitle>Invite Member</SheetTitle>
-					<SheetDescription>Invite a new member to your organization by email.</SheetDescription>
-				</SheetHeader>
-				<Form {...form}>
-					<form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-6">
-						<FormField
-							control={form.control}
-							name="email"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Email</FormLabel>
-									<FormControl>
-										<Input placeholder="Email" {...field} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="role"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Role</FormLabel>
-									<Select
-										items={{
-											[ORGANIZATION_ROLES.admin]: "Admin",
-											[ORGANIZATION_ROLES.member]: "Member",
-										}}
-										onValueChange={field.onChange}
-										defaultValue={field.value}
-									>
-										<FormControl>
-											<SelectTrigger>
-												<SelectValue placeholder="Select a role" />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											<SelectItem value={ORGANIZATION_ROLES.admin}>Admin</SelectItem>
-											<SelectItem value={ORGANIZATION_ROLES.member}>Member</SelectItem>
-										</SelectContent>
-									</Select>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<SheetFooter className="px-0">
-							<Button type="submit" disabled={form.formState.isSubmitting}>
-								{form.formState.isSubmitting ? "Inviting..." : "Invite"}
-							</Button>
-							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
-								Cancel
-							</Button>
-						</SheetFooter>
-					</form>
-				</Form>
-			</SheetContent>
-		</Sheet>
+		<FormDrawer
+			open={open}
+			onOpenChange={setOpen}
+			trigger={
+				<Button size="sm">
+					<Plus className="size-4" />
+					Add Member
+				</Button>
+			}
+			title="Invite Member"
+			description="Invite a new member to your organization by email."
+			form={form}
+			onSubmit={onSubmit}
+			submitLabel="Invite"
+		>
+			<FormField
+				control={form.control}
+				name="email"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel>Email</FormLabel>
+						<FormControl>
+							<Input placeholder="Email" {...field} />
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+			<FormField
+				control={form.control}
+				name="role"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel>Role</FormLabel>
+						<Select
+							items={{
+								[ORGANIZATION_ROLES.admin]: "Admin",
+								[ORGANIZATION_ROLES.member]: "Member",
+							}}
+							onValueChange={field.onChange}
+							defaultValue={field.value}
+						>
+							<FormControl>
+								<SelectTrigger>
+									<SelectValue placeholder="Select a role" />
+								</SelectTrigger>
+							</FormControl>
+							<SelectContent>
+								<SelectItem value={ORGANIZATION_ROLES.admin}>Admin</SelectItem>
+								<SelectItem value={ORGANIZATION_ROLES.member}>Member</SelectItem>
+							</SelectContent>
+						</Select>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+		</FormDrawer>
 	);
 }
 
@@ -246,7 +176,7 @@ function ChangeRoleDrawer({ member }: { member: OrganizationMember }) {
 		}
 	}, [open, member.role, form]);
 
-	const onSubmit = form.handleSubmit(async (values) => {
+	const onSubmit = async (values: z.infer<typeof changeRoleSchema>) => {
 		const { error } = await authClient.organization.updateMemberRole({
 			memberId: member.id,
 			role: values.role,
@@ -267,68 +197,54 @@ function ChangeRoleDrawer({ member }: { member: OrganizationMember }) {
 			description: "Role changed successfully",
 		});
 		setOpen(false);
-	});
+	};
 
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger
-				render={
-					<Button variant="outline" size="sm" type="button">
-						Change Role
-					</Button>
-				}
-			></SheetTrigger>
-			<SheetContent side="right" className="overflow-y-auto">
-				<SheetHeader>
-					<SheetTitle>Change Role</SheetTitle>
-					<SheetDescription>
-						Update the role for {member.user?.name ?? member.user?.email}.
-					</SheetDescription>
-				</SheetHeader>
-				<Form {...form}>
-					<form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-6">
-						<FormField
-							control={form.control}
-							name="role"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Role</FormLabel>
-									<Select
-										items={{
-											[ORGANIZATION_ROLES.owner]: "Owner",
-											[ORGANIZATION_ROLES.admin]: "Admin",
-											[ORGANIZATION_ROLES.member]: "Member",
-										}}
-										onValueChange={field.onChange}
-										value={field.value}
-									>
-										<FormControl>
-											<SelectTrigger>
-												<SelectValue placeholder="Select a role" />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											<SelectItem value={ORGANIZATION_ROLES.owner}>Owner</SelectItem>
-											<SelectItem value={ORGANIZATION_ROLES.admin}>Admin</SelectItem>
-											<SelectItem value={ORGANIZATION_ROLES.member}>Member</SelectItem>
-										</SelectContent>
-									</Select>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<SheetFooter className="px-0">
-							<Button type="submit" disabled={form.formState.isSubmitting}>
-								{form.formState.isSubmitting ? "Saving..." : "Save"}
-							</Button>
-							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
-								Cancel
-							</Button>
-						</SheetFooter>
-					</form>
-				</Form>
-			</SheetContent>
-		</Sheet>
+		<FormDrawer
+			open={open}
+			onOpenChange={setOpen}
+			trigger={
+				<Button variant="outline" size="sm" type="button">
+					Change Role
+				</Button>
+			}
+			title="Change Role"
+			description={`Update the role for ${member.user?.name ?? member.user?.email}.`}
+			form={form}
+			onSubmit={onSubmit}
+			submitLabel="Save"
+		>
+			<FormField
+				control={form.control}
+				name="role"
+				render={({ field }) => (
+					<FormItem>
+						<FormLabel>Role</FormLabel>
+						<Select
+							items={{
+								[ORGANIZATION_ROLES.owner]: "Owner",
+								[ORGANIZATION_ROLES.admin]: "Admin",
+								[ORGANIZATION_ROLES.member]: "Member",
+							}}
+							onValueChange={field.onChange}
+							value={field.value}
+						>
+							<FormControl>
+								<SelectTrigger>
+									<SelectValue placeholder="Select a role" />
+								</SelectTrigger>
+							</FormControl>
+							<SelectContent>
+								<SelectItem value={ORGANIZATION_ROLES.owner}>Owner</SelectItem>
+								<SelectItem value={ORGANIZATION_ROLES.admin}>Admin</SelectItem>
+								<SelectItem value={ORGANIZATION_ROLES.member}>Member</SelectItem>
+							</SelectContent>
+						</Select>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+		</FormDrawer>
 	);
 }
 
@@ -402,32 +318,7 @@ function OrganizationMemberList() {
 									{canRemove && member.user.id !== actor?.userId ? (
 										<div className="flex items-center justify-end gap-2">
 											<ChangeRoleDrawer member={member} />
-											<AlertDialog>
-												<AlertDialogTrigger
-													render={<Button variant="outline" size="sm" type="button" />}
-												>
-													Remove
-												</AlertDialogTrigger>
-												<AlertDialogContent>
-													<AlertDialogHeader>
-														<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-														<AlertDialogDescription>
-															This action cannot be undone. This will permanently remove member from
-															our organization.
-														</AlertDialogDescription>
-													</AlertDialogHeader>
-													<AlertDialogFooter>
-														<AlertDialogCancel>Cancel</AlertDialogCancel>
-														<AlertDialogAction
-															onClick={() => {
-																handleRemoveFromOrg(member.id);
-															}}
-														>
-															Continue
-														</AlertDialogAction>
-													</AlertDialogFooter>
-												</AlertDialogContent>
-											</AlertDialog>
+											<RemoveMemberDialog onConfirm={() => handleRemoveFromOrg(member.id)} />
 										</div>
 									) : (
 										<span className="text-muted-foreground">-</span>
@@ -439,6 +330,34 @@ function OrganizationMemberList() {
 				</TableBody>
 			</Table>
 		</div>
+	);
+}
+
+function RemoveMemberDialog({ onConfirm }: { onConfirm: () => Promise<void> }) {
+	const [open, setOpen] = useState(false);
+	const [isPending, setIsPending] = useState(false);
+
+	return (
+		<ConfirmDialog
+			open={open}
+			onOpenChange={setOpen}
+			trigger={
+				<Button variant="outline" size="sm" type="button">
+					Remove
+				</Button>
+			}
+			title="Remove member?"
+			description="This action cannot be undone. This will permanently remove the member from your organization."
+			confirmLabel="Remove"
+			destructive
+			isPending={isPending}
+			onConfirm={async () => {
+				setIsPending(true);
+				await onConfirm();
+				setIsPending(false);
+				setOpen(false);
+			}}
+		/>
 	);
 }
 
@@ -600,16 +519,12 @@ function OrganizationInviteList() {
 function RouteComponent() {
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
-			<PageHeader />
-			<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h2 className="text-lg font-medium">Members</h2>
-					<p className="text-sm text-muted-foreground">
-						Manage your organization members and pending invitations.
-					</p>
-				</div>
-				<AddMemberDrawer />
-			</div>
+			<PageHeader
+				crumbs={[{ label: "Settings", to: "/settings/overview" }, { label: "Members" }]}
+				title="Members"
+				description="Manage your organization members and pending invitations."
+				actions={<AddMemberDrawer />}
+			/>
 			<Tabs defaultValue="members" className="w-full">
 				<TabsList className="w-full">
 					<TabsTrigger value="members">Members</TabsTrigger>

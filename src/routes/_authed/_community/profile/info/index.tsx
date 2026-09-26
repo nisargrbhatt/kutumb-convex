@@ -1,16 +1,8 @@
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { upsertMyCommunityProfile } from "@/server/communityProfile";
 import { getMyCommunityProfileQuery } from "@/queries/communityProfile";
 import { getOrganizationCustomFieldsQuery } from "@/queries/fields";
 import { CustomFieldsForm, type CustomField } from "@/components/CustomFieldsForm";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { COMMUNITY_PROFILE_BLOOD_GROUP, GENDERS } from "@/db/constants";
@@ -56,29 +48,6 @@ export const Route = createFileRoute("/_authed/_community/profile/info/")({
 	},
 	pendingComponent: () => <p>Loading...</p>,
 });
-
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/profile/info"} />}>Profile</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Info</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
 
 function CommunityProfileForm({
 	defaultValues,
@@ -283,17 +252,11 @@ function RouteComponent() {
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
-			<PageHeader />
-
-			<div className="flex items-center justify-between">
-				<div>
-					<h2 className="text-lg font-medium">Profile</h2>
-					<p className="text-sm text-muted-foreground">
-						Add your community profile information. This will be visible to other members of the
-						community.
-					</p>
-				</div>
-			</div>
+			<PageHeader
+				crumbs={[{ label: "Profile", to: "/profile/info" }, { label: "Info" }]}
+				title="Profile"
+				description="Add your community profile information. This will be visible to other members of the community."
+			/>
 
 			<CommunityProfileForm
 				customFields={customFieldsResponse?.data ?? []}

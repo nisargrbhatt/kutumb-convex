@@ -1,17 +1,10 @@
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import {
 	addMyCommunityRelationship,
 	deleteMyCommunityRelationship,
 } from "@/server/communityRelation";
 import { getMyCommunityRelationshipsQuery } from "@/queries/communityRelation";
 import { getCommunityProfileListQuery } from "@/queries/communityProfile";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import {
@@ -39,7 +32,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { COMMUNITY_RELATION_TYPE } from "@/db/constants";
 import { formatRelationType, relationTypeSchema } from "@/domain/relation";
@@ -62,29 +54,6 @@ export const Route = createFileRoute("/_authed/_community/profile/relationships/
 	},
 	component: RouteComponent,
 });
-
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/profile/info"} />}>Profile</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Relationships</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
 
 const relationshipFormSchema = z.object({
 	type: relationTypeSchema,
@@ -113,18 +82,13 @@ function RouteComponent() {
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
-			<PageHeader />
-			<div className="flex w-full flex-col gap-6 pt-4">
-				<div className="flex items-center justify-between">
-					<div>
-						<h2 className="text-lg font-medium">Relationships</h2>
-						<p className="text-sm text-muted-foreground">
-							Manage your family and community relationships.
-						</p>
-					</div>
-					<RelationshipFormModal open={isAddOpen} onOpenChange={setIsAddOpen} />
-				</div>
-
+			<PageHeader
+				crumbs={[{ label: "Profile", to: "/profile/info" }, { label: "Relationships" }]}
+				title="Relationships"
+				description="Manage your family and community relationships."
+				actions={<RelationshipFormModal open={isAddOpen} onOpenChange={setIsAddOpen} />}
+			/>
+			<div className="flex w-full flex-col gap-6">
 				<div className="grid gap-4 md:grid-cols-2">
 					{relationships.length === 0 ? (
 						<div className="col-span-full flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center text-muted-foreground">

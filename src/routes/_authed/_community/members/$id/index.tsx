@@ -1,3 +1,10 @@
+import { ProfileAvatar } from "@/components/profile/ProfileName";
+import { ProfileStatusBadge } from "@/components/profile/ProfileStatusBadge";
+import { ProfileInfoView } from "@/components/profile/ProfileInfoView";
+import { FormDrawer } from "@/components/ui/form-drawer";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { fullName } from "@/domain/communityProfile";
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import {
 	acceptCommunityProfile,
 	getCommunityMemberById,
@@ -13,33 +20,11 @@ import { COMMUNITY_RELATION_TYPE } from "@/db/constants";
 import { formatRelationType, relationTypeSchema } from "@/domain/relation";
 import { safeAsync } from "@/lib/safe";
 import { isAppError } from "@/domain/errors";
-import { createFileRoute, notFound, Link, useRouter } from "@tanstack/react-router";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { format } from "date-fns";
-import {
-	MapPin,
-	Mail,
-	Phone,
-	Calendar,
-	Droplet,
-	User,
-	Building,
-	CheckIcon,
-	XIcon,
-	BadgeCheckIcon,
-} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MapPin, Mail, Phone, User, CheckIcon, XIcon, BadgeCheckIcon } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -52,15 +37,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { usePostHog } from "@posthog/react";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { useState } from "react";
 import {
 	Combobox,
@@ -135,50 +111,6 @@ export const Route = createFileRoute("/_authed/_community/members/$id/")({
 	},
 });
 
-function PageHeader({ name }: { name: string }) {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Link to={"/members"} />}>Members</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>{name}</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
-
-const StatusBadge = ({ status }: { status: string }) => {
-	const statusColorMap: Record<string, string> = {
-		active:
-			"bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800",
-		inactive:
-			"bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 border-red-200 dark:border-red-800",
-		draft:
-			"bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300 border-orange-200 dark:border-orange-800",
-	};
-
-	const strStatus = status?.toLowerCase() || "draft";
-	return (
-		<Badge
-			variant="outline"
-			className={`px-3 py-0.5 font-medium capitalize ${statusColorMap[strStatus] || statusColorMap.draft}`}
-		>
-			{status}
-		</Badge>
-	);
-};
-
 const formSchema = z.object({
 	userId: z.string().trim().min(1, "User is required"),
 });
@@ -249,15 +181,7 @@ function MemberActions() {
 		router.invalidate();
 	};
 
-	const openReassignDialog = () => {
-		setShowReassignDialog(() => true);
-	};
-
-	const closeReassignDialog = () => {
-		setShowReassignDialog(() => false);
-	};
-
-	const handleReassign = form.handleSubmit(async (values) => {
+	const handleReassign = async (values: z.infer<typeof formSchema>) => {
 		const result = await safeAsync(
 			reassignProfileToUser({
 				data: {
@@ -284,8 +208,9 @@ function MemberActions() {
 		});
 
 		router.invalidate();
-		closeReassignDialog();
-	});
+		setShowReassignDialog(false);
+		form.reset();
+	};
 
 	const showProfileActions = profile?.status === "draft";
 	const showReassignAction = typeof profile?.userId !== "string";
@@ -315,7 +240,7 @@ function MemberActions() {
 					{showReassignAction ? (
 						<DropdownMenuGroup>
 							<DropdownMenuLabel>Profile Assign</DropdownMenuLabel>
-							<DropdownMenuItem onClick={openReassignDialog}>
+							<DropdownMenuItem onClick={() => setShowReassignDialog(true)}>
 								<User />
 								Assign to User
 							</DropdownMenuItem>
@@ -323,85 +248,66 @@ function MemberActions() {
 					) : null}
 				</DropdownMenuContent>
 			</DropdownMenu>
-			<Dialog open={showReassignDialog}>
-				<Form {...form}>
-					<form onSubmit={handleReassign}>
-						<DialogContent className="sm:max-w-md">
-							<DialogHeader>
-								<DialogTitle>Assign User</DialogTitle>
-								<DialogDescription>
-									This profile is added without any user. Assign a logged in user to this profile if
-									you want to link this profile with a user.
-								</DialogDescription>
-							</DialogHeader>
-							<FormField
-								control={form.control}
-								name="userId"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>User</FormLabel>
-										<FormControl>
-											<Combobox
-												items={orgMembers}
-												itemToStringLabel={(i: (typeof orgMembers)[0]) => i?.user?.name ?? ""}
-												onValueChange={(newVal) => {
-													field.onChange(newVal?.userId);
-												}}
-												name={field.name}
-												value={orgMembers?.find((o) => o.userId === field.value)}
-											>
-												<ComboboxInput placeholder="Select a person" />
-												<ComboboxContent>
-													<ComboboxEmpty>No items found.</ComboboxEmpty>
-													<ComboboxList>
-														{(item) => (
-															<ComboboxItem key={item.id} value={item}>
-																<Item size="xs" className="p-0">
-																	<ItemContent>
-																		<ItemTitle className="whitespace-nowrap">
-																			{item?.user?.name}
-																		</ItemTitle>
-																		<ItemDescription>{item?.user?.email}</ItemDescription>
-																	</ItemContent>
-																</Item>
-															</ComboboxItem>
-														)}
-													</ComboboxList>
-												</ComboboxContent>
-											</Combobox>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<Item variant="outline" size="xs">
-								<ItemMedia>
-									<BadgeCheckIcon className="size-5" />
-								</ItemMedia>
-								<ItemContent>
-									<ItemTitle>
-										Every user can only have 1 profile linked to them. This is a irreversible
-										action.
-									</ItemTitle>
-								</ItemContent>
-							</Item>
-							<DialogFooter>
-								<Button type="button" variant="outline" onClick={closeReassignDialog}>
-									Cancel
-								</Button>
-
-								<Button
-									type="submit"
-									onClick={handleReassign}
-									disabled={form.formState.isSubmitting}
+			<FormDrawer
+				open={showReassignDialog}
+				onOpenChange={setShowReassignDialog}
+				title="Assign User"
+				description="This profile is added without any user. Assign a logged in user to this profile if you want to link this profile with a user."
+				form={form}
+				onSubmit={handleReassign}
+				submitLabel="Assign"
+			>
+				<FormField
+					control={form.control}
+					name="userId"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>User</FormLabel>
+							<FormControl>
+								<Combobox
+									items={orgMembers}
+									itemToStringLabel={(i: (typeof orgMembers)[0]) => i?.user?.name ?? ""}
+									onValueChange={(newVal) => {
+										field.onChange(newVal?.userId);
+									}}
+									name={field.name}
+									value={orgMembers?.find((o) => o.userId === field.value)}
 								>
-									Save changes
-								</Button>
-							</DialogFooter>
-						</DialogContent>
-					</form>
-				</Form>
-			</Dialog>
+									<ComboboxInput placeholder="Select a person" />
+									<ComboboxContent>
+										<ComboboxEmpty>No items found.</ComboboxEmpty>
+										<ComboboxList>
+											{(item) => (
+												<ComboboxItem key={item.id} value={item}>
+													<Item size="xs" className="p-0">
+														<ItemContent>
+															<ItemTitle className="whitespace-nowrap">
+																{item?.user?.name}
+															</ItemTitle>
+															<ItemDescription>{item?.user?.email}</ItemDescription>
+														</ItemContent>
+													</Item>
+												</ComboboxItem>
+											)}
+										</ComboboxList>
+									</ComboboxContent>
+								</Combobox>
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<Item variant="outline" size="xs">
+					<ItemMedia>
+						<BadgeCheckIcon className="size-5" />
+					</ItemMedia>
+					<ItemContent>
+						<ItemTitle>
+							Every user can only have 1 profile linked to them. This is a irreversible action.
+						</ItemTitle>
+					</ItemContent>
+				</Item>
+			</FormDrawer>
 		</>
 	);
 }
@@ -412,10 +318,7 @@ function RouteComponent() {
 	const canApprove = useCan({ communityProfile: ["approve"] });
 	const canManageProfileRelations = useCan({ communityProfile: ["manageRelations"] });
 
-	const fullName = [profile.firstName, profile.middleName, profile.lastName]
-		.filter(Boolean)
-		.join(" ");
-	const initials = (profile.firstName?.[0] || "") + (profile.lastName?.[0] || "");
+	const name = fullName(profile);
 
 	const showActionBlock = canApprove;
 
@@ -424,22 +327,22 @@ function RouteComponent() {
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 overflow-y-auto p-2">
-			<PageHeader name={fullName} />
+			<PageHeader crumbs={[{ label: "Members", to: "/members" }, { label: name }]} />
 
-			<div className="flex w-full flex-col gap-6 pt-4 pb-12">
+			<div className="flex w-full flex-col gap-6 pb-12">
 				{/* Identity header */}
 				<div className="flex flex-col justify-between gap-4 rounded-lg border p-6 sm:flex-row sm:items-center">
 					<div className="flex items-center gap-4">
-						<Avatar className="size-16 sm:size-20">
-							<AvatarFallback className="text-xl font-medium">
-								{initials.toUpperCase()}
-							</AvatarFallback>
-						</Avatar>
+						<ProfileAvatar
+							profile={profile}
+							className="size-16 sm:size-20"
+							fallbackClassName="text-xl"
+						/>
 
-						<div className="flex flex-col gap-1.5">
+						<div className="flex min-w-0 flex-col gap-1.5">
 							<div className="flex flex-wrap items-center gap-2">
-								<h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{fullName}</h1>
-								<StatusBadge status={profile.status} />
+								<h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{name}</h1>
+								<ProfileStatusBadge status={profile.status} />
 							</div>
 							{profile.nickName && (
 								<p className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -467,72 +370,10 @@ function RouteComponent() {
 					{showActionBlock ? <MemberActions /> : null}
 				</div>
 
-				{/* Basic Information */}
-				<Card className="rounded-lg border">
-					<CardHeader className="border-b pb-4">
-						<CardTitle className="flex items-center gap-2 text-lg font-medium">
-							<User className="size-5 text-muted-foreground" /> Basic Information
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="p-6">
-						<div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-							<InfoItem
-								icon={<Calendar />}
-								label="Date of Birth"
-								value={profile.dateOfBirth ? format(new Date(profile.dateOfBirth), "PPP") : "-"}
-							/>
-							{profile.dateOfDeath && (
-								<InfoItem
-									icon={<Calendar />}
-									label="Date of Death"
-									value={format(new Date(profile.dateOfDeath), "PPP")}
-								/>
-							)}
-							<InfoItem icon={<Droplet />} label="Blood Group" value={profile.bloodGroup || "-"} />
-							<InfoItem
-								icon={<User />}
-								label="Gender"
-								value={profile.gender ? <span className="capitalize">{profile.gender}</span> : "-"}
-							/>
-						</div>
-
-						{profile.comment && (
-							<div className="mt-8 border-t pt-6">
-								<h4 className="mb-2 text-sm font-medium text-muted-foreground">Comment / Notes</h4>
-								<p className="rounded-lg border bg-muted/30 p-4 text-sm leading-relaxed text-foreground/80">
-									{profile.comment}
-								</p>
-							</div>
-						)}
-					</CardContent>
-				</Card>
-
-				{/* Custom Fields */}
-				{customFields && customFields.length > 0 && (
-					<Card className="rounded-lg border">
-						<CardHeader className="border-b pb-4">
-							<CardTitle className="flex items-center gap-2 text-lg font-medium">
-								<Building className="size-5 text-muted-foreground" /> Additional Details
-							</CardTitle>
-							<CardDescription>Custom profile information</CardDescription>
-						</CardHeader>
-						<CardContent className="p-6">
-							<div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-								{customFields.map((field) => {
-									const data = profile.customFieldData as Record<string, any>;
-									const val = data?.[field];
-									return (
-										<InfoItem
-											key={field}
-											label={field}
-											value={val !== undefined && val !== null && val !== "" ? String(val) : "-"}
-										/>
-									);
-								})}
-							</div>
-						</CardContent>
-					</Card>
-				)}
+				<ProfileInfoView
+					profile={profile}
+					customFieldDefs={customFields.map((label) => ({ label }))}
+				/>
 
 				{/* Addresses */}
 				<div className="flex flex-col gap-3">
@@ -981,46 +822,20 @@ function DeleteRelationDialog({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger render={<Button variant="ghost" size="icon" aria-label="Delete relation" />}>
-				<Trash2 className="size-4 text-destructive" />
-			</DialogTrigger>
-			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle>Delete relation</DialogTitle>
-					<DialogDescription>
-						This removes the outgoing relation from this profile. This action cannot be undone.
-					</DialogDescription>
-				</DialogHeader>
-				<DialogFooter>
-					<Button type="button" variant="outline" onClick={() => setOpen(false)}>
-						Cancel
-					</Button>
-					<Button type="button" variant="destructive" onClick={onDelete} disabled={isDeleting}>
-						{isDeleting ? "Deleting..." : "Delete"}
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
-	);
-}
-
-function InfoItem({
-	label,
-	value,
-	icon,
-}: {
-	label: string;
-	value: React.ReactNode;
-	icon?: React.ReactNode;
-}) {
-	return (
-		<div className="flex flex-col gap-1.5">
-			<span className="flex items-center gap-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-				{icon && <span className="opacity-60 [&>svg]:size-3.5">{icon}</span>}
-				{label}
-			</span>
-			<span className="text-sm font-medium text-foreground">{value}</span>
-		</div>
+		<ConfirmDialog
+			open={open}
+			onOpenChange={setOpen}
+			trigger={
+				<Button variant="ghost" size="icon" aria-label="Delete relation">
+					<Trash2 className="size-4 text-destructive" />
+				</Button>
+			}
+			title="Delete relation"
+			description="This removes the outgoing relation from this profile. This action cannot be undone."
+			confirmLabel="Delete"
+			destructive
+			onConfirm={onDelete}
+			isPending={isDeleting}
+		/>
 	);
 }

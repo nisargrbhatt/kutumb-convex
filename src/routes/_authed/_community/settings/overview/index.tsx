@@ -1,22 +1,5 @@
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { PageHeader } from "@/components/CommunityLayout/PageHeader";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -28,7 +11,6 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
@@ -50,31 +32,6 @@ export const Route = createFileRoute("/_authed/_community/settings/overview/")({
 	},
 	component: RouteComponent,
 });
-
-function PageHeader() {
-	return (
-		<div className="flex flex-row items-center justify-start gap-2">
-			<SidebarTrigger />
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/dashboard"} />}>Home</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink render={<Route.Link to={"/settings/overview"} />}>
-							Settings
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>Overview</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-		</div>
-	);
-}
 
 const formSchema = z.object({
 	name: z
@@ -185,33 +142,17 @@ function DeleteOrganizationDialog(props: { organizationId: string; name: string 
 	};
 
 	return (
-		<AlertDialog open={open} onOpenChange={setOpen}>
-			<AlertDialogTrigger render={<Button variant="destructive" />}>
-				Delete Organization
-			</AlertDialogTrigger>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>Delete {props.name}?</AlertDialogTitle>
-					<AlertDialogDescription>
-						This will permanently delete this organization and all its data, including members and
-						profiles. This action cannot be undone.
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-					<AlertDialogAction
-						variant="destructive"
-						disabled={isDeleting}
-						onClick={(e) => {
-							e.preventDefault();
-							handleDelete();
-						}}
-					>
-						{isDeleting ? "Deleting..." : "Delete"}
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+		<ConfirmDialog
+			open={open}
+			onOpenChange={setOpen}
+			trigger={<Button variant="destructive">Delete Organization</Button>}
+			title={`Delete ${props.name}?`}
+			description="This will permanently delete this organization and all its data, including members and profiles. This action cannot be undone."
+			confirmLabel="Delete"
+			destructive
+			onConfirm={handleDelete}
+			isPending={isDeleting}
+		/>
 	);
 }
 
@@ -271,7 +212,9 @@ function RouteComponent() {
 	const { data: activeOrg } = authClient.useActiveOrganization();
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 p-2">
-			<PageHeader />
+			<PageHeader
+				crumbs={[{ label: "Settings", to: "/settings/overview" }, { label: "Overview" }]}
+			/>
 			{activeOrg ? (
 				<>
 					<OrganizationForm
