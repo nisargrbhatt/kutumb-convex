@@ -54,7 +54,8 @@ export function FormDrawer<TIn extends FieldValues, TOut = TIn>({
 
 	const handleOpenChange = (next: boolean) => {
 		onOpenChange(next);
-		if (!next) form.reset();
+		// Explicit: `reset` merges the form's `resetOptions`, which may keep dirty values.
+		if (!next) form.reset(undefined, { keepDirtyValues: false });
 	};
 
 	return (
