@@ -18,6 +18,7 @@ import { Route as publicRouteRouteImport } from './routes/(public)/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthSelectOrgRouteImport } from './routes/oauth/select-org'
 import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
+import { Route as ApiMcpRouteImport } from './routes/api/mcp'
 import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community'
 import { Route as DotwellKnownOauthProtectedResourceIndexRouteImport } from './routes/[.]well-known/oauth-protected-resource/index'
 import { Route as publicTermOfServiceIndexRouteImport } from './routes/(public)/term-of-service/index'
@@ -84,6 +85,11 @@ const OauthSelectOrgRoute = OauthSelectOrgRouteImport.update({
 const OauthConsentRoute = OauthConsentRouteImport.update({
   id: '/oauth/consent',
   path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMcpRoute = ApiMcpRouteImport.update({
+  id: '/api/mcp',
+  path: '/api/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedCommunityRoute = AuthedCommunityRouteImport.update({
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/select-org': typeof OauthSelectOrgRoute
   '/settings': typeof AuthedCommunitySettingsRouteWithChildren
@@ -263,6 +270,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/select-org': typeof OauthSelectOrgRoute
   '/settings': typeof AuthedCommunitySettingsRouteWithChildren
@@ -299,6 +307,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
+  '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/select-org': typeof OauthSelectOrgRoute
   '/_authed/_community/settings': typeof AuthedCommunitySettingsRouteWithChildren
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/api/mcp'
     | '/oauth/consent'
     | '/oauth/select-org'
     | '/settings'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/api/mcp'
     | '/oauth/consent'
     | '/oauth/select-org'
     | '/settings'
@@ -400,6 +411,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authed/_community'
+    | '/api/mcp'
     | '/oauth/consent'
     | '/oauth/select-org'
     | '/_authed/_community/settings'
@@ -435,6 +447,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  ApiMcpRoute: typeof ApiMcpRoute
   OauthConsentRoute: typeof OauthConsentRoute
   OauthSelectOrgRoute: typeof OauthSelectOrgRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -508,6 +521,13 @@ declare module '@tanstack/react-router' {
       path: '/oauth/consent'
       fullPath: '/oauth/consent'
       preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/mcp': {
+      id: '/api/mcp'
+      path: '/api/mcp'
+      fullPath: '/api/mcp'
+      preLoaderRoute: typeof ApiMcpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/_community': {
@@ -772,6 +792,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  ApiMcpRoute: ApiMcpRoute,
   OauthConsentRoute: OauthConsentRoute,
   OauthSelectOrgRoute: OauthSelectOrgRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
