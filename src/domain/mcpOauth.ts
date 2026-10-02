@@ -80,3 +80,16 @@ export function inferApplicationType(redirectUris: readonly string[]): "native" 
 	}
 	return "native";
 }
+
+/** Display name for an AI Client that registered without one. */
+export const clientDisplayName = (name: string | null | undefined): string => name ?? "An app";
+
+/**
+ * Host shown next to an AI Client. CIMD: the host serving the metadata document (the `client_id`
+ * URL itself) is the verified identity, never anything the document claims. DCR: the self-declared
+ * `client_uri`, display only.
+ */
+export function clientHost(clientId: string, clientUri: string | null | undefined): string | null {
+	const uri = registrationKind(clientId) === "cimd" ? clientId : clientUri;
+	return (uri ? URL.parse(uri)?.host : null) ?? null;
+}

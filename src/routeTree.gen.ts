@@ -41,6 +41,7 @@ import { Route as AuthedCommunitySettingsMembersIndexRouteImport } from './route
 import { Route as AuthedCommunitySettingsFieldsIndexRouteImport } from './routes/_authed/_community/settings/fields/index'
 import { Route as AuthedCommunityProfileRelationshipsIndexRouteImport } from './routes/_authed/_community/profile/relationships/index'
 import { Route as AuthedCommunityProfileInfoIndexRouteImport } from './routes/_authed/_community/profile/info/index'
+import { Route as AuthedCommunityProfileAiIndexRouteImport } from './routes/_authed/_community/profile/ai/index'
 import { Route as AuthedCommunityProfileAddressesIndexRouteImport } from './routes/_authed/_community/profile/addresses/index'
 import { Route as AuthedCommunityMembersIdIndexRouteImport } from './routes/_authed/_community/members/$id/index'
 
@@ -218,6 +219,12 @@ const AuthedCommunityProfileInfoIndexRoute =
     path: '/profile/info/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
+const AuthedCommunityProfileAiIndexRoute =
+  AuthedCommunityProfileAiIndexRouteImport.update({
+    id: '/profile/ai/',
+    path: '/profile/ai/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
 const AuthedCommunityProfileAddressesIndexRoute =
   AuthedCommunityProfileAddressesIndexRouteImport.update({
     id: '/profile/addresses/',
@@ -258,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
   '/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
+  '/profile/ai/': typeof AuthedCommunityProfileAiIndexRoute
   '/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
   '/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
   '/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
@@ -291,6 +299,7 @@ export interface FileRoutesByTo {
   '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
   '/members/$id': typeof AuthedCommunityMembersIdIndexRoute
   '/profile/addresses': typeof AuthedCommunityProfileAddressesIndexRoute
+  '/profile/ai': typeof AuthedCommunityProfileAiIndexRoute
   '/profile/info': typeof AuthedCommunityProfileInfoIndexRoute
   '/profile/relationships': typeof AuthedCommunityProfileRelationshipsIndexRoute
   '/settings/fields': typeof AuthedCommunitySettingsFieldsIndexRoute
@@ -328,6 +337,7 @@ export interface FileRoutesById {
   '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
   '/_authed/_community/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/_authed/_community/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
+  '/_authed/_community/profile/ai/': typeof AuthedCommunityProfileAiIndexRoute
   '/_authed/_community/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
   '/_authed/_community/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
   '/_authed/_community/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/onboarding/invitations/'
     | '/members/$id/'
     | '/profile/addresses/'
+    | '/profile/ai/'
     | '/profile/info/'
     | '/profile/relationships/'
     | '/settings/fields/'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/onboarding/invitations'
     | '/members/$id'
     | '/profile/addresses'
+    | '/profile/ai'
     | '/profile/info'
     | '/profile/relationships'
     | '/settings/fields'
@@ -432,6 +444,7 @@ export interface FileRouteTypes {
     | '/_authed/onboarding/invitations/'
     | '/_authed/_community/members/$id/'
     | '/_authed/_community/profile/addresses/'
+    | '/_authed/_community/profile/ai/'
     | '/_authed/_community/profile/info/'
     | '/_authed/_community/profile/relationships/'
     | '/_authed/_community/settings/fields/'
@@ -684,6 +697,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityProfileInfoIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
+    '/_authed/_community/profile/ai/': {
+      id: '/_authed/_community/profile/ai/'
+      path: '/profile/ai'
+      fullPath: '/profile/ai/'
+      preLoaderRoute: typeof AuthedCommunityProfileAiIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
     '/_authed/_community/profile/addresses/': {
       id: '/_authed/_community/profile/addresses/'
       path: '/profile/addresses'
@@ -746,6 +766,7 @@ interface AuthedCommunityRouteChildren {
   AuthedCommunityMemoriesIndexRoute: typeof AuthedCommunityMemoriesIndexRoute
   AuthedCommunityMembersIdIndexRoute: typeof AuthedCommunityMembersIdIndexRoute
   AuthedCommunityProfileAddressesIndexRoute: typeof AuthedCommunityProfileAddressesIndexRoute
+  AuthedCommunityProfileAiIndexRoute: typeof AuthedCommunityProfileAiIndexRoute
   AuthedCommunityProfileInfoIndexRoute: typeof AuthedCommunityProfileInfoIndexRoute
   AuthedCommunityProfileRelationshipsIndexRoute: typeof AuthedCommunityProfileRelationshipsIndexRoute
 }
@@ -760,6 +781,7 @@ const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
   AuthedCommunityMembersIdIndexRoute: AuthedCommunityMembersIdIndexRoute,
   AuthedCommunityProfileAddressesIndexRoute:
     AuthedCommunityProfileAddressesIndexRoute,
+  AuthedCommunityProfileAiIndexRoute: AuthedCommunityProfileAiIndexRoute,
   AuthedCommunityProfileInfoIndexRoute: AuthedCommunityProfileInfoIndexRoute,
   AuthedCommunityProfileRelationshipsIndexRoute:
     AuthedCommunityProfileRelationshipsIndexRoute,

@@ -3,12 +3,14 @@ import type { BetterAuthOptions } from "better-auth";
 import type { OrganizationOptions } from "better-auth/plugins";
 import { env } from "cloudflare:workers";
 import { db } from "@/db";
+import { removeMemberConnections } from "@/domain/queries/connections";
 import { LIMIT_COPY, LimitError } from "@/domain/limits";
 import { ONBOARDING_INVITATIONS_PATH, loginHref } from "@/domain/authRoutes";
 import { inferApplicationType, registrationKind } from "@/domain/mcpOauth";
 import InviteEmail from "@/emails/InviteEmail";
 import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
 import VerifyEmail from "@/emails/VerifyEmail";
+import { safeAsync } from "./safe";
 import { sendEmail } from "./email";
 import { limits } from "./limits";
 import { captureMcpConnectionCreated } from "./posthog-server";
@@ -23,11 +25,21 @@ async function limitGuard(assert: () => Promise<void>, message: string) {
 	}
 }
 
+/** The member is already gone: never fail the request over cleanup; the live check still 401s. */
+async function dropConnections(userId: string, organizationId: string) {
+	const result = await safeAsync(removeMemberConnections(db, userId, organizationId));
+	if (!result.success) console.error("Failed to drop Connections of removed member", result.error);
+}
+
 export const organizationHooks = {
 	beforeAcceptInvitation: async ({ user }) =>
 		limitGuard(() => limits.assertOrgSlot(user.id), LIMIT_COPY.orgAccept.description),
 	beforeCreateInvitation: async ({ organization }) =>
 		limitGuard(() => limits.assertMemberSlot(organization.id), LIMIT_COPY.memberInvite.description),
+	// A Connection ends with the member's membership (ADR 0004).
+	afterRemoveMember: async ({ user, organization }) => {
+		await dropConnections(user.id, organization.id);
+	},
 } satisfies NonNullable<OrganizationOptions["organizationHooks"]>;
 
 export const sendInvitationEmail: NonNullable<OrganizationOptions["sendInvitationEmail"]> = async (
@@ -103,8 +115,19 @@ export const mcpHooks = {
 		if (!inferred) return;
 		return { context: { ...ctx, body: { ...body, application_type: inferred } } };
 	}),
-	/** `mcp_connection_created`: consent was Allowed and the flow ended in an authorization code. */
+	/**
+	 * Leave → drop Connections. `mcp_connection_created`: consent was Allowed and the flow ended in
+	 * an authorization code.
+	 */
 	after: createAuthMiddleware(async (ctx) => {
+		// Leaving fires no `afterRemoveMember`; same rule: no membership, no Connection.
+		if (ctx.path === "/organization/leave") {
+			const organizationId = (ctx.body as { organizationId?: unknown } | undefined)?.organizationId;
+			if (typeof organizationId !== "string" || ctx.context.returned instanceof Error) return;
+			const session = await getSessionFromCtx(ctx);
+			if (session) await dropConnections(session.user.id, organizationId);
+			return;
+		}
 		if (ctx.path !== "/oauth2/consent" || ctx.body?.accept !== true) return;
 		const returned = ctx.context.returned as { url?: unknown } | undefined;
 		if (typeof returned?.url !== "string") return;

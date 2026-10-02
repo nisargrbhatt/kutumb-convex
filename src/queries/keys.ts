@@ -47,4 +47,5 @@ export const orgKeys = {
 export const accountKeys = {
 	all: (userId: string) => ["account", userId] as const,
 	organizationCount: (userId: string) => [...accountKeys.all(userId), "organizationCount"] as const,
+	connections: (userId: string) => [...accountKeys.all(userId), "connections"] as const,
 };

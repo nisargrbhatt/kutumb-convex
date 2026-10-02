@@ -7,7 +7,12 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { Link } from "@tanstack/react-router";
-import { IconAddressBook, IconClipboardList, IconConnection } from "@tabler/icons-react";
+import {
+	IconAddressBook,
+	IconClipboardList,
+	IconConnection,
+	IconSparkles,
+} from "@tabler/icons-react";
 
 export function ProfileNav() {
 	const { toggleSidebar, isMobile, open } = useSidebar();
@@ -77,6 +82,27 @@ export function ProfileNav() {
 					>
 						<IconConnection />
 						<span>Relationships</span>
+					</SidebarMenuButton>
+				</SidebarMenuItem>
+				<SidebarMenuItem
+					onClick={() => {
+						if (open && isMobile) {
+							toggleSidebar();
+						}
+					}}
+				>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/profile/ai"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconSparkles />
+						<span>AI</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 			</SidebarMenu>

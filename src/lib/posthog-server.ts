@@ -82,3 +82,22 @@ export function captureMcpToolCalled(props: {
 		console.error("Failed to capture mcp_tool_called event", error);
 	}
 }
+
+/** A member revoked one of their Connections from the Connections page. */
+export function captureMcpConnectionRevoked(props: {
+	userId: string;
+	organizationId: string;
+	clientId: string;
+}) {
+	try {
+		const client = getPostHogClient();
+		client.capture({
+			distinctId: props.userId,
+			event: "mcp_connection_revoked",
+			properties: { orgId: props.organizationId, clientId: props.clientId },
+		});
+		waitUntil(client.flush());
+	} catch (error) {
+		console.error("Failed to capture mcp_connection_revoked event", error);
+	}
+}
