@@ -1,36 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
-import { drizzle } from "drizzle-orm/sqlite-proxy";
 import { beforeEach, describe, expect, it } from "vitest";
-import * as schema from "@/db/schema";
+import type { DatabaseSync } from "node:sqlite";
+import { freshDb } from "@/test/sqliteDb";
 import { getActor, loadConnectionActor } from "./actor";
-
-// Real schema: replay the drizzle migrations into an in-memory sqlite.
-function freshDb() {
-	const sqlite = new DatabaseSync(":memory:");
-	const dir = new URL("../../../migrations/", import.meta.url);
-	for (const file of readdirSync(dir)
-		.filter((f) => f.endsWith(".sql"))
-		.sort()) {
-		for (const stmt of readFileSync(new URL(file, dir), "utf8").split("--> statement-breakpoint")) {
-			if (stmt.trim()) sqlite.exec(stmt);
-		}
-	}
-	const db = drizzle(
-		async (sql, params, method) => {
-			const stmt = sqlite.prepare(sql);
-			if (method === "run") {
-				stmt.run(...(params as never[]));
-				return { rows: [] };
-			}
-			stmt.setReturnArrays(true);
-			const rows = stmt.all(...(params as never[])) as unknown as unknown[][];
-			return { rows: method === "get" ? (rows[0] ?? []) : rows };
-		},
-		{ schema }
-	);
-	return { sqlite, db };
-}
 
 const KEY = { userId: "u1", clientId: "c1", orgId: "o1" };
 
