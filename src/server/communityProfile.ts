@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { COMMUNITY_PROFILE_STATUS } from "@/db/constants";
 import { communityProfile } from "@/db/app-schema";
 import { generatePrimaryKey } from "@/lib/generate";
-import { and, count, eq, like, sql } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { safeAsync } from "@/lib/safe";
 import {
 	extractSubgraph,
@@ -18,8 +18,8 @@ import { LIMIT_COPY, LimitError } from "@/domain/limits";
 import { limits } from "@/lib/limits";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
-import type { CustomFieldDefinition } from "@/domain/customFields";
 import { communityProfileInput, fullName, memberFilterSchema } from "@/domain/communityProfile";
+import { getCommunityProfileDetail, listCommunityMembers } from "@/domain/queries/profiles";
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
@@ -141,58 +141,7 @@ export const getActiveProfilesForRelation = createServerFn({ method: "GET" })
 export const getCommunityMembers = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
 	.validator(memberFilterSchema)
-	.handler(async ({ context, data }) => {
-		const { organizationId } = context.actor;
-
-		const conditions = [eq(communityProfile.organizationId, organizationId)];
-
-		if (data.search.trim().length > 0) {
-			const searchTerm = `%${data.search.trim()}%`;
-			conditions.push(
-				sql`(${like(communityProfile.firstName, searchTerm)} OR ${like(communityProfile.lastName, searchTerm)} OR ${like(communityProfile.email, searchTerm)})`
-			);
-		}
-
-		if (data.status) {
-			conditions.push(eq(communityProfile.status, data.status));
-		}
-
-		if (data.gender) {
-			conditions.push(eq(communityProfile.gender, data.gender));
-		}
-
-		const whereClause = and(...conditions);
-		const offset = (data.page - 1) * data.pageSize;
-
-		const [members, totalResult] = await Promise.all([
-			db.query.communityProfile.findMany({
-				where: () => whereClause!,
-				limit: data.pageSize,
-				offset,
-				columns: {
-					id: true,
-					firstName: true,
-					middleName: true,
-					lastName: true,
-					nickName: true,
-					gender: true,
-					email: true,
-					status: true,
-					bloodGroup: true,
-					mobileNumber: true,
-					dateOfBirth: true,
-				},
-			}),
-			db.select({ total: count() }).from(communityProfile).where(whereClause!),
-		]);
-
-		return {
-			data: members,
-			total: totalResult[0]?.total ?? 0,
-			page: data.page,
-			pageSize: data.pageSize,
-		};
-	});
+	.handler(({ context, data }) => listCommunityMembers(db, context.actor, data));
 
 export const getFocusedCommunityGraph = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
@@ -241,67 +190,7 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 		})
 	)
 	.middleware([orgMiddleware])
-	.handler(async ({ context, data }) => {
-		const { organizationId } = context.actor;
-
-		const foundProfile = await db.query.communityProfile.findFirst({
-			where: (fields, ops) =>
-				ops.and(ops.eq(fields.id, data.id), ops.eq(fields.organizationId, organizationId)),
-			columns: {
-				organizationId: false,
-			},
-		});
-
-		if (!foundProfile) {
-			throw new AppError("NotFound", "Community Profile not found");
-		}
-
-		const profileAddresses = await db.query.communityAddress.findMany({
-			where: (fields, ops) => ops.eq(fields.communityProfileId, foundProfile.id),
-			columns: {
-				communityProfileId: false,
-			},
-		});
-
-		const customFieldDefs = await db.query.communityProfileCustomField.findMany({
-			where: (fields, ops) => ops.eq(fields.organizationId, organizationId),
-			columns: { id: true, label: true, type: true },
-		});
-
-		const counterpartColumns = {
-			id: true,
-			firstName: true,
-			middleName: true,
-			lastName: true,
-			nickName: true,
-		} as const;
-
-		// Outgoing: subject is the `from`. Type read subject-centric.
-		const outgoingRelations = await db.query.communityRelation.findMany({
-			where: (fields, ops) => ops.eq(fields.fromId, foundProfile.id),
-			columns: { organizationId: false },
-			with: {
-				toCommunityProfile: { columns: counterpartColumns },
-			},
-		});
-
-		// Incoming: subject is the `to`. Type shown as stored (no inversion — ADR 0001).
-		const incomingRelations = await db.query.communityRelation.findMany({
-			where: (fields, ops) => ops.eq(fields.toId, foundProfile.id),
-			columns: { organizationId: false },
-			with: {
-				fromCommunityProfile: { columns: counterpartColumns },
-			},
-		});
-
-		return {
-			profile: foundProfile,
-			addresses: profileAddresses,
-			customFieldDefs: customFieldDefs satisfies CustomFieldDefinition[],
-			outgoingRelations,
-			incomingRelations,
-		};
-	});
+	.handler(({ context, data }) => getCommunityProfileDetail(db, context.actor, data.id));
 
 export const acceptCommunityProfile = createServerFn({ method: "POST" })
 	.validator(

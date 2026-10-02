@@ -149,6 +149,20 @@ export const memberFilterSchema = z.object({
 });
 export type MemberFilter = z.infer<typeof memberFilterSchema>;
 
+/** AI Client search tool input. `limit` is clamped again server-side. */
+export const searchProfilesInput = z.object({
+	query: z
+		.string()
+		.trim()
+		.optional()
+		.describe("Name text; every word must match part of a first/middle/last/nick name."),
+	status: profileStatusSchema.default("active").describe("Profile status. Defaults to active."),
+	gender: genderSchema.optional().describe("Only profiles with this gender."),
+	limit: z.number().int().min(1).max(100).default(25).describe("Page size, 1-100. Default 25."),
+	cursor: z.string().optional().describe("`nextCursor` from the previous page."),
+});
+export type SearchProfilesInput = z.infer<typeof searchProfilesInput>;
+
 type NameParts = Pick<CommunityProfileRow, "firstName" | "lastName"> & {
 	middleName?: string | null;
 };

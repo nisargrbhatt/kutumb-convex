@@ -59,14 +59,19 @@ beforeEach(() => {
 });
 
 describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
-	it("tools/list advertises read-only whoami with an output schema", async () => {
+	it("tools/list advertises read-only tools with output schemas", async () => {
 		const { result } = await rpc("tools/list");
-		expect(result.tools).toHaveLength(1);
-		expect(result.tools[0]).toMatchObject({
-			name: "whoami",
-			annotations: { readOnlyHint: true },
-			outputSchema: { type: "object" },
-		});
+		expect(result.tools.map((t: { name: string }) => t.name)).toEqual([
+			"whoami",
+			"search_profiles",
+			"get_profile",
+		]);
+		for (const tool of result.tools) {
+			expect(tool).toMatchObject({
+				annotations: { readOnlyHint: true },
+				outputSchema: { type: "object" },
+			});
+		}
 	});
 
 	it("whoami returns org, role and profile for the Actor", async () => {

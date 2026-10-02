@@ -11,25 +11,40 @@ const toolResult = (output: Record<string, unknown>): CallToolResult => ({
 	structuredContent: output,
 });
 
+type ToolConfig<Out extends z.ZodObject, In extends z.ZodObject | undefined> = {
+	title: string;
+	description: string;
+	inputSchema?: In;
+	outputSchema: Out;
+};
+
 /**
- * Registers a read-only, input-less tool that runs as the request's Actor. Maps errors to
- * `isError` results and reports `mcp_tool_called` (name, org, client, outcome, duration — never
- * inputs/outputs).
+ * Registers a read-only tool that runs as the request's Actor. Maps errors to `isError` results
+ * and reports `mcp_tool_called` (name, org, client, outcome, duration — never inputs/outputs).
+ * With an `inputSchema` the SDK validates arguments first and `run` receives them.
  */
-export function defineReadTool<Out extends z.ZodObject>(
+export function defineReadTool<
+	Out extends z.ZodObject,
+	In extends z.ZodObject | undefined = undefined,
+>(
 	server: McpServer,
 	name: string,
-	config: { title: string; description: string; outputSchema: Out },
-	run: (actor: Actor) => Promise<z.input<Out>>
+	config: ToolConfig<Out, In>,
+	run: (
+		actor: Actor,
+		input: In extends z.ZodObject ? z.output<In> : undefined
+	) => Promise<z.input<Out>>
 ): void {
 	server.registerTool(name, { ...config, annotations: { readOnlyHint: true } }, (async (
-		ctx: ServerContext
+		...cbArgs: [ServerContext] | [unknown, ServerContext]
 	): Promise<CallToolResult> => {
 		const startedAt = Date.now();
+		const ctx = cbArgs[cbArgs.length - 1] as ServerContext;
 		const actor = getActor(ctx);
 		let result: CallToolResult;
 		try {
-			result = toolResult((await run(actor)) as Record<string, unknown>);
+			const input = (config.inputSchema ? cbArgs[0] : undefined) as never;
+			result = toolResult((await run(actor, input)) as Record<string, unknown>);
 		} catch (error) {
 			result = toolErrorResult(error);
 		}
