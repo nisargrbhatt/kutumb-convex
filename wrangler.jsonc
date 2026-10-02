@@ -13,8 +13,7 @@
 	"d1_databases": [
 		{
 			"binding": "D1",
-			"database_name": "D1",
-			"database_id": "6c87b6c7-5b1e-4e30-99c1-43e470c0c408",
+			"database_id": "ffedc984-cd62-447b-9792-86bc41610a82",
 		},
 	],
 	"kv_namespaces": [
