@@ -5,7 +5,7 @@ import { organization } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "cloudflare:workers";
 import { ac, member, owner, admin } from "./permission";
-import { createKvRateLimitStorage } from "./rate-limit-kv";
+import { createD1RateLimitStorage } from "./rate-limit-d1";
 import { ORG_LIMIT, MEMBER_LIMIT } from "@/domain/limits";
 import {
 	databaseHooks,
@@ -46,11 +46,10 @@ export const auth = betterAuth({
 		sendOnSignUp: true,
 		sendVerificationEmail,
 	},
-	// Only the rate limiter points at KV — not secondaryStorage, which would also
-	// relocate session storage onto KV's eventual consistency (every request, plus
-	// logout/session revocation).
+	// Only the rate limiter has custom storage (D1, atomic consume) — not secondaryStorage,
+	// which would also relocate session storage (every request, plus logout/revocation).
 	rateLimit: {
-		customStorage: createKvRateLimitStorage(env.KV),
+		customStorage: createD1RateLimitStorage(env.D1),
 	},
 	secret: env.BETTER_AUTH_SECRET,
 	socialProviders: {
