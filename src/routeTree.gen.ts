@@ -33,6 +33,7 @@ import { Route as AuthedCommunityMemoriesIndexRouteImport } from './routes/_auth
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
 import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
+import { Route as publicDocsMcpIndexRouteImport } from './routes/(public)/docs/mcp/index'
 import { Route as DotwellKnownOpenidConfigurationApiAuthRouteImport } from './routes/[.]well-known/openid-configuration/api/auth'
 import { Route as DotwellKnownOauthProtectedResourceApiMcpRouteImport } from './routes/[.]well-known/oauth-protected-resource/api/mcp'
 import { Route as DotwellKnownOauthAuthorizationServerApiAuthRouteImport } from './routes/[.]well-known/oauth-authorization-server/api/auth'
@@ -171,6 +172,11 @@ const AuthedCommunityCommunityTreeIndexRoute =
     path: '/community-tree/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
+const publicDocsMcpIndexRoute = publicDocsMcpIndexRouteImport.update({
+  id: '/docs/mcp/',
+  path: '/docs/mcp/',
+  getParentRoute: () => publicRouteRoute,
+} as any)
 const DotwellKnownOpenidConfigurationApiAuthRoute =
   DotwellKnownOpenidConfigurationApiAuthRouteImport.update({
     id: '/.well-known/openid-configuration/api/auth',
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  '/docs/mcp/': typeof publicDocsMcpIndexRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  '/docs/mcp': typeof publicDocsMcpIndexRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  '/(public)/docs/mcp/': typeof publicDocsMcpIndexRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
@@ -365,6 +374,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/api/auth'
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
+    | '/docs/mcp/'
     | '/community-tree/'
     | '/dashboard/'
     | '/members/'
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/api/auth'
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
+    | '/docs/mcp'
     | '/community-tree'
     | '/dashboard'
     | '/members'
@@ -436,6 +447,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/api/auth'
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
+    | '/(public)/docs/mcp/'
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
@@ -641,6 +653,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityCommunityTreeIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
+    '/(public)/docs/mcp/': {
+      id: '/(public)/docs/mcp/'
+      path: '/docs/mcp'
+      fullPath: '/docs/mcp/'
+      preLoaderRoute: typeof publicDocsMcpIndexRouteImport
+      parentRoute: typeof publicRouteRoute
+    }
     '/.well-known/openid-configuration/api/auth': {
       id: '/.well-known/openid-configuration/api/auth'
       path: '/.well-known/openid-configuration/api/auth'
@@ -725,12 +744,14 @@ interface publicRouteRouteChildren {
   publicAboutIndexRoute: typeof publicAboutIndexRoute
   publicPrivacyPolicyIndexRoute: typeof publicPrivacyPolicyIndexRoute
   publicTermOfServiceIndexRoute: typeof publicTermOfServiceIndexRoute
+  publicDocsMcpIndexRoute: typeof publicDocsMcpIndexRoute
 }
 
 const publicRouteRouteChildren: publicRouteRouteChildren = {
   publicAboutIndexRoute: publicAboutIndexRoute,
   publicPrivacyPolicyIndexRoute: publicPrivacyPolicyIndexRoute,
   publicTermOfServiceIndexRoute: publicTermOfServiceIndexRoute,
+  publicDocsMcpIndexRoute: publicDocsMcpIndexRoute,
 }
 
 const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
