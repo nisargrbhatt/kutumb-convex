@@ -1,8 +1,6 @@
 # Connections page (/profile/ai)
 
-Type: AFK
-Status: resolved
-Blocked by: 10
+Type: AFK Status: resolved Blocked by: 10
 
 Spec: [spec.md § AI settings UI, Auth stack (Ending a Connection)](../spec.md)
 
@@ -26,9 +24,9 @@ consents for that org. PostHog `mcp_connection_revoked`. Empty state with "Conne
 ## Resolution
 
 - `/profile/ai` (`routes/_authed/_community/profile/ai/index.tsx`) + "AI" Profile nav item;
-  breadcrumb Home › Profile › AI. Loader preloads; community filter is client-side over the
-  caller's own list (default active org, "All communities"). Empty state (no Connections at all) with
-  CTA; `ConnectAiClientButton` is a **disabled stub** until slice 16.
+  breadcrumb Home › Profile › AI. Loader preloads; community filter is client-side over the caller's
+  own list (default active org, "All communities"). Empty state (no Connections at all) with CTA;
+  `ConnectAiClientButton` is a **disabled stub** until slice 16.
 - `domain/queries/connections.ts`: `listConnections` (consent ⋈ client ⋈ org, own `userId` only),
   `revokeConnection(userId, consentId)` (null if not theirs), `removeMemberConnections`. Revoke =
   set `revoked` on matching refresh + access tokens, **then** delete consent (failure leaves it

@@ -1,8 +1,6 @@
 # Connect drawer + public setup guide
 
-Type: AFK
-Status: resolved
-Blocked by: 15
+Type: AFK Status: resolved Blocked by: 15
 
 Spec: [spec.md § AI settings UI, Setup guide](../spec.md)
 
@@ -21,8 +19,13 @@ revoke".
 
 ## Resolution
 
-- `domain/mcpClients.ts`: pure `mcpClients(url)` (Claude, ChatGPT, Claude Code, Cursor: steps + snippets) + `MCP_DOCS_PATH`. Tested. One source for drawer + page.
-- MCP URL: public server fn `server/mcpInfo.ts` -> `mcpResourceUrl(env.BETTER_AUTH_URL)`; `queries/mcpInfo.ts` (staleTime Infinity).
-- `ConnectAiClientDrawer` (right Sheet): URL + copy, accordion, read-only alert, "Setup guide" (new tab). `ConnectAiClientButton` now opens it (header + empty state). Shared `McpClientSteps`, `CopyButton`.
-- Public `/(public)/docs/mcp`: URL, per-client steps, what AI can see, how to revoke; breadcrumbs Home › Docs › MCP. Browser-checked logged out, desktop + 375px, no overflow.
+- `domain/mcpClients.ts`: pure `mcpClients(url)` (Claude, ChatGPT, Claude Code, Cursor: steps +
+  snippets) + `MCP_DOCS_PATH`. Tested. One source for drawer + page.
+- MCP URL: public server fn `server/mcpInfo.ts` -> `mcpResourceUrl(env.BETTER_AUTH_URL)`;
+  `queries/mcpInfo.ts` (staleTime Infinity).
+- `ConnectAiClientDrawer` (right Sheet): URL + copy, accordion, read-only alert, "Setup guide" (new
+  tab). `ConnectAiClientButton` now opens it (header + empty state). Shared `McpClientSteps`,
+  `CopyButton`.
+- Public `/(public)/docs/mcp`: URL, per-client steps, what AI can see, how to revoke; breadcrumbs
+  Home › Docs › MCP. Browser-checked logged out, desktop + 375px, no overflow.
 - Not run: drawer in browser (needs seeded login); real-client flow (slice 17).

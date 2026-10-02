@@ -49,13 +49,14 @@ revokes Connections.
   un-inverted, with counterpart gender. Extract `(actor, input)` query fns. Search 25/100 + cursor;
   graph ≤3 deep, ≤200 nodes.
 - [MCP route architecture and Actor seam](issues/06-mcp-route-architecture.md): SDK v2 `^2.1`,
-  `legacy:'stateless'` (≥2025-03-26). `/api/mcp` + root `.well-known` routes serving better-auth-built
-  metadata (issuer `/api/auth`). Own `verifyMcpRequest` → 401/403 challenges; JWKS memo from D1.
-  `loadConnectionActor` → existing `Actor` via `authInfo.extra`. `AppError` → `isError`. Strict
-  Origin/Host, no CORS on MCP.
+  `legacy:'stateless'` (≥2025-03-26). `/api/mcp` + root `.well-known` routes serving
+  better-auth-built metadata (issuer `/api/auth`). Own `verifyMcpRequest` → 401/403 challenges; JWKS
+  memo from D1. `loadConnectionActor` → existing `Actor` via `authInfo.extra`. `AppError` →
+  `isError`. Strict Origin/Host, no CORS on MCP.
 - [AI settings section UI](issues/07-ai-settings-section-ui.md): `/profile/ai` for any member.
-  Connections table + "Connect AI client" drawer (URL, per-client steps, docs link). Community filter
-  defaults to active org. Status Active/Expired. Consent screens prototyped; unverified client → red.
+  Connections table + "Connect AI client" drawer (URL, per-client steps, docs link). Community
+  filter defaults to active org. Status Active/Expired. Consent screens prototyped; unverified
+  client → red.
 - [Assemble spec and implementation slices](issues/08-assemble-spec-and-slices.md): Spec written to
   `spec.md`. Last used comes from refresh tokens. Rate limits use better-auth rules plus the CF
   binding. PostHog tracks events with no PII. Setup guide is public at `/docs/mcp`. 9 slices (09–17)
@@ -71,4 +72,5 @@ _None. The way is clear. Implementation slices are in `issues/09`–`17`._
 - In-app chat, where Kutumb calls an LLM itself.
 - Usage metering or billing for AI access.
 - Static personal API key: v1 is OAuth-only ([08](issues/08-assemble-spec-and-slices.md)).
-- Admin oversight of other members' Connections, because Connections are personal ([08](issues/08-assemble-spec-and-slices.md)).
+- Admin oversight of other members' Connections, because Connections are personal
+  ([08](issues/08-assemble-spec-and-slices.md)).

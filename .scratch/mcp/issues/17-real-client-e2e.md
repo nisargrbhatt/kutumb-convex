@@ -1,8 +1,6 @@
 # Real-client E2E verification
 
-Type: HITL
-Status: open
-Blocked by: 11, 14, 16
+Type: HITL Status: open Blocked by: 11, 14, 16
 
 Spec: [spec.md § Testing](../spec.md)
 
