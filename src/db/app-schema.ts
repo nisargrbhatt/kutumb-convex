@@ -166,3 +166,15 @@ export const communityMemoryRelations = relations(communityMemory, ({ one }) => 
 		references: [organization.id],
 	}),
 }));
+
+// better-auth rate limiter state. Written only by `createD1RateLimitStorage`
+// (src/lib/rate-limit-d1.ts), never through the better-auth adapter.
+export const rateLimit = sqliteTable(
+	"rate_limit",
+	{
+		key: text("key").primaryKey(),
+		count: integer("count").notNull(),
+		lastRequest: integer("last_request").notNull(),
+	},
+	(table) => [index("rate_limit_lastRequest_idx").on(table.lastRequest)]
+);

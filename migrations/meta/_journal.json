@@ -29,6 +29,13 @@
 			"when": 1789668115876,
 			"tag": "0003_known_nomad",
 			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "6",
+			"when": 1790924634058,
+			"tag": "0004_shallow_cable",
+			"breakpoints": true
 		}
 	]
 }

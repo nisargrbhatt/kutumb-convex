@@ -1,7 +1,7 @@
 # Auth known limitations — accepted tradeoffs, not bugs
 
-Four behaviors in the auth surface are deliberate. Listed here so a future maintainer filing them as
-bugs finds the reasoning first.
+Three behaviors in the auth surface are deliberate. Listed here so a future maintainer filing them
+as bugs finds the reasoning first.
 
 - **Email enumeration is accepted on signup.** Signup errors reveal whether an email is already
   registered. Generic ("if this exists…") copy is used only on password reset, where the leak is
@@ -18,10 +18,7 @@ bugs finds the reasoning first.
   identity to an existing password account. Accepted: surfacing this as a hard error (rather than
   silently creating a second account) is the safer failure mode.
 
-- **KV rate-limit storage is eventually consistent across colos.** A user can briefly exceed the
-  nominal rate limit if requests land on different Cloudflare colos before KV replicates. Accepted:
-  the limiter's purpose is abuse deterrence, not a hard cap, and D1-backed strict limiting was
-  judged not worth the extra write on every auth request.
-
 _Amended 2026-09-17: the Stripe org-deletion bullet was removed with the billing rip
-(`.scratch/free-tier`). Remaining bullets unchanged._
+(`.scratch/free-tier`). Remaining bullets unchanged._ _Amended 2026-10-02: the KV rate-limit bullet
+was removed — limiter moved to D1 with atomic `consume()` (better-auth 1.7 upgrade,
+`.scratch/mcp`)._
