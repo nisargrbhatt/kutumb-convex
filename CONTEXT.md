@@ -61,8 +61,9 @@ Profile respectively. There is no exemption for an Org Member creating their own
 
 The subject of any action against a community: an Org Member identified by their user, the
 organization they are acting in, and their role there. Every read or write of community data is
-performed by exactly one Actor. Today an Actor comes from a signed-in session; in future it may come
-from an API token carrying the same three facts. _Avoid_: "current user", "session user".
+performed by exactly one Actor. An Actor comes from a signed-in session or from a Connection; either
+way the role is the Org Member's current role, not one captured earlier. _Avoid_: "current user",
+"session user".
 
 ## Custom Field Definition
 
@@ -76,3 +77,15 @@ value) is meant.
 The value one Community Profile holds for one Custom Field Definition. Keyed by the definition's id,
 never by its label, so renaming a definition does not orphan values. A definition with no value on a
 profile is simply absent.
+
+## AI Client
+
+An external LLM application (e.g. Claude, ChatGPT, an IDE assistant) that reads community data on an
+Org Member's behalf through a Connection. _Avoid_: "LLM provider", "integration".
+
+## Connection
+
+An Org Member's consent letting one AI Client act as them in **one** organization, chosen at consent
+time. The AI Client acts as that member's Actor with their current role. A Connection is revocable
+by its member and ends when their membership in that organization ends. Connecting a second
+organization means a second Connection. _Avoid_: "API token", "grant", "integration".

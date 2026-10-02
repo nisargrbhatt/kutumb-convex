@@ -1,14 +1,13 @@
 # better-auth plugin options for MCP OAuth
 
-Type: research
-Status: resolved
-Blocked by:
+Type: research Status: resolved Blocked by:
 
 ## Question
 
 In better-auth v1.6.x, which plugin should back MCP OAuth? Candidates: `mcp`,
-`oauth-provider`/`oidc-provider`, Agent-Auth (https://better-auth.com/docs/plugins/agent-auth).
-For each, cover:
+`oauth-provider`/`oidc-provider`, Agent-Auth (https://better-auth.com/docs/plugins/agent-auth). For
+each, cover:
+
 - maintenance status
 - spec compliance vs ticket 01
 - DCR support
@@ -20,9 +19,9 @@ For each, cover:
 
 ## Answer
 
-- **Recommend `@better-auth/oauth-provider@1.6.29`** (pin = core) + `jwt()` plugin. If core
-  upgraded to 1.7.x, swap to `@better-auth/mcp` (wraps oauth-provider, same options + `resource`,
-  built-in RFC 9728 + `requireMcpAuth` + DPoP/CIMD); only published for `^1.7.6`.
+- **Recommend `@better-auth/oauth-provider@1.6.29`** (pin = core) + `jwt()` plugin. If core upgraded
+  to 1.7.x, swap to `@better-auth/mcp` (wraps oauth-provider, same options + `resource`, built-in
+  RFC 9728 + `requireMcpAuth` + DPoP/CIMD); only published for `^1.7.6`.
 - Core `mcp` plugin = wrapper over deprecated `oidc-provider`; both **removed in 1.7.0**; no RFC
   8707, opaque tokens, consent only on `prompt=consent`, no org hook. Reject.
 - Agent-Auth: own protocol, not OAuth/MCP-auth, "not yet stable". Reject.
@@ -34,8 +33,8 @@ For each, cover:
 - Tables: `oauthClient`, `oauthRefreshToken`, `oauthAccessToken`, `oauthConsent` (all w/
   `referenceId`) + `jwks`. Arrays → JSON text on sqlite; D1 fine. Imports only better-auth
   subpaths + jose/zod → OK w/ `better-auth/minimal` on Workers (not runtime-tested).
-- Org on grant: `postLogin { page, shouldRedirect, consentReferenceId }` → own select-org page,
-  set active org, `/oauth2/continue {postLogin:true}` → `referenceId = activeOrganizationId` on
+- Org on grant: `postLogin { page, shouldRedirect, consentReferenceId }` → own select-org page, set
+  active org, `/oauth2/continue {postLogin:true}` → `referenceId = activeOrganizationId` on
   consent/code/refresh; `customAccessTokenClaims({referenceId})` → org claim in JWT. Custom
   `loginPage`/`consentPage` (own routes, `POST /oauth2/consent`).
 - Grants: `/oauth2/get-consents`, `update-consent`, `delete-consent` (user-scoped). Gap:

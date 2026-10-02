@@ -1,8 +1,6 @@
 # Assemble spec and implementation slices
 
-Type: grilling
-Status: resolved
-Blocked by: 04, 05, 06, 07
+Type: grilling Status: resolved Blocked by: 04, 05, 06, 07
 
 ## Question
 
@@ -13,10 +11,12 @@ it into vertical implementation tickets, agreeing the slice order with the user.
 
 Grilled 2026-10-02. Spec: [spec.md](../spec.md). Fog graduated:
 
-- **Last used** = newest `oauthRefreshToken.createdAt` per Connection (accurate to ~1h, no per-call writes).
+- **Last used** = newest `oauthRefreshToken.createdAt` per Connection (accurate to ~1h, no per-call
+  writes).
 - **Rate limits**: better-auth `customRules` (register 5/h/IP, token + authorize 30/min) + CF
   `ratelimits` binding on `/api/mcp`, 60/min per `clientId:userId` → 429.
-- **PostHog**: `mcp_tool_called`, `mcp_connection_created`, `mcp_connection_revoked`; never inputs/outputs.
+- **PostHog**: `mcp_tool_called`, `mcp_connection_created`, `mcp_connection_revoked`; never
+  inputs/outputs.
 - **Setup guide**: public `/(public)/docs/mcp`, client-steps data shared with the drawer.
 - Static API key + admin oversight → out of scope.
 - E2E via `cloudflared` tunnel (no staging Worker).
