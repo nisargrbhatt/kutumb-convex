@@ -16,6 +16,7 @@ vi.mock("@/db", () => ({
 	},
 }));
 vi.mock("@/lib/posthog-server", () => ({ captureMcpToolCalled: mocks.capture }));
+vi.mock("cloudflare:workers", () => ({ env: { KV: {} } }));
 
 const { createKutumbMcpHandler } = await import("./server");
 
@@ -65,6 +66,7 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 			"whoami",
 			"search_profiles",
 			"get_profile",
+			"get_family_graph",
 		]);
 		for (const tool of result.tools) {
 			expect(tool).toMatchObject({
