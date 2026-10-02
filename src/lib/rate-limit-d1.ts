@@ -2,7 +2,7 @@ import type { BetterAuthRateLimitOptions } from "better-auth/types";
 
 type RateLimitStorage = NonNullable<BetterAuthRateLimitOptions["customStorage"]>;
 
-// Comfortably outlives better-auth's widest built-in window (60s) and any custom rule.
+// Rows older than the widest rule window (OAuth register, 1h) are already reset by consume().
 const PRUNE_AFTER_MS = 60 * 60 * 1000;
 
 // One atomic statement: reset when the window elapsed, else always count the attempt.

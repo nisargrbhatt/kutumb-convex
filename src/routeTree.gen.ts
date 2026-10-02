@@ -16,7 +16,10 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as publicRouteRouteImport } from './routes/(public)/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OauthSelectOrgRouteImport } from './routes/oauth/select-org'
+import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
 import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community'
+import { Route as DotwellKnownOauthProtectedResourceIndexRouteImport } from './routes/[.]well-known/oauth-protected-resource/index'
 import { Route as publicTermOfServiceIndexRouteImport } from './routes/(public)/term-of-service/index'
 import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/privacy-policy/index'
 import { Route as publicAboutIndexRouteImport } from './routes/(public)/about/index'
@@ -29,6 +32,9 @@ import { Route as AuthedCommunityMemoriesIndexRouteImport } from './routes/_auth
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
 import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
+import { Route as DotwellKnownOpenidConfigurationApiAuthRouteImport } from './routes/[.]well-known/openid-configuration/api/auth'
+import { Route as DotwellKnownOauthProtectedResourceApiMcpRouteImport } from './routes/[.]well-known/oauth-protected-resource/api/mcp'
+import { Route as DotwellKnownOauthAuthorizationServerApiAuthRouteImport } from './routes/[.]well-known/oauth-authorization-server/api/auth'
 import { Route as AuthedCommunitySettingsOverviewIndexRouteImport } from './routes/_authed/_community/settings/overview/index'
 import { Route as AuthedCommunitySettingsMembersIndexRouteImport } from './routes/_authed/_community/settings/members/index'
 import { Route as AuthedCommunitySettingsFieldsIndexRouteImport } from './routes/_authed/_community/settings/fields/index'
@@ -70,10 +76,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthSelectOrgRoute = OauthSelectOrgRouteImport.update({
+  id: '/oauth/select-org',
+  path: '/oauth/select-org',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthConsentRoute = OauthConsentRouteImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedCommunityRoute = AuthedCommunityRouteImport.update({
   id: '/_community',
   getParentRoute: () => AuthedRoute,
 } as any)
+const DotwellKnownOauthProtectedResourceIndexRoute =
+  DotwellKnownOauthProtectedResourceIndexRouteImport.update({
+    id: '/.well-known/oauth-protected-resource/',
+    path: '/.well-known/oauth-protected-resource/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const publicTermOfServiceIndexRoute =
   publicTermOfServiceIndexRouteImport.update({
     id: '/term-of-service/',
@@ -142,6 +164,24 @@ const AuthedCommunityCommunityTreeIndexRoute =
     path: '/community-tree/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
+const DotwellKnownOpenidConfigurationApiAuthRoute =
+  DotwellKnownOpenidConfigurationApiAuthRouteImport.update({
+    id: '/.well-known/openid-configuration/api/auth',
+    path: '/.well-known/openid-configuration/api/auth',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotwellKnownOauthProtectedResourceApiMcpRoute =
+  DotwellKnownOauthProtectedResourceApiMcpRouteImport.update({
+    id: '/.well-known/oauth-protected-resource/api/mcp',
+    path: '/.well-known/oauth-protected-resource/api/mcp',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotwellKnownOauthAuthorizationServerApiAuthRoute =
+  DotwellKnownOauthAuthorizationServerApiAuthRouteImport.update({
+    id: '/.well-known/oauth-authorization-server/api/auth',
+    path: '/.well-known/oauth-authorization-server/api/auth',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthedCommunitySettingsOverviewIndexRoute =
   AuthedCommunitySettingsOverviewIndexRouteImport.update({
     id: '/overview/',
@@ -191,12 +231,18 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/oauth/consent': typeof OauthConsentRoute
+  '/oauth/select-org': typeof OauthSelectOrgRoute
   '/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about/': typeof publicAboutIndexRoute
   '/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
   '/term-of-service/': typeof publicTermOfServiceIndexRoute
+  '/.well-known/oauth-protected-resource/': typeof DotwellKnownOauthProtectedResourceIndexRoute
+  '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
+  '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
+  '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
@@ -217,12 +263,18 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/oauth/consent': typeof OauthConsentRoute
+  '/oauth/select-org': typeof OauthSelectOrgRoute
   '/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about': typeof publicAboutIndexRoute
   '/privacy-policy': typeof publicPrivacyPolicyIndexRoute
   '/term-of-service': typeof publicTermOfServiceIndexRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceIndexRoute
+  '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
+  '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
+  '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
@@ -247,12 +299,18 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
+  '/oauth/consent': typeof OauthConsentRoute
+  '/oauth/select-org': typeof OauthSelectOrgRoute
   '/_authed/_community/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/(public)/about/': typeof publicAboutIndexRoute
   '/(public)/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
   '/(public)/term-of-service/': typeof publicTermOfServiceIndexRoute
+  '/.well-known/oauth-protected-resource/': typeof DotwellKnownOauthProtectedResourceIndexRoute
+  '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
+  '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
+  '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
@@ -275,12 +333,18 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/oauth/consent'
+    | '/oauth/select-org'
     | '/settings'
     | '/api/auth/$'
     | '/api/ph/$'
     | '/about/'
     | '/privacy-policy/'
     | '/term-of-service/'
+    | '/.well-known/oauth-protected-resource/'
+    | '/.well-known/oauth-authorization-server/api/auth'
+    | '/.well-known/oauth-protected-resource/api/mcp'
+    | '/.well-known/openid-configuration/api/auth'
     | '/community-tree/'
     | '/dashboard/'
     | '/members/'
@@ -301,12 +365,18 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/oauth/consent'
+    | '/oauth/select-org'
     | '/settings'
     | '/api/auth/$'
     | '/api/ph/$'
     | '/about'
     | '/privacy-policy'
     | '/term-of-service'
+    | '/.well-known/oauth-protected-resource'
+    | '/.well-known/oauth-authorization-server/api/auth'
+    | '/.well-known/oauth-protected-resource/api/mcp'
+    | '/.well-known/openid-configuration/api/auth'
     | '/community-tree'
     | '/dashboard'
     | '/members'
@@ -330,12 +400,18 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authed/_community'
+    | '/oauth/consent'
+    | '/oauth/select-org'
     | '/_authed/_community/settings'
     | '/api/auth/$'
     | '/api/ph/$'
     | '/(public)/about/'
     | '/(public)/privacy-policy/'
     | '/(public)/term-of-service/'
+    | '/.well-known/oauth-protected-resource/'
+    | '/.well-known/oauth-authorization-server/api/auth'
+    | '/.well-known/oauth-protected-resource/api/mcp'
+    | '/.well-known/openid-configuration/api/auth'
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
@@ -359,8 +435,14 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  OauthConsentRoute: typeof OauthConsentRoute
+  OauthSelectOrgRoute: typeof OauthSelectOrgRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPhSplatRoute: typeof ApiPhSplatRoute
+  DotwellKnownOauthProtectedResourceIndexRoute: typeof DotwellKnownOauthProtectedResourceIndexRoute
+  DotwellKnownOauthAuthorizationServerApiAuthRoute: typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
+  DotwellKnownOauthProtectedResourceApiMcpRoute: typeof DotwellKnownOauthProtectedResourceApiMcpRoute
+  DotwellKnownOpenidConfigurationApiAuthRoute: typeof DotwellKnownOpenidConfigurationApiAuthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -414,12 +496,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/select-org': {
+      id: '/oauth/select-org'
+      path: '/oauth/select-org'
+      fullPath: '/oauth/select-org'
+      preLoaderRoute: typeof OauthSelectOrgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/consent': {
+      id: '/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/oauth/consent'
+      preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authed/_community': {
       id: '/_authed/_community'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthedCommunityRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/.well-known/oauth-protected-resource/': {
+      id: '/.well-known/oauth-protected-resource/'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource/'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(public)/term-of-service/': {
       id: '/(public)/term-of-service/'
@@ -504,6 +607,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/community-tree/'
       preLoaderRoute: typeof AuthedCommunityCommunityTreeIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
+    }
+    '/.well-known/openid-configuration/api/auth': {
+      id: '/.well-known/openid-configuration/api/auth'
+      path: '/.well-known/openid-configuration/api/auth'
+      fullPath: '/.well-known/openid-configuration/api/auth'
+      preLoaderRoute: typeof DotwellKnownOpenidConfigurationApiAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource/api/mcp': {
+      id: '/.well-known/oauth-protected-resource/api/mcp'
+      path: '/.well-known/oauth-protected-resource/api/mcp'
+      fullPath: '/.well-known/oauth-protected-resource/api/mcp'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceApiMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-authorization-server/api/auth': {
+      id: '/.well-known/oauth-authorization-server/api/auth'
+      path: '/.well-known/oauth-authorization-server/api/auth'
+      fullPath: '/.well-known/oauth-authorization-server/api/auth'
+      preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerApiAuthRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authed/_community/settings/overview/': {
       id: '/_authed/_community/settings/overview/'
@@ -648,8 +772,18 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  OauthConsentRoute: OauthConsentRoute,
+  OauthSelectOrgRoute: OauthSelectOrgRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPhSplatRoute: ApiPhSplatRoute,
+  DotwellKnownOauthProtectedResourceIndexRoute:
+    DotwellKnownOauthProtectedResourceIndexRoute,
+  DotwellKnownOauthAuthorizationServerApiAuthRoute:
+    DotwellKnownOauthAuthorizationServerApiAuthRoute,
+  DotwellKnownOauthProtectedResourceApiMcpRoute:
+    DotwellKnownOauthProtectedResourceApiMcpRoute,
+  DotwellKnownOpenidConfigurationApiAuthRoute:
+    DotwellKnownOpenidConfigurationApiAuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

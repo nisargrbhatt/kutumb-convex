@@ -1,15 +1,17 @@
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import type { BetterAuthOptions } from "better-auth";
 import type { OrganizationOptions } from "better-auth/plugins";
 import { env } from "cloudflare:workers";
 import { db } from "@/db";
 import { LIMIT_COPY, LimitError } from "@/domain/limits";
 import { ONBOARDING_INVITATIONS_PATH, loginHref } from "@/domain/authRoutes";
+import { inferApplicationType, registrationKind } from "@/domain/mcpOauth";
 import InviteEmail from "@/emails/InviteEmail";
 import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
 import VerifyEmail from "@/emails/VerifyEmail";
 import { sendEmail } from "./email";
 import { limits } from "./limits";
+import { captureMcpConnectionCreated } from "./posthog-server";
 
 /** Run a limit assertion; a `LimitError` becomes a FORBIDDEN `APIError` carrying its code. */
 async function limitGuard(assert: () => Promise<void>, message: string) {
@@ -90,3 +92,35 @@ export const databaseHooks = {
 		},
 	},
 } satisfies BetterAuthOptions["databaseHooks"];
+
+export const mcpHooks = {
+	// DCR without `application_type` defaults to `web`, which rejects loopback redirects.
+	before: createAuthMiddleware(async (ctx) => {
+		if (ctx.path !== "/oauth2/register") return;
+		const body = ctx.body as { application_type?: string; redirect_uris?: unknown } | undefined;
+		if (!body || body.application_type !== undefined || !Array.isArray(body.redirect_uris)) return;
+		const inferred = inferApplicationType(body.redirect_uris.filter((u) => typeof u === "string"));
+		if (!inferred) return;
+		return { context: { ...ctx, body: { ...body, application_type: inferred } } };
+	}),
+	/** `mcp_connection_created`: consent was Allowed and the flow ended in an authorization code. */
+	after: createAuthMiddleware(async (ctx) => {
+		if (ctx.path !== "/oauth2/consent" || ctx.body?.accept !== true) return;
+		const returned = ctx.context.returned as { url?: unknown } | undefined;
+		if (typeof returned?.url !== "string") return;
+		const redirect = URL.parse(returned.url);
+		if (!redirect?.searchParams.has("code")) return;
+		const session = await getSessionFromCtx(ctx);
+		const organizationId = session?.session.activeOrganizationId;
+		const clientId = (ctx.body as { oauth_query?: string }).oauth_query
+			? new URLSearchParams(ctx.body.oauth_query).get("client_id")
+			: null;
+		if (!session || !organizationId || !clientId) return;
+		captureMcpConnectionCreated({
+			userId: session.user.id,
+			organizationId,
+			clientId,
+			registration: registrationKind(clientId),
+		});
+	}),
+} satisfies BetterAuthOptions["hooks"];
