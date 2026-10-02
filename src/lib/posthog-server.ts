@@ -1,5 +1,6 @@
 import { PostHog } from "posthog-node";
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
+import type { RegistrationKind } from "@/domain/mcpOauth";
 
 let posthogClient: PostHog | null = null;
 
@@ -27,5 +28,29 @@ export function captureLimitReached(props: {
 		});
 	} catch (error) {
 		console.error("Failed to capture limit_reached event", error);
+	}
+}
+
+/** Fired when a member Allows an AI Client at consent. Never carries tool data. */
+export function captureMcpConnectionCreated(props: {
+	userId: string;
+	organizationId: string;
+	clientId: string;
+	registration: RegistrationKind;
+}) {
+	try {
+		const client = getPostHogClient();
+		client.capture({
+			distinctId: props.userId,
+			event: "mcp_connection_created",
+			properties: {
+				orgId: props.organizationId,
+				clientId: props.clientId,
+				registration: props.registration,
+			},
+		});
+		waitUntil(client.flush());
+	} catch (error) {
+		console.error("Failed to capture mcp_connection_created event", error);
 	}
 }
