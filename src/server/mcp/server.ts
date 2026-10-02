@@ -4,6 +4,12 @@ import { db } from "@/db";
 import { searchProfilesInput } from "@/domain/communityProfile";
 import { searchProfiles } from "@/domain/queries/profiles";
 import { defineReadTool } from "./tools/define";
+import {
+	getFamilyGraph,
+	getFamilyGraphDescription,
+	getFamilyGraphInput,
+	getFamilyGraphOutput,
+} from "./tools/getFamilyGraph";
 import { getProfile, getProfileDescription, getProfileOutput } from "./tools/getProfile";
 import { searchProfilesDescription, searchProfilesOutput } from "./tools/searchProfiles";
 import { whoami, whoamiOutput } from "./tools/whoami";
@@ -46,6 +52,18 @@ export function buildMcpServer(): McpServer {
 			outputSchema: getProfileOutput,
 		},
 		(actor, input) => getProfile(db, actor, input)
+	);
+
+	defineReadTool(
+		server,
+		"get_family_graph",
+		{
+			title: "Get family graph",
+			description: getFamilyGraphDescription,
+			inputSchema: getFamilyGraphInput,
+			outputSchema: getFamilyGraphOutput,
+		},
+		(actor, input) => getFamilyGraph(db, actor, input)
 	);
 
 	return server;

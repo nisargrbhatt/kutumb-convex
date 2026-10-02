@@ -136,7 +136,7 @@ plus a JSON `text` fallback. Ids are stable for chaining.
   caller has none (assumed; confirm). The description
   states "`to` is `from`'s `<type>`".
 - **Field exposure** matches the Actor's in-app view (email, mobile, DOB, addresses, comment, custom
-  fields). `get_profile` and the graph return profiles of any status.
+  fields). `get_profile` returns profiles of any status; the graph (KV blob) returns active profiles only.
 - **Domain reuse**: extract plain `(actor, input)` query fns (`src/domain/queries/*`) that both the
   existing server fns and the tools call. Tools never touch `createServerFn`.
 

@@ -9,6 +9,7 @@ vi.mock("@/db", async () => {
 	return { db: h.fresh.db };
 });
 vi.mock("@/lib/posthog-server", () => ({ captureMcpToolCalled: vi.fn() }));
+vi.mock("cloudflare:workers", () => ({ env: { KV: {} } }));
 
 const { createKutumbMcpHandler } = await import("../server");
 
