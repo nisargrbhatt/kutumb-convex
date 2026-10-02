@@ -14,3 +14,6 @@ current role in D1, so revoking or removing membership takes effect immediately,
   ours (the plugin's Node helper doesn't run on Workers), so SSRF protection is ours. JWTs are
   verified in-process from the `jwks` table, not via the plugin's self-fetch of `/jwks`. Deleting a
   consent doesn't revoke refresh tokens in the plugin, so our disconnect does it.
+  Fetcher: manual redirects (refused), KV cache ~1h, relies on `global_fetch_strictly_public` for
+  private-address blocking (Workers can't pin DNS). Consent shows the `client_id` host as the
+  verified identity.

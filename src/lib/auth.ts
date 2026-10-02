@@ -3,9 +3,11 @@ import { betterAuth } from "better-auth/minimal";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { jwt, organization } from "better-auth/plugins";
 import { mcp } from "@better-auth/mcp";
+import { cimd } from "@better-auth/cimd";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "cloudflare:workers";
 import { ac, member, owner, admin } from "./permission";
+import { createCimdFetcher } from "./cimd-fetch";
 import { createD1RateLimitStorage } from "./rate-limit-d1";
 import { ORG_LIMIT, MEMBER_LIMIT } from "@/domain/limits";
 import {
@@ -64,6 +66,15 @@ export const auth = betterAuth({
 			customAccessTokenClaims: ({ referenceId }) =>
 				referenceId ? { [ORG_CLAIM]: referenceId } : {},
 			rateLimit: OAUTH_RATE_LIMITS,
+		}),
+		// Preferred registration (verified tick on consent); DCR stays as the fallback. Must come
+		// after mcp(): it registers itself as a client-discovery extension on oauth-provider.
+		cimd({
+			fetchClientMetadataResource: createCimdFetcher({
+				kv: env.KV,
+				ownOrigin: env.BETTER_AUTH_URL,
+			}),
+			metadataProfile: "mcp-2026-07-28",
 		}),
 	],
 	hooks: mcpHooks,

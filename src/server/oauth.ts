@@ -30,7 +30,9 @@ async function loadClient(clientId: string): Promise<OauthClientInfo | null> {
 	if (!result.success) return null;
 	const client = result.data;
 	const registration = registrationKind(clientId);
-	const uri = client.client_uri ?? (registration === "cimd" ? clientId : undefined);
+	// CIMD: the host serving the metadata document is the verified identity (the client_id URL
+	// itself), not anything the document claims. DCR: self-declared, display only.
+	const uri = registration === "cimd" ? clientId : client.client_uri;
 	return {
 		name: client.client_name ?? "An app",
 		host: (uri ? URL.parse(uri)?.host : null) ?? null,
