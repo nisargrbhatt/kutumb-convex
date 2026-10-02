@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	MCP_SCOPES,
+	clientHost,
 	OAUTH_RATE_LIMITS,
 	ORG_PICK_TTL_MS,
 	inferApplicationType,
@@ -28,6 +29,20 @@ describe("registrationKind", () => {
 
 	it("treats opaque generated ids as DCR", () => {
 		expect(registrationKind("aZkQ3mPLw0sT9uVx1yBcDeFgHiJkLmNo")).toBe("dcr");
+	});
+});
+
+describe("clientHost", () => {
+	it("CIMD: host of the client_id URL, ignoring any claimed uri", () => {
+		expect(clientHost("https://claude.ai/oauth/client.json", "https://evil.test")).toBe(
+			"claude.ai"
+		);
+	});
+
+	it("DCR: host of the self-declared uri, null when absent or malformed", () => {
+		expect(clientHost("opaque", "https://cursor.com/app")).toBe("cursor.com");
+		expect(clientHost("opaque", null)).toBeNull();
+		expect(clientHost("opaque", "not a url")).toBeNull();
 	});
 });
 

@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import z from "zod";
 import { db } from "@/db";
-import { registrationKind, type RegistrationKind } from "@/domain/mcpOauth";
+import {
+	clientDisplayName,
+	clientHost,
+	registrationKind,
+	type RegistrationKind,
+} from "@/domain/mcpOauth";
 import type { Role } from "@/domain/permission";
 import { auth } from "@/lib/auth";
 import { markOrgPicked } from "@/lib/oauth-flow";
@@ -30,12 +35,9 @@ async function loadClient(clientId: string): Promise<OauthClientInfo | null> {
 	if (!result.success) return null;
 	const client = result.data;
 	const registration = registrationKind(clientId);
-	// CIMD: the host serving the metadata document is the verified identity (the client_id URL
-	// itself), not anything the document claims. DCR: self-declared, display only.
-	const uri = registration === "cimd" ? clientId : client.client_uri;
 	return {
-		name: client.client_name ?? "An app",
-		host: (uri ? URL.parse(uri)?.host : null) ?? null,
+		name: clientDisplayName(client.client_name),
+		host: clientHost(clientId, client.client_uri),
 		registration,
 	};
 }
