@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { communityProfile } from "@/db/schema";
+import { changeRequest, communityProfile, communityRelation } from "@/db/schema";
 import type { Actor } from "@/domain/permission";
 import { freshDb } from "@/test/sqliteDb";
-import { getCommunityProfileDetail, listCommunityMembers, searchProfiles } from "./profiles";
+import {
+	countMyRelations,
+	getCommunityProfileDetail,
+	getMyRelationships,
+	listCommunityMembers,
+	searchProfiles,
+} from "./profiles";
 
 const ACTOR: Actor = { userId: "u1", organizationId: "o1", role: "member" };
+const MEMBER: Actor = ACTOR;
+const ADMIN: Actor = { userId: "u2", organizationId: "o1", role: "admin" };
+const OWNER: Actor = { userId: "u3", organizationId: "o1", role: "owner" };
 
 type Seed = Partial<typeof communityProfile.$inferInsert> & { id: string; firstName: string };
 
@@ -21,11 +30,51 @@ describe("profile queries", () => {
 			}))
 		);
 
+	/** `create` Change Request: its submitter is the draft's creator. */
+	const createRequest = (
+		profileId: string,
+		submitterUserId: string | null,
+		status: "pending" | "rejected" = "pending"
+	) =>
+		db.insert(changeRequest).values({
+			id: `cr-${profileId}`,
+			organizationId: "o1",
+			profileId,
+			profileName: profileId,
+			kind: "create",
+			status,
+			submitterUserId,
+			submitterName: "S",
+			createdAt: new Date(0),
+		});
+
+	/**
+	 * Visibility fixture: active, own draft, other's draft, backfilled draft (no submitter), draft
+	 * whose create request is no longer pending, inactive, and u1's own linked inactive profile.
+	 */
+	const seedVisibility = async () => {
+		await seed([
+			{ id: "act", firstName: "Active" },
+			{ id: "dOwn", firstName: "OwnDraft", status: "draft" },
+			{ id: "dOther", firstName: "OtherDraft", status: "draft" },
+			{ id: "dBack", firstName: "Backfilled", status: "draft" },
+			{ id: "dStale", firstName: "StaleDraft", status: "draft" },
+			{ id: "inact", firstName: "Inactive", status: "inactive" },
+			{ id: "me", firstName: "Me", status: "inactive", userId: "u1" },
+		]);
+		await createRequest("dOwn", "u1");
+		await createRequest("dOther", "u2");
+		await createRequest("dBack", null);
+		await createRequest("dStale", "u1", "rejected");
+	};
+	const ALL_IDS = ["act", "dBack", "dOther", "dOwn", "dStale", "inact", "me"];
+	const MEMBER_IDS = ["act", "dOwn", "me"];
+
 	beforeEach(() => {
 		const fresh = freshDb();
 		db = fresh.db;
 		fresh.sqlite.exec(`
-			INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('u1', 'U1', 'u1@x.test', 1, 0, 0);
+			INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('u1', 'U1', 'u1@x.test', 1, 0, 0), ('u2', 'U2', 'u2@x.test', 1, 0, 0);
 			INSERT INTO organization (id, name, slug, created_at) VALUES ('o1', 'Org 1', 'o1', 0), ('o2', 'Org 2', 'o2', 0);
 		`);
 	});
@@ -43,13 +92,11 @@ describe("profile queries", () => {
 			expect(res.nextCursor).toBeNull();
 		});
 
-		it("status filter overrides the default", async () => {
-			await seed([
-				{ id: "a", firstName: "Asha" },
-				{ id: "b", firstName: "Bina", status: "draft" },
-			]);
-			const res = await searchProfiles(db, ACTOR, { status: "draft" });
-			expect(res.items.map((i) => i.id)).toEqual(["b"]);
+		it("active only for every role (AI Clients never see drafts/inactive)", async () => {
+			await seedVisibility();
+			for (const actor of [MEMBER, ADMIN, OWNER]) {
+				expect((await searchProfiles(db, actor, {})).items.map((i) => i.id)).toEqual(["act"]);
+			}
 		});
 
 		it("gender filter", async () => {
@@ -147,12 +194,12 @@ describe("profile queries", () => {
 				{ id: "x", firstName: "Xena", organizationId: "o2" },
 			]);
 			const base = { search: "", status: "", gender: "", page: 1, pageSize: 10 } as const;
-			const all = await listCommunityMembers(db, ACTOR, base);
+			const all = await listCommunityMembers(db, ADMIN, base);
 			expect(all.total).toBe(3);
 			expect(all.data.map((d) => d.id).sort()).toEqual(["a", "b", "c"]);
 			expect(all.data[0]).toHaveProperty("email");
 
-			const f = await listCommunityMembers(db, ACTOR, {
+			const f = await listCommunityMembers(db, ADMIN, {
 				...base,
 				gender: "female",
 				status: "draft",
@@ -160,7 +207,7 @@ describe("profile queries", () => {
 			expect(f.data.map((d) => d.id)).toEqual(["b"]);
 			expect(f.total).toBe(1);
 
-			const paged = await listCommunityMembers(db, ACTOR, { ...base, page: 2, pageSize: 2 });
+			const paged = await listCommunityMembers(db, ADMIN, { ...base, page: 2, pageSize: 2 });
 			expect(paged.data).toHaveLength(1);
 			expect(paged.total).toBe(3);
 			expect(paged.page).toBe(2);
@@ -174,6 +221,137 @@ describe("profile queries", () => {
 			const base = { status: "", gender: "", page: 1, pageSize: 10 } as const;
 			const res = await listCommunityMembers(db, ACTOR, { ...base, search: "ash" });
 			expect(res.data.map((d) => d.id).sort()).toEqual(["a", "b"]);
+		});
+	});
+
+	describe("listCommunityMembers visibility", () => {
+		const base = { search: "", gender: "", page: 1, pageSize: 50 } as const;
+		const ids = async (actor: Actor, status: "" | "draft" | "inactive" = "") => {
+			const res = await listCommunityMembers(db, actor, { ...base, status });
+			expect(res.total).toBe(res.data.length);
+			return res.data.map((d) => d.id).sort();
+		};
+
+		it("owner/admin see every profile, any status", async () => {
+			await seedVisibility();
+			expect(await ids(OWNER)).toEqual(ALL_IDS);
+			expect(await ids(ADMIN)).toEqual(ALL_IDS);
+			expect(await ids(ADMIN, "inactive")).toEqual(["inact", "me"]);
+		});
+
+		it("plain member: active + own drafts + own linked profile", async () => {
+			await seedVisibility();
+			expect(await ids(MEMBER)).toEqual(MEMBER_IDS);
+			expect(await ids(MEMBER, "draft")).toEqual(["dOwn"]);
+			expect(await ids(MEMBER, "inactive")).toEqual(["me"]);
+		});
+	});
+
+	describe("getCommunityProfileDetail visibility", () => {
+		const visible = (actor: Actor, id: string) =>
+			getCommunityProfileDetail(db, actor, id).then(
+				() => true,
+				(e) => {
+					expect(e).toMatchObject({ name: "AppError", kind: "NotFound" });
+					return false;
+				}
+			);
+
+		it("subject: owner/admin open any; plain member others' draft/inactive → NotFound", async () => {
+			await seedVisibility();
+			for (const id of ALL_IDS) {
+				expect(await visible(OWNER, id), id).toBe(true);
+				expect(await visible(ADMIN, id), id).toBe(true);
+				expect(await visible(MEMBER, id), id).toBe(MEMBER_IDS.includes(id));
+			}
+		});
+
+		it("counterparts the viewer can't see are dropped silently", async () => {
+			await seedVisibility();
+			const others = ALL_IDS.filter((id) => id !== "act");
+			await db.insert(communityRelation).values(
+				others.flatMap((id) => [
+					{
+						id: `out-${id}`,
+						organizationId: "o1",
+						fromId: "act",
+						toId: id,
+						type: "brother" as const,
+					},
+					{
+						id: `in-${id}`,
+						organizationId: "o1",
+						fromId: id,
+						toId: "act",
+						type: "sister" as const,
+					},
+				])
+			);
+			const counterparts = async (actor: Actor) => {
+				const d = await getCommunityProfileDetail(db, actor, "act");
+				return {
+					out: d.outgoingRelations.map((r) => r.toCommunityProfile!.id).sort(),
+					in: d.incomingRelations.map((r) => r.fromCommunityProfile!.id).sort(),
+				};
+			};
+			expect(await counterparts(ADMIN)).toEqual({ out: others, in: others });
+			expect(await counterparts(MEMBER)).toEqual({ out: ["dOwn", "me"], in: ["dOwn", "me"] });
+		});
+	});
+
+	describe("own relations (My relationships + dashboard counts)", () => {
+		const seedOwnRelations = async (ownerUserId: string) => {
+			await seedVisibility();
+			await seed([{ id: "mine", firstName: "Mine", userId: ownerUserId }]);
+
+			await db.insert(communityRelation).values(
+				ALL_IDS.flatMap((id) => [
+					{
+						id: `out-${id}`,
+						organizationId: "o1",
+						fromId: "mine",
+						toId: id,
+						type: "brother" as const,
+					},
+					{
+						id: `in-${id}`,
+						organizationId: "o1",
+						fromId: id,
+						toId: "mine",
+						type: "sister" as const,
+					},
+				])
+			);
+		};
+
+		it("no linked profile → empty", async () => {
+			expect(await getMyRelationships(db, MEMBER)).toEqual({
+				profileId: null,
+				outgoing: [],
+				incoming: [],
+			});
+			expect(await countMyRelations(db, MEMBER, "out")).toBe(0);
+		});
+
+		it("plain member: counterparts filtered by visibility", async () => {
+			// u2 is the member here so u1's linked "me" is just another inactive profile.
+			const viewer: Actor = { ...MEMBER, userId: "u2" };
+			await seedOwnRelations("u2");
+			const res = await getMyRelationships(db, viewer);
+			expect(res.profileId).toBe("mine");
+			// u2 created dOther; "me" (u1's, inactive) hidden.
+			const visible = ["act", "dOther"];
+			expect(res.outgoing.map((r) => r.toCommunityProfile!.id).sort()).toEqual(visible);
+			expect(res.incoming.map((r) => r.fromCommunityProfile!.id).sort()).toEqual(visible);
+			expect(await countMyRelations(db, viewer, "out")).toBe(2);
+			expect(await countMyRelations(db, viewer, "in")).toBe(2);
+		});
+
+		it("owner/admin: every counterpart", async () => {
+			await seedOwnRelations("u2");
+			const res = await getMyRelationships(db, ADMIN);
+			expect(res.outgoing).toHaveLength(ALL_IDS.length);
+			expect(await countMyRelations(db, ADMIN, "in")).toBe(ALL_IDS.length);
 		});
 	});
 

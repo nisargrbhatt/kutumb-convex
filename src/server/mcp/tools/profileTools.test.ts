@@ -64,7 +64,7 @@ const profile = (
 beforeEach(() => {
 	const { sqlite } = h.fresh;
 	sqlite.exec(`
-		DELETE FROM communityRelation; DELETE FROM communityAddress; DELETE FROM communityProfile;
+		DELETE FROM changeRequest; DELETE FROM communityRelation; DELETE FROM communityAddress; DELETE FROM communityProfile;
 		DELETE FROM communityProfileCustomField; DELETE FROM organization; DELETE FROM user;
 		INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('u1', 'U1', 'u1@x.test', 1, 0, 0);
 		INSERT INTO organization (id, name, slug, created_at) VALUES ('o1', 'Org 1', 'o1', 0), ('o2', 'Org 2', 'o2', 0);
@@ -72,7 +72,13 @@ beforeEach(() => {
 			('f1', 'Gotra', 'text', 'o1'), ('f2', 'Height', 'number', 'o1'), ('f3', 'Unset', 'text', 'o1');
 		${profile("jared", "Jared", { gender: "male", email: "jared@x.test", cfd: '{"f1":"Kashyap","f2":180,"gone":"x"}' })}
 		${profile("anna", "Anna", { gender: "female" })}
-		${profile("mia", "Mia", { gender: "female", status: "inactive" })}
+		${profile("mia", "Mia", { gender: "female" })}
+		${profile("ivy", "Ivy", { gender: "female", status: "inactive" })}
+		${profile("dina", "Dina", { status: "draft" })}
+		${profile("me", "Me", { status: "inactive" })}
+		UPDATE communityProfile SET userId = 'u1' WHERE id = 'me';
+		INSERT INTO changeRequest (id, organizationId, profileId, profileName, kind, status, submitterUserId, submitterName, createdAt)
+			VALUES ('cr1', 'o1', 'dina', 'Dina Shah', 'create', 'pending', 'u1', 'U1', 0);
 		${profile("other", "Zed", {}, "o2")}
 		INSERT INTO communityAddress (id, line1, country, state, city, postalCode, type, communityProfileId)
 			VALUES ('ad1', '1 Main St', 'IN', 'MH', 'Pune', '411001', 'home', 'jared');
@@ -80,6 +86,9 @@ beforeEach(() => {
 		INSERT INTO communityRelation (id, fromId, toId, organizationId, type) VALUES ('r1', 'jared', 'anna', 'o1', 'sister');
 		-- from=Mia,to=Jared,type=brother: "Jared is Mia's brother"
 		INSERT INTO communityRelation (id, fromId, toId, organizationId, type) VALUES ('r2', 'mia', 'jared', 'o1', 'brother');
+		INSERT INTO communityRelation (id, fromId, toId, organizationId, type) VALUES
+			('r3', 'jared', 'ivy', 'o1', 'sister'), ('r4', 'dina', 'jared', 'o1', 'brother'),
+			('r5', 'jared', 'me', 'o1', 'brother');
 	`);
 });
 
@@ -97,7 +106,7 @@ describe("get_profile", () => {
 		expect(p.incoming).toEqual([
 			{
 				type: "brother",
-				counterpart: { id: "mia", fullName: "Mia Shah", gender: "female", status: "inactive" },
+				counterpart: { id: "mia", fullName: "Mia Shah", gender: "female", status: "active" },
 			},
 		]);
 		// The same rows seen from the other side swap sections, not types.
@@ -149,9 +158,34 @@ describe("get_profile", () => {
 		]);
 	});
 
-	it("returns profiles of any status", async () => {
-		const { result } = await call("get_profile", { id: "mia" });
-		expect(result.structuredContent).toMatchObject({ id: "mia", status: "inactive" });
+	describe("active only, every role", () => {
+		const ROLES: Actor[] = [ACTOR, { ...ACTOR, role: "admin" }, { ...ACTOR, role: "owner" }];
+
+		it("non-active subject → NotFound, except the caller's own linked profile", async () => {
+			for (const actor of ROLES) {
+				for (const id of ["ivy", "dina"]) {
+					const { result } = await call("get_profile", { id }, actor);
+					expect(result, `${actor.role} ${id}`).toMatchObject({
+						isError: true,
+						content: [{ text: "Community Profile not found" }],
+					});
+				}
+				const own = await call("get_profile", { id: "me" }, actor);
+				expect(own.result.structuredContent).toMatchObject({ id: "me", status: "inactive" });
+			}
+		});
+
+		it("counterparts: active only (inactive, draft, own inactive dropped)", async () => {
+			for (const actor of ROLES) {
+				const p = (await call("get_profile", { id: "jared" }, actor)).result.structuredContent;
+				expect(p.outgoing.map((r: { counterpart: { id: string } }) => r.counterpart.id)).toEqual([
+					"anna",
+				]);
+				expect(p.incoming.map((r: { counterpart: { id: string } }) => r.counterpart.id)).toEqual([
+					"mia",
+				]);
+			}
+		});
 	});
 
 	it("text fallback mirrors structuredContent", async () => {
@@ -201,14 +235,24 @@ describe("search_profiles", () => {
 		expect(result.structuredContent.items.map((i: { id: string }) => i.id).sort()).toEqual([
 			"anna",
 			"jared",
+			"mia",
 		]);
 		expect(result.structuredContent.nextCursor).toBeNull();
 		expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
 	});
 
-	it("status + gender + query", async () => {
-		const inactive = await call("search_profiles", { status: "inactive" });
-		expect(inactive.result.structuredContent.items).toMatchObject([{ id: "mia" }]);
+	it("no status input: always active only, every role", async () => {
+		for (const role of ["member", "admin", "owner"] as const) {
+			const res = await call("search_profiles", { status: "inactive" }, { ...ACTOR, role });
+			expect(res.result.structuredContent.items.map((i: { id: string }) => i.id).sort()).toEqual([
+				"anna",
+				"jared",
+				"mia",
+			]);
+		}
+	});
+
+	it("gender + query", async () => {
 		const f = await call("search_profiles", { gender: "female", query: "ann" });
 		expect(f.result.structuredContent.items).toMatchObject([{ id: "anna", gender: "female" }]);
 	});
@@ -220,7 +264,10 @@ describe("search_profiles", () => {
 			.structuredContent;
 		expect(p2.items).toHaveLength(1);
 		expect(p2.items[0].id).not.toBe(p1.items[0].id);
-		expect(p2.nextCursor).toBeNull();
+		const p3 = (await call("search_profiles", { limit: 1, cursor: p2.nextCursor })).result
+			.structuredContent;
+		expect(p3.items).toHaveLength(1);
+		expect(p3.nextCursor).toBeNull();
 	});
 
 	it("limit above 100 is rejected by the input schema", async () => {
