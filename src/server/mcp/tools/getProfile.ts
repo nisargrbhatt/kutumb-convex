@@ -75,7 +75,8 @@ type Detail = Awaited<ReturnType<typeof getCommunityProfileDetail>>;
 
 export function toProfileView(detail: Detail): View {
 	const { profile, addresses, customFieldDefs, outgoingRelations, incomingRelations } = detail;
-	const { customFieldData, ...columns } = profile;
+	// `version` is an internal concurrency counter, not a profile field.
+	const { customFieldData, version: _version, ...columns } = profile;
 
 	const toCounterpart = (
 		p: NonNullable<Detail["outgoingRelations"][number]["toCommunityProfile"]>
@@ -89,7 +90,7 @@ export function toProfileView(detail: Detail): View {
 	return {
 		...columns,
 		fullName: fullName(profile),
-		addresses,
+		addresses: addresses.map(({ version: _version, ...address }) => address),
 		customFields: customFieldDefs.flatMap((def) => {
 			const value = customFieldData?.[def.id];
 			return value === undefined || value === null ? [] : [{ ...def, value }];
