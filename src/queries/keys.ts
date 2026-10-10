@@ -37,6 +37,24 @@ export const fieldKeys = {
 	list: (orgId: string) => [...fieldKeys.all(orgId), "list"] as const,
 };
 
+export const changeRequestKeys = {
+	all: (orgId: string) => ["changeRequest", orgId] as const,
+	queue: (orgId: string) => [...changeRequestKeys.all(orgId), "queue"] as const,
+	pendingCount: (orgId: string) => [...changeRequestKeys.all(orgId), "pendingCount"] as const,
+	mine: (orgId: string) => [...changeRequestKeys.all(orgId), "mine"] as const,
+	unseenCount: (orgId: string) => [...changeRequestKeys.all(orgId), "unseenCount"] as const,
+	forProfile: (orgId: string, profileId: string) =>
+		[...changeRequestKeys.all(orgId), "forProfile", profileId] as const,
+};
+
+/** `filter`: the audit read's filter object (shape owned by the History / Audit log slice). */
+export const auditKeys = {
+	all: (orgId: string) => ["audit", orgId] as const,
+	log: (orgId: string, filter: unknown) => [...auditKeys.all(orgId), "log", filter] as const,
+	profile: (orgId: string, profileId: string, filter: unknown) =>
+		[...auditKeys.all(orgId), "profile", profileId, filter] as const,
+};
+
 export const orgKeys = {
 	all: (orgId: string) => ["organization", orgId] as const,
 	usage: (orgId: string) => [...orgKeys.all(orgId), "usage"] as const,

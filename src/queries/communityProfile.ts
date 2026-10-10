@@ -1,24 +1,29 @@
 import type { CommunityProfileInput, MemberFilter } from "@/domain/communityProfile";
 import { LIMIT_COPY } from "@/domain/limits";
+import { useCan } from "@/hooks/useCan";
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import {
 	acceptCommunityProfile,
-	addMissingMember,
+	createProfile,
+	deactivateProfile,
+	deleteProfile,
 	getActiveMemberCount,
 	getActiveProfilesForRelation,
 	getCommunityMemberById,
 	getCommunityMembers,
 	getFocusedCommunityGraph,
 	getMyCommunityProfile,
-	reassignProfileToUser,
+	getPendingRequestCount,
+	reactivateProfile,
+	reassignProfile,
 	rejectCommunityProfile,
 	searchCommunityProfilesLite,
-	upsertMyCommunityProfile,
+	updateProfileInfo,
 } from "@/server/communityProfile";
-import { orgKeys, profileKeys, relationKeys } from "./keys";
-import { toastMutationError, useOrgId } from "./mutation";
+import { changeRequestKeys, orgKeys, profileKeys } from "./keys";
+import { toastMutationError, useInvalidateProfileChange, useOrgId } from "./mutation";
 
 export const myProfileQuery = (orgId: string) =>
 	queryOptions({
@@ -50,6 +55,13 @@ export const memberDetailQuery = (orgId: string, id: string) =>
 		queryFn: () => getCommunityMemberById({ data: { id } }),
 	});
 
+/** Owner/admin: pending Change Requests on one profile (lifecycle confirm copy). */
+export const pendingRequestCountQuery = (orgId: string, profileId: string) =>
+	queryOptions({
+		queryKey: changeRequestKeys.forProfile(orgId, profileId),
+		queryFn: () => getPendingRequestCount({ data: { profileId } }),
+	});
+
 export const focusedCommunityGraphQuery = (
 	orgId: string,
 	props?: { focusId?: string; depth?: number }
@@ -71,41 +83,73 @@ export const searchCommunityProfilesLiteQuery = (orgId: string, query: string) =
 		enabled: query.trim().length > 0,
 	});
 
-export function useUpsertMyProfile() {
-	const qc = useQueryClient();
-	const orgId = useOrgId();
+/** Own linked profile: create when missing, else info edit against the loaded `version`. */
+export function useSaveMyProfile() {
+	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
 	return useMutation({
-		mutationFn: (input: CommunityProfileInput) => upsertMyCommunityProfile({ data: input }),
-		onSuccess: async () => {
+		mutationFn: ({
+			current,
+			input,
+		}: {
+			current: { id: string; version: number } | null;
+			input: CommunityProfileInput;
+		}) =>
+			current
+				? updateProfileInfo({
+						data: { profileId: current.id, expectedVersion: current.version, profile: input },
+					})
+				: createProfile({ data: { self: true, profile: input } }),
+		onSuccess: async (result) => {
+			if (result.outcome === "unchanged") {
+				toast.info("No changes to save");
+				return;
+			}
 			toast.success("Profile saved");
-			posthog.capture("profile_saved");
-			await Promise.all([
-				qc.invalidateQueries({ queryKey: profileKeys.all(orgId) }),
-				// My relationships carry my profileId.
-				qc.invalidateQueries({ queryKey: relationKeys.all(orgId) }),
-				qc.invalidateQueries({ queryKey: orgKeys.usage(orgId) }),
-			]);
+			posthog.capture("profile_saved", { outcome: result.outcome });
+			await invalidate();
 		},
 		onError: toastMutationError("Profile", "Failed to save profile", LIMIT_COPY.profileSelf),
 	});
 }
 
-export function useAddMissingMember() {
-	const qc = useQueryClient();
-	const orgId = useOrgId();
+/** Owner/admin info edit of a Userless Profile. */
+export function useUpdateProfileInfo(profileId: string) {
+	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
 	return useMutation({
-		mutationFn: (input: CommunityProfileInput) => addMissingMember({ data: input }),
-		onSuccess: async () => {
-			posthog.capture("member_added", {});
+		mutationFn: (v: { expectedVersion: number; input: CommunityProfileInput }) =>
+			updateProfileInfo({
+				data: { profileId, expectedVersion: v.expectedVersion, profile: v.input },
+			}),
+		onSuccess: async (result) => {
+			if (result.outcome === "unchanged") {
+				toast.info("No changes to save");
+				return;
+			}
+			toast.success("Profile saved");
+			posthog.capture("profile_saved", { outcome: result.outcome });
+			await invalidate();
+		},
+		onError: toastMutationError("Profile", "Failed to save profile"),
+	});
+}
+
+export function useAddMissingMember() {
+	const invalidate = useInvalidateProfileChange();
+	const posthog = usePostHog();
+	const appliesActive = useCan({ changeRequest: ["review"] });
+	return useMutation({
+		mutationFn: (input: CommunityProfileInput) =>
+			createProfile({ data: { self: false, profile: input } }),
+		onSuccess: async (result) => {
+			posthog.capture("member_added", { outcome: result.outcome });
 			toast.success("Member added", {
-				description: "Added as a Draft Record. An owner/admin will approve the profile.",
+				description: appliesActive
+					? "The profile is active."
+					: "Added as a Draft Record. An owner/admin will approve the profile.",
 			});
-			await Promise.all([
-				qc.invalidateQueries({ queryKey: profileKeys.all(orgId) }),
-				qc.invalidateQueries({ queryKey: orgKeys.usage(orgId) }),
-			]);
+			await invalidate();
 		},
 		onError: toastMutationError("Add member", "Failed to add member"),
 	});
@@ -145,20 +189,65 @@ export function useRejectProfile(profileId: string) {
 }
 
 export function useReassignProfile(profileId: string) {
-	const qc = useQueryClient();
-	const orgId = useOrgId();
+	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
 	return useMutation({
-		mutationFn: (userId: string) =>
-			reassignProfileToUser({ data: { userId, memberId: profileId } }),
+		mutationFn: (userId: string) => reassignProfile({ data: { userId, profileId } }),
 		onSuccess: async (_data, userId) => {
 			posthog.capture("member_profile_reassigned", {
 				member_id: profileId,
 				assigned_user_id: userId,
 			});
 			toast.success("Profile", { description: "Profile reassigned successfully" });
-			await qc.invalidateQueries({ queryKey: profileKeys.all(orgId) });
+			await invalidate();
 		},
 		onError: toastMutationError("Profile", "Failed to reassign profile"),
 	});
 }
+
+function useLifecycle(
+	profileId: string,
+	fn: (a: { data: { profileId: string } }) => Promise<unknown>,
+	copy: { event: string; success: string; failure: string },
+	/** Runs before invalidation (e.g. leave a detail page whose profile is gone). */
+	beforeInvalidate?: () => unknown
+) {
+	const invalidate = useInvalidateProfileChange();
+	const posthog = usePostHog();
+	return useMutation({
+		mutationFn: () => fn({ data: { profileId } }),
+		onSuccess: async () => {
+			posthog.capture(copy.event);
+			toast.success("Profile", { description: copy.success });
+			await beforeInvalidate?.();
+			await invalidate();
+		},
+		onError: toastMutationError("Profile", copy.failure),
+	});
+}
+
+export const useDeactivateProfile = (profileId: string) =>
+	useLifecycle(profileId, deactivateProfile, {
+		event: "profile_deactivated",
+		success: "Profile deactivated",
+		failure: "Failed to deactivate profile",
+	});
+
+export const useReactivateProfile = (profileId: string) =>
+	useLifecycle(profileId, reactivateProfile, {
+		event: "profile_reactivated",
+		success: "Profile reactivated",
+		failure: "Failed to reactivate profile",
+	});
+
+export const useDeleteProfile = (profileId: string, onDeleted: () => unknown) =>
+	useLifecycle(
+		profileId,
+		deleteProfile,
+		{
+			event: "profile_deleted",
+			success: "Profile deleted",
+			failure: "Failed to delete profile",
+		},
+		onDeleted
+	);

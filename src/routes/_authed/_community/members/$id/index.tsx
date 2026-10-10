@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { MapPin } from "lucide-react";
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
+import { AddAddressButton, AddressActions } from "@/components/address/AddressActions";
 import { ProfileIdentityHeader } from "@/components/profile/ProfileIdentityHeader";
 import { ProfileInfoView } from "@/components/profile/ProfileInfoView";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,8 @@ function RouteComponent() {
 	const {
 		data: { profile, addresses, customFieldDefs, outgoingRelations, incomingRelations },
 	} = useSuspenseQuery(memberDetailQuery(orgId, id));
-	const canApprove = useCan({ communityProfile: ["approve"] });
+	const canReview = useCan({ changeRequest: ["review"] });
+	const canEditUserless = canReview && profile.userId == null;
 	const name = fullName(profile);
 
 	return (
@@ -47,18 +49,28 @@ function RouteComponent() {
 				<ProfileIdentityHeader
 					profile={profile}
 					headingLevel="h1"
-					actions={canApprove ? <MemberActions profile={profile} /> : null}
+					actions={
+						canReview ? <MemberActions profile={profile} customFieldDefs={customFieldDefs} /> : null
+					}
 				/>
 
 				<ProfileInfoView profile={profile} customFieldDefs={customFieldDefs} />
 
 				{/* Addresses */}
 				<div className="flex flex-col gap-3">
-					<div>
-						<h2 className="text-lg font-medium">Addresses</h2>
-						<p className="text-sm text-muted-foreground">
-							Residential, work, and other addresses on record.
-						</p>
+					<div className="flex flex-wrap items-end justify-between gap-2">
+						<div>
+							<h2 className="text-lg font-medium">Addresses</h2>
+							<p className="text-sm text-muted-foreground">
+								Residential, work, and other addresses on record.
+							</p>
+						</div>
+						{canEditUserless ? (
+							<AddAddressButton
+								profileId={profile.id}
+								description="Add an address for this profile on its behalf."
+							/>
+						) : null}
 					</div>
 
 					{addresses && addresses.length > 0 ? (
@@ -71,9 +83,14 @@ function RouteComponent() {
 												<MapPin className="size-4 text-muted-foreground" />
 												Address
 											</CardTitle>
-											<Badge variant="secondary" className="capitalize">
-												{address.type}
-											</Badge>
+											<div className="flex items-center gap-2">
+												<Badge variant="secondary" className="capitalize">
+													{address.type}
+												</Badge>
+												{canEditUserless ? (
+													<AddressActions profileId={profile.id} address={address} />
+												) : null}
+											</div>
 										</div>
 									</CardHeader>
 									<CardContent className="pt-4">

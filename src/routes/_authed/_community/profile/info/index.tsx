@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/empty";
 import { toFormValues } from "@/domain/communityProfile";
 import { authClient } from "@/lib/auth-client";
-import { myProfileQuery, useUpsertMyProfile } from "@/queries/communityProfile";
+import { myProfileQuery, useSaveMyProfile } from "@/queries/communityProfile";
 import { customFieldsQuery } from "@/queries/fields";
 
 export const Route = createFileRoute("/_authed/_community/profile/info/")({
@@ -37,7 +37,7 @@ function RouteComponent() {
 	const { data: profile } = useSuspenseQuery(myProfileQuery(orgId));
 	const { data: customFieldDefs } = useSuspenseQuery(customFieldsQuery(orgId));
 	const [open, setOpen] = useState(false);
-	const upsert = useUpsertMyProfile();
+	const save = useSaveMyProfile();
 
 	return (
 		<div className="flex h-full w-full flex-col items-start justify-start gap-4 overflow-y-auto p-2">
@@ -93,12 +93,12 @@ function RouteComponent() {
 				})}
 				customFieldDefs={customFieldDefs}
 				onSubmit={(input) =>
-					upsert.mutateAsync(input).then(
+					save.mutateAsync({ current: profile, input }).then(
 						() => true,
 						() => false
 					)
 				}
-				isPending={upsert.isPending}
+				isPending={save.isPending}
 			/>
 		</div>
 	);

@@ -32,17 +32,31 @@ export function applyMigrations(
 export function freshDb({ before }: { before?: string } = {}) {
 	const sqlite = new DatabaseSync(":memory:");
 	applyMigrations(sqlite, { before });
+	type Method = "run" | "all" | "values" | "get";
+	const exec = (sql: string, params: unknown[], method: Method) => {
+		const stmt = sqlite.prepare(sql);
+		if (method === "run") {
+			stmt.run(...(params as never[]));
+			return { rows: [] };
+		}
+		stmt.setReturnArrays(true);
+		const rows = stmt.all(...(params as never[])) as unknown as unknown[][];
+		// drizzle expects `undefined` (not `[]`) for a `get` that finds no row.
+		return { rows: (method === "get" ? rows[0] : rows) as unknown[] };
+	};
 	const db = drizzle(
-		async (sql, params, method) => {
-			const stmt = sqlite.prepare(sql);
-			if (method === "run") {
-				stmt.run(...(params as never[]));
-				return { rows: [] };
+		async (sql, params, method) => exec(sql, params, method),
+		// `db.batch`: all-or-nothing like D1 (one implicit transaction).
+		async (queries) => {
+			sqlite.exec("BEGIN");
+			try {
+				const results = queries.map((q) => exec(q.sql, q.params, q.method));
+				sqlite.exec("COMMIT");
+				return results;
+			} catch (e) {
+				sqlite.exec("ROLLBACK");
+				throw e;
 			}
-			stmt.setReturnArrays(true);
-			const rows = stmt.all(...(params as never[])) as unknown as unknown[][];
-			// drizzle expects `undefined` (not `[]`) for a `get` that finds no row.
-			return { rows: (method === "get" ? rows[0] : rows) as unknown[] };
 		},
 		{ schema }
 	);
