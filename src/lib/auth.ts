@@ -32,91 +32,116 @@ import {
 	sendVerificationEmail,
 } from "./auth-hooks";
 
-export const auth = betterAuth({
-	database: drizzleAdapter(db, { provider: "sqlite" }),
-	plugins: [
-		tanstackStartCookies(),
-		organization({
-			ac: ac,
-			roles: { owner, admin, member },
-			organizationLimit: ORG_LIMIT,
-			membershipLimit: MEMBER_LIMIT,
-			invitationLimit: MEMBER_LIMIT,
-			organizationHooks,
-			sendInvitationEmail,
-		}),
-		jwt(),
-		// ADR 0004: a Connection is one oauthConsent row (clientId, userId, referenceId=orgId).
-		// The org is picked on /oauth/select-org (postLogin) and rides on the consent + JWT.
-		mcp({
-			loginPage: LOGIN_PATH,
-			consentPage: OAUTH_CONSENT_PATH,
-			resource: mcpResourceUrl(env.BETTER_AUTH_URL),
-			scopes: [...MCP_SCOPES],
-			allowDynamicClientRegistration: true,
-			allowUnauthenticatedClientRegistration: true,
-			accessTokenExpiresIn: ACCESS_TOKEN_TTL_SECONDS,
-			refreshTokenExpiresIn: REFRESH_TOKEN_TTL_SECONDS,
-			refreshTokenReuseInterval: REFRESH_TOKEN_REUSE_SECONDS,
-			postLogin: {
-				page: OAUTH_SELECT_ORG_PATH,
-				shouldRedirect: ({ session }) => shouldPickOrg(session),
-				consentReferenceId: ({ session, user }) => consentOrganizationId(session, user.id),
-			},
-			customAccessTokenClaims: ({ referenceId }) =>
-				referenceId ? { [ORG_CLAIM]: referenceId } : {},
-			rateLimit: OAUTH_RATE_LIMITS,
-		}),
-		// Preferred registration (verified tick on consent); DCR stays as the fallback. Must come
-		// after mcp(): it registers itself as a client-discovery extension on oauth-provider.
-		cimd({
-			fetchClientMetadataResource: createCimdFetcher({
-				kv: env.KV,
-				ownOrigin: env.BETTER_AUTH_URL,
+const createAuth = () =>
+	betterAuth({
+		database: drizzleAdapter(db, { provider: "sqlite" }),
+		plugins: [
+			tanstackStartCookies(),
+			organization({
+				ac: ac,
+				roles: { owner, admin, member },
+				organizationLimit: ORG_LIMIT,
+				membershipLimit: MEMBER_LIMIT,
+				invitationLimit: MEMBER_LIMIT,
+				organizationHooks,
+				sendInvitationEmail,
 			}),
-			metadataProfile: "mcp-2026-07-28",
-		}),
-	],
-	hooks: mcpHooks,
-	// 🔒 account.accountLinking.requireLocalEmailVerified defaults to true — left unset,
-	// never set to false. It's the only thing blocking pre-registration takeover now that
-	// requireEmailVerification is off (attacker registers unverified password account on
-	// victim's email, victim signs in with Google — link is refused without it). Any
-	// better-auth upgrade must re-verify this default hasn't flipped.
-	emailAndPassword: {
-		enabled: true,
-		disableSignUp: env.BETTER_AUTH_DISABLE_SIGNUP === "1",
-		requireEmailVerification: false,
-		autoSignIn: true,
-		minPasswordLength: 8,
-		sendResetPassword,
-	},
-	emailVerification: {
-		sendOnSignUp: true,
-		sendVerificationEmail,
-	},
-	// Only the rate limiter has custom storage (D1, atomic consume) — not secondaryStorage,
-	// which would also relocate session storage (every request, plus logout/revocation).
-	rateLimit: {
-		customStorage: createD1RateLimitStorage(env.D1),
-	},
-	// Rate limits (incl. OAuth register 5/h/IP) key on client IP; behind Cloudflare that is this
-	// header. Unset, every request falls into one shared `no-trusted-ip` bucket.
-	advanced: {
-		ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
-	},
-	secret: env.BETTER_AUTH_SECRET,
-	socialProviders: {
-		google: {
+			jwt(),
+			// ADR 0004: a Connection is one oauthConsent row (clientId, userId, referenceId=orgId).
+			// The org is picked on /oauth/select-org (postLogin) and rides on the consent + JWT.
+			mcp({
+				loginPage: LOGIN_PATH,
+				consentPage: OAUTH_CONSENT_PATH,
+				resource: mcpResourceUrl(env.BETTER_AUTH_URL),
+				scopes: [...MCP_SCOPES],
+				allowDynamicClientRegistration: true,
+				allowUnauthenticatedClientRegistration: true,
+				accessTokenExpiresIn: ACCESS_TOKEN_TTL_SECONDS,
+				refreshTokenExpiresIn: REFRESH_TOKEN_TTL_SECONDS,
+				refreshTokenReuseInterval: REFRESH_TOKEN_REUSE_SECONDS,
+				postLogin: {
+					page: OAUTH_SELECT_ORG_PATH,
+					shouldRedirect: ({ session }) => shouldPickOrg(session),
+					consentReferenceId: ({ session, user }) => consentOrganizationId(session, user.id),
+				},
+				customAccessTokenClaims: ({ referenceId }) =>
+					referenceId ? { [ORG_CLAIM]: referenceId } : {},
+				rateLimit: OAUTH_RATE_LIMITS,
+			}),
+			// Preferred registration (verified tick on consent); DCR stays as the fallback. Must come
+			// after mcp(): it registers itself as a client-discovery extension on oauth-provider.
+			cimd({
+				fetchClientMetadataResource: createCimdFetcher({
+					kv: env.KV,
+					ownOrigin: env.BETTER_AUTH_URL,
+				}),
+				metadataProfile: "mcp-2026-07-28",
+			}),
+		],
+		hooks: mcpHooks,
+		// 🔒 account.accountLinking.requireLocalEmailVerified defaults to true — left unset,
+		// never set to false. It's the only thing blocking pre-registration takeover now that
+		// requireEmailVerification is off (attacker registers unverified password account on
+		// victim's email, victim signs in with Google — link is refused without it). Any
+		// better-auth upgrade must re-verify this default hasn't flipped.
+		emailAndPassword: {
+			enabled: true,
 			disableSignUp: env.BETTER_AUTH_DISABLE_SIGNUP === "1",
-			clientId: env.GOOGLE_CLIENT_ID,
-			clientSecret: env.GOOGLE_CLIENT_SECRET,
+			requireEmailVerification: false,
+			autoSignIn: true,
+			minPasswordLength: 8,
+			sendResetPassword,
 		},
-	},
-	databaseHooks,
-	baseURL: env.BETTER_AUTH_URL,
-	logger: {
-		level: "debug",
-		log: (level, message, ...args) => console.log(`[${level}] ${message}`, ...args),
-	},
+		emailVerification: {
+			sendOnSignUp: true,
+			sendVerificationEmail,
+		},
+		// Only the rate limiter has custom storage (D1, atomic consume) — not secondaryStorage,
+		// which would also relocate session storage (every request, plus logout/revocation).
+		rateLimit: {
+			customStorage: createD1RateLimitStorage(env.D1),
+		},
+		// Rate limits (incl. OAuth register 5/h/IP) key on client IP; behind Cloudflare that is this
+		// header. Unset, every request falls into one shared `no-trusted-ip` bucket.
+		advanced: {
+			ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+		},
+		secret: env.BETTER_AUTH_SECRET,
+		socialProviders: {
+			google: {
+				disableSignUp: env.BETTER_AUTH_DISABLE_SIGNUP === "1",
+				clientId: env.GOOGLE_CLIENT_ID,
+				clientSecret: env.GOOGLE_CLIENT_SECRET,
+			},
+		},
+		databaseHooks,
+		baseURL: env.BETTER_AUTH_URL,
+		logger: {
+			level: "debug",
+			log: (level, message, ...args) => console.log(`[${level}] ${message}`, ...args),
+		},
+	});
+
+type Auth = ReturnType<typeof createAuth>;
+
+let instance: Auth | undefined;
+
+/**
+ * Lazy: betterAuth() starts plugin init immediately, and oauth-provider's init queries D1
+ * (seedResources). Workers forbid I/O at global scope, so build on first use inside a handler.
+ * A failed init is dropped so the next request retries instead of reusing the rejection.
+ */
+export function getAuth(): Auth {
+	if (!instance) {
+		const created = createAuth();
+		instance = created;
+		created.$context.catch(() => {
+			if (instance === created) instance = undefined;
+		});
+	}
+	return instance;
+}
+
+export const auth = new Proxy({} as Auth, {
+	get: (_, prop) => Reflect.get(getAuth(), prop),
 });

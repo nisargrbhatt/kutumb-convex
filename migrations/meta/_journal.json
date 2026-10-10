@@ -1,48 +1,55 @@
 {
-	"version": "7",
-	"dialect": "sqlite",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "6",
-			"when": 1774717021827,
-			"tag": "0000_material_dazzler",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "6",
-			"when": 1780852402136,
-			"tag": "0001_blushing_speed_demon",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "6",
-			"when": 1786819786993,
-			"tag": "0002_icy_blue_blade",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "6",
-			"when": 1789668115876,
-			"tag": "0003_known_nomad",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "6",
-			"when": 1790924634058,
-			"tag": "0004_shallow_cable",
-			"breakpoints": true
-		},
-		{
-			"idx": 5,
-			"version": "6",
-			"when": 1790925091477,
-			"tag": "0005_amusing_scrambler",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1774717021827,
+      "tag": "0000_material_dazzler",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1780852402136,
+      "tag": "0001_blushing_speed_demon",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786819786993,
+      "tag": "0002_icy_blue_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789668115876,
+      "tag": "0003_known_nomad",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790924634058,
+      "tag": "0004_shallow_cable",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790925091477,
+      "tag": "0005_amusing_scrambler",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790947457173,
+      "tag": "0006_seed_mcp_resource",
+      "breakpoints": true
+    }
+  ]
 }
