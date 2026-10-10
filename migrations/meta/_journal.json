@@ -50,6 +50,13 @@
       "when": 1790947457173,
       "tag": "0006_seed_mcp_resource",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791647896680,
+      "tag": "0007_change_request_audit_event",
+      "breakpoints": true
     }
   ]
 }

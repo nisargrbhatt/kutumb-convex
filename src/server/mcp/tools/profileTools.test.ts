@@ -127,6 +127,7 @@ describe("get_profile", () => {
 		});
 		expect(p).not.toHaveProperty("organizationId");
 		expect(p).not.toHaveProperty("customFieldData");
+		expect(p).not.toHaveProperty("version");
 		expect(p.addresses).toEqual([
 			{
 				id: "ad1",
