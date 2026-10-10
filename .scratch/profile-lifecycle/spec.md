@@ -52,7 +52,10 @@ ADR 0005 records audit retention / PII.
 [D1 batch atomicity via Drizzle](issues/01-d1-batch-atomicity.md): `db.batch` = one transaction.
 Race-free guards live in `WHERE` (`id=? AND version=?`, `status='pending'`), followed by
 `SELECT CASE WHEN changes()=1 THEN 1 ELSE json('stale') END` to turn a 0-row guard into an error
-that rolls the batch back. Fallback if remote D1 disagrees: CHECK guard table (decided by slice 08).
+that rolls the batch back. Confirmed on remote D1 by
+[slice 08](issues/08-remote-d1-guard-smoke-test.md); CHECK guard table / trigger also work. The
+guard must come right after its guarded DML (`changes()` = last INSERT/UPDATE/DELETE). Batch DML
+via Drizzle builders; raw `db.run(sql\`…${param}\`)` inside `db.batch` throws (drizzle 0.45.2).
 
 ### Schema
 

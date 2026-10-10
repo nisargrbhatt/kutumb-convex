@@ -82,6 +82,9 @@ change, visible to owner/admin.
   [spec.md](spec.md) + slices 08–16 (all AFK); badges via `changeRequestKeys`, 60s stale + focus,
   no polling; audit paged by group; client-side PostHog events; remote-D1 smoke test first;
   ADR 0005 for audit retention/PII.
+- [Remote-D1 guard smoke test](issues/08-remote-d1-guard-smoke-test.md): remote D1 confirms (a)
+  `changes()`+`json('stale')` (chosen), (b), (d) roll back whole batch; `changes()` = last DML;
+  batch = 1 API request toward 1000 cap; raw `sql` w/ params breaks in `db.batch`, use builders.
 
 ## Not yet specified
 
