@@ -8,11 +8,9 @@ import { and, count, eq } from "drizzle-orm";
 import {
 	extractSubgraph,
 	getOrgGraphBlob,
-	invalidateOrgGraph,
 	resolveAnchorId,
 	searchProfiles,
 } from "@/lib/communityGraphCache";
-import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
 import { communityProfileInput, memberFilterSchema } from "@/domain/communityProfile";
 import { getCommunityProfileDetail, listCommunityMembers } from "@/domain/queries/profiles";
@@ -162,90 +160,6 @@ export const getCommunityMemberById = createServerFn({ method: "GET" })
 	)
 	.middleware([orgMiddleware])
 	.handler(({ context, data }) => getCommunityProfileDetail(db, context.actor, data.id));
-
-export const acceptCommunityProfile = createServerFn({ method: "POST" })
-	.validator(
-		z.object({
-			memberId: z.string().describe("Community Profile Id"),
-		})
-	)
-	.middleware([orgMiddleware])
-	.handler(async ({ data, context }) => {
-		assertCan(context.actor, { communityProfile: ["approve"] });
-
-		const { organizationId } = context.actor;
-
-		const existingProfile = await db.query.communityProfile.findFirst({
-			where: (fields, operators) =>
-				operators.and(
-					operators.eq(fields.id, data.memberId),
-					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.status, COMMUNITY_PROFILE_STATUS.draft)
-				),
-			columns: {
-				id: true,
-			},
-		});
-
-		if (!existingProfile) {
-			throw new AppError("NotFound", "Community Profile not found which is in draft state");
-		}
-
-		await db
-			.update(communityProfile)
-			.set({
-				status: COMMUNITY_PROFILE_STATUS.active,
-			})
-			.where(eq(communityProfile.id, data.memberId));
-
-		await invalidateOrgGraph(organizationId);
-
-		return {
-			message: "Community Profile accepted successfully",
-		};
-	});
-
-export const rejectCommunityProfile = createServerFn({ method: "POST" })
-	.validator(
-		z.object({
-			memberId: z.string().describe("Community Profile Id"),
-		})
-	)
-	.middleware([orgMiddleware])
-	.handler(async ({ data, context }) => {
-		assertCan(context.actor, { communityProfile: ["reject"] });
-
-		const { organizationId } = context.actor;
-
-		const existingProfile = await db.query.communityProfile.findFirst({
-			where: (fields, operators) =>
-				operators.and(
-					operators.eq(fields.id, data.memberId),
-					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.status, COMMUNITY_PROFILE_STATUS.draft)
-				),
-			columns: {
-				id: true,
-			},
-		});
-
-		if (!existingProfile) {
-			throw new AppError("NotFound", "Community Profile not found which is in draft state");
-		}
-
-		await db
-			.update(communityProfile)
-			.set({
-				status: COMMUNITY_PROFILE_STATUS.inactive,
-			})
-			.where(eq(communityProfile.id, data.memberId));
-
-		await invalidateOrgGraph(organizationId);
-
-		return {
-			message: "Community Profile rejected successfully",
-		};
-	});
 
 export const reassignProfile = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])

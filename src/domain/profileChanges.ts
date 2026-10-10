@@ -77,7 +77,13 @@ export type SubmitResult =
 	| { outcome: "requested"; profileId: string; changeRequestId: string }
 	| { outcome: "unchanged"; profileId: string };
 
+export type ReviewDecision =
+	| { decision: "approve"; note?: string | null }
+	/** `note` = reject reason, required. */
+	| { decision: "reject"; note: string };
+
 type ProfileRow = typeof communityProfile.$inferSelect;
+type RequestRow = typeof changeRequest.$inferSelect;
 type AddressRow = typeof communityAddress.$inferSelect;
 type RelationRow = typeof communityRelation.$inferSelect;
 
@@ -371,17 +377,41 @@ export function makeProfileChanges({
 		};
 		const plan = emptyPlan();
 		plan.statements.push(db.insert(communityProfile).values(row));
-		// Member-created draft: its create Change Request (+ event) arrives with the queue slice.
+		const snapshot = profileSnapshot(row, await customFieldLabels(organizationId));
 		if (status === COMMUNITY_PROFILE_STATUS.active) {
 			plan.events.push({
 				action: "profile.created",
 				profileId: row.id,
 				profileName: fullName(row),
-				payload: profileSnapshot(row, await customFieldLabels(organizationId)),
+				payload: snapshot,
 			});
 			plan.graphChanged = true;
+			return { plan, profileId: row.id, changeRequestId: null };
 		}
-		return { plan, profileId: row.id };
+		// Member-created draft: judged via its pending create Change Request (payload null).
+		const changeRequestId = newId();
+		plan.statements.push(
+			db.insert(changeRequest).values({
+				id: changeRequestId,
+				organizationId,
+				profileId: row.id,
+				profileName: fullName(row),
+				kind: CHANGE_REQUEST_KIND.create,
+				status: CHANGE_REQUEST_STATUS.pending,
+				payload: null,
+				submitterUserId: userId,
+				submitterName: name,
+				createdAt: now(),
+			})
+		);
+		plan.events.push({
+			action: "change_request.submitted",
+			profileId: row.id,
+			profileName: fullName(row),
+			changeRequestId,
+			payload: { kind: CHANGE_REQUEST_KIND.create, profile: snapshot },
+		});
+		return { plan, profileId: row.id, changeRequestId };
 	}
 
 	function planInfo(
@@ -683,14 +713,123 @@ export function makeProfileChanges({
 		});
 	}
 
+	/** Hard delete: full snapshot + `relation.removed` per cascaded relation (no address events). */
+	async function planDelete(actor: Actor, subject: ProfileRow): Promise<Plan> {
+		const [addresses, relations, labels] = await Promise.all([
+			db.query.communityAddress.findMany({
+				where: (f, o) => o.eq(f.communityProfileId, subject.id),
+			}),
+			db
+				.select()
+				.from(communityRelation)
+				.where(
+					or(eq(communityRelation.fromId, subject.id), eq(communityRelation.toId, subject.id))
+				),
+			customFieldLabels(actor.organizationId),
+		]);
+		// Relations + addresses go by FK cascade; only events are written for them.
+		const removals = await relationRemovals(subject, relations, { deleteRows: false });
+		return {
+			statements: [db.delete(communityProfile).where(eq(communityProfile.id, subject.id)), guard()],
+			events: [
+				{
+					action: "profile.deleted",
+					profileId: subject.id,
+					profileName: fullName(subject),
+					payload: {
+						...profileSnapshot(subject, labels),
+						addresses: addresses.map(addressSnapshot),
+					},
+				},
+				...removals.events,
+			],
+			graphChanged: subject.status === COMMUNITY_PROFILE_STATUS.active,
+			onGuardTrip: "Conflict",
+		};
+	}
+
+	/** Pending request `id`; `submitterOnly` hides others' requests (NotFound). */
+	async function loadPendingRequest(actor: Actor, id: string, { submitterOnly = false } = {}) {
+		const row = await db.query.changeRequest.findFirst({
+			where: (f, o) => o.and(o.eq(f.id, id), o.eq(f.organizationId, actor.organizationId)),
+		});
+		if (!row || (submitterOnly && row.submitterUserId !== actor.userId)) {
+			throw new AppError("NotFound", "Change Request not found");
+		}
+		if (row.status !== CHANGE_REQUEST_STATUS.pending) {
+			throw new AppError("Conflict", "This Change Request is already closed");
+		}
+		return row;
+	}
+
+	/** Closes `req` as `status`, guarded on it still being pending (else the batch → Conflict). */
+	function closeRequest(
+		actor: Actor,
+		name: string,
+		req: RequestRow,
+		status: RequestRow["status"],
+		note: string | null
+	): BatchItem<"sqlite">[] {
+		return [
+			db
+				.update(changeRequest)
+				.set({
+					status,
+					resolvedByUserId: actor.userId,
+					resolvedByName: name,
+					resolvedAt: now(),
+					resolutionNote: note,
+				})
+				.where(
+					and(eq(changeRequest.id, req.id), eq(changeRequest.status, CHANGE_REQUEST_STATUS.pending))
+				),
+			guard(),
+		];
+	}
+
+	/** Draft → active (create approved). */
+	function planActivateDraft(subject: ProfileRow): Plan {
+		return {
+			statements: [
+				db
+					.update(communityProfile)
+					.set({
+						status: COMMUNITY_PROFILE_STATUS.active,
+						version: sql`${communityProfile.version} + 1`,
+					})
+					.where(
+						and(
+							eq(communityProfile.id, subject.id),
+							eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.draft)
+						)
+					),
+				guard(),
+			],
+			events: [
+				{
+					action: "profile.activated",
+					profileId: subject.id,
+					profileName: fullName(subject),
+					payload: {
+						status: [COMMUNITY_PROFILE_STATUS.draft, COMMUNITY_PROFILE_STATUS.active],
+					},
+				},
+			],
+			graphChanged: true,
+			onGuardTrip: "Conflict",
+		};
+	}
+
 	return {
 		/** Applies (or, later, requests) one change. Routing by Actor role + profile linkage. */
 		async submit(actor: Actor, change: ProfileChange): Promise<SubmitResult> {
 			const name = await actorName(actor);
 			if (change.kind === "create") {
-				const { plan, profileId } = await planCreate(actor, name, change);
+				const { plan, profileId, changeRequestId } = await planCreate(actor, name, change);
 				await commit(actor, name, plan);
-				return { outcome: "applied", profileId };
+				return changeRequestId
+					? { outcome: "requested", profileId, changeRequestId }
+					: { outcome: "applied", profileId };
 			}
 
 			const subject = await loadProfile(actor, change.profileId);
@@ -720,6 +859,76 @@ export function makeProfileChanges({
 			if (!plan) return { outcome: "unchanged", profileId: subject.id };
 			await commit(actor, name, plan);
 			return { outcome: "applied", profileId: subject.id };
+		},
+
+		/** Owner/admin closes a pending Change Request: approve applies it, reject discards it. */
+		async review(actor: Actor, changeRequestId: string, decision: ReviewDecision) {
+			assertReviewer(actor);
+			const note = decision.note?.trim() || null;
+			if (decision.decision === "reject" && !note) {
+				throw new AppError("Invalid", "A reason is required to reject");
+			}
+			const req = await loadPendingRequest(actor, changeRequestId);
+			if (req.kind !== CHANGE_REQUEST_KIND.create) {
+				throw new AppError("Invalid", `Reviewing ${req.kind} requests is not supported yet`);
+			}
+			const subject = await loadProfile(actor, req.profileId);
+			const name = await actorName(actor);
+			const approve = decision.decision === "approve";
+			const applied = approve ? planActivateDraft(subject) : await planDelete(actor, subject);
+			await commit(actor, name, {
+				statements: [
+					...closeRequest(
+						actor,
+						name,
+						req,
+						approve ? CHANGE_REQUEST_STATUS.approved : CHANGE_REQUEST_STATUS.rejected,
+						note
+					),
+					...applied.statements,
+				],
+				events: [
+					{
+						action: approve ? "change_request.approved" : "change_request.rejected",
+						profileId: subject.id,
+						profileName: fullName(subject),
+						changeRequestId: req.id,
+						payload: approve ? { kind: req.kind, note } : { kind: req.kind, reason: note },
+					},
+					...applied.events.map((e) => ({ ...e, changeRequestId: req.id })),
+				],
+				graphChanged: applied.graphChanged,
+				onGuardTrip: "Conflict",
+			});
+			return { kind: req.kind, profileId: subject.id };
+		},
+
+		/** Submitter takes back a pending request; a withdrawn create deletes its draft. */
+		async withdraw(actor: Actor, changeRequestId: string) {
+			const req = await loadPendingRequest(actor, changeRequestId, { submitterOnly: true });
+			const name = await actorName(actor);
+			const subject = await loadProfile(actor, req.profileId);
+			const applied =
+				req.kind === CHANGE_REQUEST_KIND.create ? await planDelete(actor, subject) : emptyPlan();
+			await commit(actor, name, {
+				statements: [
+					...closeRequest(actor, name, req, CHANGE_REQUEST_STATUS.withdrawn, null),
+					...applied.statements,
+				],
+				events: [
+					{
+						action: "change_request.withdrawn",
+						profileId: subject.id,
+						profileName: fullName(subject),
+						changeRequestId: req.id,
+						payload: { kind: req.kind },
+					},
+					...applied.events.map((e) => ({ ...e, changeRequestId: req.id })),
+				],
+				graphChanged: applied.graphChanged,
+				onGuardTrip: "Conflict",
+			});
+			return { kind: req.kind, profileId: subject.id };
 		},
 
 		/** Link an `active` Userless Profile to an Org Member of the same org. */
@@ -811,43 +1020,13 @@ export function makeProfileChanges({
 				throw new AppError("Forbidden", "Only the owner can delete a profile");
 			}
 			const subject = await loadProfile(actor, profileId);
-			const [addresses, relations, labels] = await Promise.all([
-				db.query.communityAddress.findMany({
-					where: (f, o) => o.eq(f.communityProfileId, subject.id),
-				}),
-				db
-					.select()
-					.from(communityRelation)
-					.where(
-						or(eq(communityRelation.fromId, subject.id), eq(communityRelation.toId, subject.id))
-					),
-				customFieldLabels(actor.organizationId),
-			]);
 			const name = await actorName(actor);
 			const supersede = await supersedePending(actor, name, subject);
-			// Relations + addresses go by FK cascade; only events are written for them.
-			const removals = await relationRemovals(subject, relations, { deleteRows: false });
+			const deletion = await planDelete(actor, subject);
 			await commit(actor, name, {
-				statements: [
-					...supersede.statements,
-					db.delete(communityProfile).where(eq(communityProfile.id, subject.id)),
-					guard(),
-				],
-				events: [
-					...supersede.events,
-					{
-						action: "profile.deleted",
-						profileId: subject.id,
-						profileName: fullName(subject),
-						payload: {
-							...profileSnapshot(subject, labels),
-							addresses: addresses.map(addressSnapshot),
-						},
-					},
-					...removals.events,
-				],
-				graphChanged: subject.status === COMMUNITY_PROFILE_STATUS.active,
-				onGuardTrip: "Conflict",
+				...deletion,
+				statements: [...supersede.statements, ...deletion.statements],
+				events: [...supersede.events, ...deletion.events],
 			});
 		},
 	};
