@@ -4,25 +4,32 @@ import { assertCan, can, type Actor, type Role } from "./permission";
 
 const actorWith = (role: Role): Actor => ({ userId: "u1", organizationId: "o1", role });
 
-// Custom app statements only (`communityProfile`, `customFields`) — better-auth's own
+// Custom app statements only (`communityProfile`, `customFields`, `changeRequest`, `auditEvent`) — better-auth's own
 // default statements (organization, member, invitation, ...) are its contract, not ours.
 const customStatements = {
 	communityProfile: ["create", "approve", "reject", "delete", "reassign", "manageRelations"],
 	customFields: ["create", "read", "delete"],
+	changeRequest: ["create", "review"],
+	auditEvent: ["read"],
 } as const;
 
 const expected: Record<Role, Record<string, readonly string[]>> = {
 	member: {
 		communityProfile: ["create"],
 		customFields: ["read"],
+		changeRequest: ["create"],
 	},
 	admin: {
 		communityProfile: ["create", "approve", "reject", "reassign", "manageRelations"],
 		customFields: ["read"],
+		changeRequest: ["create", "review"],
+		auditEvent: ["read"],
 	},
 	owner: {
 		communityProfile: ["create", "approve", "reject", "delete", "reassign", "manageRelations"],
 		customFields: ["read", "create", "delete"],
+		changeRequest: ["create", "review"],
+		auditEvent: ["read"],
 	},
 };
 
