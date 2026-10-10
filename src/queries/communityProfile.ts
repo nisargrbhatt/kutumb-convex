@@ -1,11 +1,10 @@
 import type { CommunityProfileInput, MemberFilter } from "@/domain/communityProfile";
 import { LIMIT_COPY } from "@/domain/limits";
 import { useCan } from "@/hooks/useCan";
-import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import {
-	acceptCommunityProfile,
 	createProfile,
 	deactivateProfile,
 	deleteProfile,
@@ -18,12 +17,11 @@ import {
 	getPendingRequestCount,
 	reactivateProfile,
 	reassignProfile,
-	rejectCommunityProfile,
 	searchCommunityProfilesLite,
 	updateProfileInfo,
 } from "@/server/communityProfile";
-import { changeRequestKeys, orgKeys, profileKeys } from "./keys";
-import { toastMutationError, useInvalidateProfileChange, useOrgId } from "./mutation";
+import { changeRequestKeys, profileKeys } from "./keys";
+import { toastMutationError, useInvalidateProfileChange } from "./mutation";
 
 export const myProfileQuery = (orgId: string) =>
 	queryOptions({
@@ -144,6 +142,9 @@ export function useAddMissingMember() {
 			createProfile({ data: { self: false, profile: input } }),
 		onSuccess: async (result) => {
 			posthog.capture("member_added", { outcome: result.outcome });
+			if (result.outcome === "requested") {
+				posthog.capture("change_request_submitted", { kind: "create" });
+			}
 			toast.success("Member added", {
 				description: appliesActive
 					? "The profile is active."
@@ -152,39 +153,6 @@ export function useAddMissingMember() {
 			await invalidate();
 		},
 		onError: toastMutationError("Add member", "Failed to add member"),
-	});
-}
-
-export function useApproveProfile(profileId: string) {
-	const qc = useQueryClient();
-	const orgId = useOrgId();
-	const posthog = usePostHog();
-	return useMutation({
-		mutationFn: () => acceptCommunityProfile({ data: { memberId: profileId } }),
-		onSuccess: async () => {
-			posthog.capture("member_profile_accepted", { member_id: profileId });
-			toast.success("Profile", { description: "Profile accepted successfully" });
-			await qc.invalidateQueries({ queryKey: profileKeys.all(orgId) });
-		},
-		onError: toastMutationError("Profile", "Failed to accept profile"),
-	});
-}
-
-export function useRejectProfile(profileId: string) {
-	const qc = useQueryClient();
-	const orgId = useOrgId();
-	const posthog = usePostHog();
-	return useMutation({
-		mutationFn: () => rejectCommunityProfile({ data: { memberId: profileId } }),
-		onSuccess: async () => {
-			posthog.capture("member_profile_rejected", { member_id: profileId });
-			toast.success("Profile", { description: "Profile rejected successfully" });
-			await Promise.all([
-				qc.invalidateQueries({ queryKey: profileKeys.all(orgId) }),
-				qc.invalidateQueries({ queryKey: orgKeys.usage(orgId) }),
-			]);
-		},
-		onError: toastMutationError("Profile", "Failed to reject profile"),
 	});
 }
 
