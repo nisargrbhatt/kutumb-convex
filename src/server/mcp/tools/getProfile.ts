@@ -68,7 +68,7 @@ Relations are subject-centric and are NEVER inverted. Read the section, then the
 
 Worked example, subject Jared: outgoing [{type:"sister", counterpart: Anna}] means Anna is Jared's sister. incoming [{type:"brother", counterpart: Mia}] means Jared is Mia's brother (so Mia is Jared's sibling; counterpart.gender tells sister vs brother). It does NOT mean Mia is Jared's brother. To find "Jared's sisters", take outgoing entries of type "sister" plus incoming "brother"/"sister" entries whose counterpart.gender is "female".
 
-Works for profiles of any status. Use search_profiles to find an id.`;
+Only "active" profiles (and your own linked profile, whatever its status) can be fetched; any other id returns "not found". Relations list "active" counterparts only. Use search_profiles to find an id.`;
 
 type View = z.input<typeof getProfileOutput>;
 type Detail = Awaited<ReturnType<typeof getCommunityProfileDetail>>;
@@ -109,5 +109,7 @@ export function toProfileView(detail: Detail): View {
 }
 
 export async function getProfile(db: QueryDb, actor: Actor, input: { id: string }): Promise<View> {
-	return toProfileView(await getCommunityProfileDetail(db, actor, input.id));
+	return toProfileView(
+		await getCommunityProfileDetail(db, actor, input.id, { audience: "aiClient" })
+	);
 }

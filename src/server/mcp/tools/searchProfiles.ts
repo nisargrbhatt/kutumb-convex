@@ -18,4 +18,4 @@ export const searchProfilesOutput = z.object({
 });
 
 export const searchProfilesDescription =
-	"Searches Community Profiles (people in the community, not app users) by name. Returns a compact list; call get_profile with an id for full details and relations. Only `active` profiles are returned unless `status` says otherwise. Results are paged: while `nextCursor` is non-null, call again with it as `cursor`.";
+	"Searches Community Profiles (people in the community, not app users) by name. Returns a compact list; call get_profile with an id for full details and relations. Only `active` profiles are returned. Results are paged: while `nextCursor` is non-null, call again with it as `cursor`.";
