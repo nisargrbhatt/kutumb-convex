@@ -1,7 +1,12 @@
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
-import { and, asc, count, eq, gt, like, sql } from "drizzle-orm";
-import { COMMUNITY_PROFILE_STATUS } from "@/db/constants";
-import { communityProfile } from "@/db/app-schema";
+import type { SQL } from "drizzle-orm";
+import { and, asc, count, eq, gt, like, or, sql } from "drizzle-orm";
+import {
+	CHANGE_REQUEST_KIND,
+	CHANGE_REQUEST_STATUS,
+	COMMUNITY_PROFILE_STATUS,
+} from "@/db/constants";
+import { changeRequest, communityProfile, communityRelation } from "@/db/app-schema";
 import { AppError } from "@/domain/errors";
 import type { MemberFilter, SearchProfilesInput } from "@/domain/communityProfile";
 import { fullName } from "@/domain/communityProfile";
@@ -12,9 +17,39 @@ import type { QueryDb } from "./db";
 export const SEARCH_DEFAULT_LIMIT = 25;
 export const SEARCH_MAX_LIMIT = 100;
 
+const crCol = (col: SQLiteColumn) => sql`cr.${sql.identifier(col.name)}`;
+
+/**
+ * The read-side visibility rule as a `communityProfile` condition (org scope included):
+ * owner/admin see every profile; a plain member sees `active` profiles, drafts they created
+ * (submitter of the pending `create` Change Request; backfilled drafts have none) and their own
+ * linked profile whatever its status. Non-visible reads surface as `NotFound`.
+ */
+export function visibleProfileWhere(actor: Actor): SQL {
+	const inOrg = eq(communityProfile.organizationId, actor.organizationId);
+	if (actor.role !== "member") return inOrg;
+
+	const ownDraft = and(
+		eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.draft),
+		// Columns named via `cr.` so drizzle's relational-query aliasing can't requalify them.
+		sql`EXISTS (SELECT 1 FROM ${changeRequest} cr WHERE ${crCol(changeRequest.profileId)} = ${communityProfile.id}
+			AND ${crCol(changeRequest.kind)} = ${CHANGE_REQUEST_KIND.create}
+			AND ${crCol(changeRequest.status)} = ${CHANGE_REQUEST_STATUS.pending}
+			AND ${crCol(changeRequest.submitterUserId)} = ${actor.userId})`
+	);
+	return and(
+		inOrg,
+		or(
+			eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active),
+			eq(communityProfile.userId, actor.userId),
+			ownDraft
+		)
+	)!;
+}
+
 /** Members page: offset-paged list with the columns the table shows. */
 export async function listCommunityMembers(db: QueryDb, actor: Actor, filter: MemberFilter) {
-	const conditions = [eq(communityProfile.organizationId, actor.organizationId)];
+	const conditions = [visibleProfileWhere(actor)];
 
 	if (filter.search.trim().length > 0) {
 		const searchTerm = `%${filter.search.trim()}%`;
@@ -82,7 +117,8 @@ export async function searchProfiles(
 
 	const conditions = [
 		eq(communityProfile.organizationId, actor.organizationId),
-		eq(communityProfile.status, input.status ?? COMMUNITY_PROFILE_STATUS.active),
+		// AI Clients see `active` only, whatever the caller's role.
+		eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active),
 	];
 	if (input.gender) conditions.push(eq(communityProfile.gender, input.gender));
 	if (input.cursor) conditions.push(gt(communityProfile.id, input.cursor));
@@ -134,16 +170,49 @@ const counterpartColumns = {
 } as const;
 
 /**
+ * Who is reading: `app` = the web app (role-aware visibility rule); `aiClient` = an MCP AI Client,
+ * which sees `active` profiles only (plus the caller's own linked profile as subject) for every
+ * role.
+ */
+export type ReadAudience = "app" | "aiClient";
+
+function readRules(actor: Actor, audience: ReadAudience) {
+	if (audience === "app") {
+		const where = visibleProfileWhere(actor);
+		return { subjectWhere: where, counterpartWhere: where };
+	}
+	const inOrgActive = and(
+		eq(communityProfile.organizationId, actor.organizationId),
+		eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active)
+	)!;
+	return {
+		subjectWhere: and(
+			eq(communityProfile.organizationId, actor.organizationId),
+			or(
+				eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active),
+				eq(communityProfile.userId, actor.userId)
+			)
+		)!,
+		counterpartWhere: inOrgActive,
+	};
+}
+
+/**
  * One profile of the Actor's org with addresses, custom field definitions and relations.
  * Relations are subject-centric and never inverted (ADR 0001): `outgoing` = subject is `from`,
  * `incoming` = subject is `to`, `type` as stored.
  */
-export async function getCommunityProfileDetail(db: QueryDb, actor: Actor, id: string) {
+export async function getCommunityProfileDetail(
+	db: QueryDb,
+	actor: Actor,
+	id: string,
+	{ audience = "app" }: { audience?: ReadAudience } = {}
+) {
 	const { organizationId } = actor;
+	const { subjectWhere, counterpartWhere } = readRules(actor, audience);
 
 	const foundProfile = await db.query.communityProfile.findFirst({
-		where: (fields, ops) =>
-			ops.and(ops.eq(fields.id, id), ops.eq(fields.organizationId, organizationId)),
+		where: () => and(eq(communityProfile.id, id), subjectWhere)!,
 		columns: {
 			organizationId: false,
 		},
@@ -183,11 +252,94 @@ export async function getCommunityProfileDetail(db: QueryDb, actor: Actor, id: s
 		},
 	});
 
+	const [visibleOut, visibleIn] = await Promise.all([
+		relationsWithVisibleCounterpart(db, counterpartWhere, "out", foundProfile.id),
+		relationsWithVisibleCounterpart(db, counterpartWhere, "in", foundProfile.id),
+	]);
+
 	return {
 		profile: foundProfile,
 		addresses: profileAddresses,
 		customFieldDefs: customFieldDefs satisfies CustomFieldDefinition[],
-		outgoingRelations,
-		incomingRelations,
+		outgoingRelations: outgoingRelations.filter((r) => visibleOut.has(r.id)),
+		incomingRelations: incomingRelations.filter((r) => visibleIn.has(r.id)),
 	};
+}
+
+/**
+ * Ids of `subjectId`'s relations (`out`: subject is `from`, `in`: subject is `to`) whose
+ * counterpart matches a visibility condition. Core query builder on purpose: relational queries
+ * requalify every column to the root alias, which breaks the nested profile condition.
+ */
+export async function relationsWithVisibleCounterpart(
+	db: QueryDb,
+	visibleWhere: SQL,
+	direction: "out" | "in",
+	subjectId: string
+) {
+	const [subjectCol, counterpartCol] =
+		direction === "out"
+			? [communityRelation.fromId, communityRelation.toId]
+			: [communityRelation.toId, communityRelation.fromId];
+	const rows = await db
+		.select({ id: communityRelation.id })
+		.from(communityRelation)
+		.innerJoin(communityProfile, eq(communityProfile.id, counterpartCol))
+		.where(and(eq(subjectCol, subjectId), visibleWhere));
+	return new Set(rows.map((r) => r.id));
+}
+
+const myCounterpartColumns = {
+	id: true,
+	firstName: true,
+	middleName: true,
+	lastName: true,
+	nickName: true,
+} as const;
+
+async function findMyProfileId(db: QueryDb, { organizationId, userId }: Actor) {
+	const profile = await db.query.communityProfile.findFirst({
+		where: (fields, ops) =>
+			ops.and(ops.eq(fields.organizationId, organizationId), ops.eq(fields.userId, userId)),
+		columns: { id: true },
+	});
+	return profile?.id ?? null;
+}
+
+/** My relationships page: the Actor's own profile's relations, counterparts filtered by visibility. */
+export async function getMyRelationships(db: QueryDb, actor: Actor) {
+	const profileId = await findMyProfileId(db, actor);
+	if (!profileId) return { profileId, outgoing: [], incoming: [] };
+
+	const visibleWhere = visibleProfileWhere(actor);
+	const [outgoing, incoming, visibleOut, visibleIn] = await Promise.all([
+		db.query.communityRelation.findMany({
+			where: (fields, ops) => ops.eq(fields.fromId, profileId),
+			columns: { organizationId: false },
+			with: { toCommunityProfile: { columns: myCounterpartColumns } },
+		}),
+		// Type shown as stored (no inversion — ADR 0001).
+		db.query.communityRelation.findMany({
+			where: (fields, ops) => ops.eq(fields.toId, profileId),
+			columns: { organizationId: false },
+			with: { fromCommunityProfile: { columns: myCounterpartColumns } },
+		}),
+		relationsWithVisibleCounterpart(db, visibleWhere, "out", profileId),
+		relationsWithVisibleCounterpart(db, visibleWhere, "in", profileId),
+	]);
+
+	return {
+		profileId,
+		outgoing: outgoing.filter((r) => visibleOut.has(r.id)),
+		incoming: incoming.filter((r) => visibleIn.has(r.id)),
+	};
+}
+
+/** Dashboard: count of the Actor's own outgoing / incoming relations with a visible counterpart. */
+export async function countMyRelations(db: QueryDb, actor: Actor, direction: "out" | "in") {
+	const profileId = await findMyProfileId(db, actor);
+	if (!profileId) return 0;
+	return (
+		await relationsWithVisibleCounterpart(db, visibleProfileWhere(actor), direction, profileId)
+	).size;
 }

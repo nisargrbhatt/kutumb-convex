@@ -15,7 +15,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
+import { GENDERS } from "@/db/constants";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, stripSearchParams } from "@tanstack/react-router";
@@ -25,9 +25,11 @@ import { ProfileForm } from "@/components/profile/ProfileForm";
 import {
 	MEMBER_FILTER_DEFAULTS,
 	memberFilterSchema,
+	memberStatusFilterOptions,
 	toFormValues,
 	type MemberFilter,
 } from "@/domain/communityProfile";
+import { useActor } from "@/hooks/useActor";
 import { useCan } from "@/hooks/useCan";
 import { customFieldsQuery } from "@/queries/fields";
 
@@ -174,6 +176,8 @@ function MembersFilters() {
 	const navigate = Route.useNavigate();
 	const search = Route.useSearch();
 	const [searchValue, setSearchValue] = useState(search.search);
+	const actor = useActor();
+	const statusOptions = actor ? memberStatusFilterOptions(actor) : [];
 
 	useEffect(() => {
 		const timeout = setTimeout(() => {
@@ -218,7 +222,7 @@ function MembersFilters() {
 				</SelectTrigger>
 				<SelectContent>
 					<SelectItem value="all">All Status</SelectItem>
-					{Object.values(COMMUNITY_PROFILE_STATUS).map((s) => (
+					{statusOptions.map((s) => (
 						<SelectItem key={s} value={s} className="capitalize">
 							{s}
 						</SelectItem>

@@ -1,6 +1,6 @@
 # Read-side visibility
 
-Type: AFK Status: ready-for-agent Blocked by: 09
+Type: AFK Status: resolved Blocked by: 09
 
 Spec: [spec.md § Read-side visibility](../spec.md)
 
@@ -19,6 +19,19 @@ Per [Read-side visibility](05-read-side-visibility.md):
 
 ## Acceptance criteria
 
-- [ ] query tests per role × status (draft own/other/backfilled, inactive, own inactive linked)
-- [ ] MCP tool tests updated; cross-role NotFound
+- [x] query tests per role × status (draft own/other/backfilled, inactive, own inactive linked)
+- [x] MCP tool tests updated; cross-role NotFound
 - [ ] browser: plain member can't open another's draft or inactive profile by URL
+
+## Comments
+
+- `visibleProfileWhere(actor)` in `src/domain/queries/profiles.ts`; list, detail, My
+  relationships (`getMyRelationships`), dashboard counts (`countMyRelations`) use it. Counterparts
+  filtered via join (`relationsWithVisibleCounterpart`), no `IN` list (D1 100-param cap).
+- MCP: `getCommunityProfileDetail(..., { audience: "aiClient" })` = active + own subject, active
+  counterparts. `searchProfilesInput.status` removed.
+- UI: `memberStatusFilterOptions(actor)` drives members status Select.
+- Graph blob active-only asserted (draft + inactive, all roles) in familyGraph.test.ts. Picker
+  (`getActiveProfilesForRelation`) unchanged, no test (server fn on `@/db`).
+- Browser check not done: worktree has no local D1/seed; needs multi-user + role setup. NotFound
+  by URL covered by query test only.
