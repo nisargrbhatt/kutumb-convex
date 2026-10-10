@@ -9,7 +9,7 @@ import { AppError } from "@/domain/errors";
 
 export const statement = {
 	...defaultStatements,
-	communityProfile: ["create", "approve", "reject", "delete", "reassign", "manageRelations"],
+	communityProfile: ["create", "approve", "reject", "delete", "reassign"],
 	customFields: ["create", "read", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
@@ -26,7 +26,7 @@ export const member = ac.newRole({
 
 export const admin = ac.newRole({
 	...adminAc.statements,
-	communityProfile: ["create", "approve", "reject", "reassign", "manageRelations"],
+	communityProfile: ["create", "approve", "reject", "reassign"],
 	customFields: ["read"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
@@ -34,7 +34,7 @@ export const admin = ac.newRole({
 
 export const owner = ac.newRole({
 	...ownerAc.statements,
-	communityProfile: ["create", "approve", "reject", "delete", "reassign", "manageRelations"],
+	communityProfile: ["create", "approve", "reject", "delete", "reassign"],
 	customFields: ["read", "create", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],

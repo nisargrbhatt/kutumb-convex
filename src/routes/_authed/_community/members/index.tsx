@@ -57,11 +57,13 @@ function AddMemberDrawer({
 	const { organizationId: orgId } = Route.useRouteContext();
 	const { data: customFieldDefs } = useQuery({ ...customFieldsQuery(orgId), enabled: open });
 	const addMember = useAddMissingMember();
+	const appliesActive = useCan({ changeRequest: ["review"] });
 
 	return (
 		<ProfileForm
 			mode="admin"
 			isNew
+			description={appliesActive ? "Added as an active profile." : undefined}
 			open={open}
 			onOpenChange={onOpenChange}
 			defaultValues={toFormValues(null)}

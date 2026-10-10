@@ -2,11 +2,9 @@ import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
-import { COMMUNITY_PROFILE_STATUS } from "@/db/constants";
-import { communityProfile } from "@/db/app-schema";
-import { generatePrimaryKey } from "@/lib/generate";
+import { CHANGE_REQUEST_STATUS, COMMUNITY_PROFILE_STATUS } from "@/db/constants";
+import { changeRequest, communityProfile } from "@/db/app-schema";
 import { and, count, eq } from "drizzle-orm";
-import { safeAsync } from "@/lib/safe";
 import {
 	extractSubgraph,
 	getOrgGraphBlob,
@@ -14,12 +12,13 @@ import {
 	resolveAnchorId,
 	searchProfiles,
 } from "@/lib/communityGraphCache";
-import { LIMIT_COPY, LimitError } from "@/domain/limits";
-import { limits } from "@/lib/limits";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
-import { communityProfileInput, fullName, memberFilterSchema } from "@/domain/communityProfile";
+import { communityProfileInput, memberFilterSchema } from "@/domain/communityProfile";
 import { getCommunityProfileDetail, listCommunityMembers } from "@/domain/queries/profiles";
+import { profileChanges } from "@/lib/profileChanges";
+
+const profileId = z.string().trim().min(1, "Profile is required");
 
 export const getMyCommunityProfile = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
@@ -60,54 +59,26 @@ export const getActiveMemberCount = createServerFn({ method: "GET" })
 		return result?.total ?? 0;
 	});
 
-export const upsertMyCommunityProfile = createServerFn({ method: "POST" })
+/** Create a profile: `self` → the Actor's own linked profile; otherwise a Userless Profile. */
+export const createProfile = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
-	.validator(communityProfileInput)
-	.handler(async ({ context, data }) => {
-		const { organizationId, userId } = context.actor;
-
-		const communityProfileItem = await db.query.communityProfile.findFirst({
-			where: (fields, operators) =>
-				operators.and(
-					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, userId)
-				),
-
-			columns: {
-				id: true,
-			},
-		});
-		if (!communityProfileItem) {
-			try {
-				await limits.assertProfileSlot(organizationId, userId);
-			} catch (e) {
-				if (e instanceof LimitError) {
-					throw new AppError("LimitReached", LIMIT_COPY.profileSelf.description, e.code);
-				}
-				throw e;
-			}
-
-			await db.insert(communityProfile).values({
-				...data,
-				id: generatePrimaryKey(),
-				organizationId,
-				userId,
-				status: COMMUNITY_PROFILE_STATUS.active,
-			});
-		} else {
-			const communityProfileId = communityProfileItem?.id;
-			await db
-				.update(communityProfile)
-				.set({ ...data, status: COMMUNITY_PROFILE_STATUS.active })
-				.where(eq(communityProfile.id, communityProfileId));
-		}
-
-		await invalidateOrgGraph(organizationId);
-
-		return {
-			message: "Community Profile updated successfully",
-		};
+	.validator(z.object({ self: z.boolean(), profile: communityProfileInput }))
+	.handler(({ context, data }) => {
+		if (!data.self) assertCan(context.actor, { communityProfile: ["create"] });
+		return profileChanges.submit(context.actor, { kind: "create", ...data });
 	});
+
+/** Info edit; `expectedVersion` = the profile's `version` when the form loaded. */
+export const updateProfileInfo = createServerFn({ method: "POST" })
+	.middleware([orgMiddleware])
+	.validator(
+		z.object({
+			profileId,
+			expectedVersion: z.number().int().min(0),
+			profile: communityProfileInput,
+		})
+	)
+	.handler(({ context, data }) => profileChanges.submit(context.actor, { kind: "info", ...data }));
 
 export const getActiveProfilesForRelation = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
@@ -276,108 +247,44 @@ export const rejectCommunityProfile = createServerFn({ method: "POST" })
 		};
 	});
 
-export const reassignProfileToUser = createServerFn({ method: "POST" })
+export const reassignProfile = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
-	.validator(
-		z.object({
-			memberId: z.string(),
-			userId: z.string(),
-		})
-	)
-	.handler(async ({ context, data }) => {
-		assertCan(context.actor, { communityProfile: ["reassign"] });
+	.validator(z.object({ profileId, userId: z.string().trim().min(1, "User is required") }))
+	.handler(({ context, data }) =>
+		profileChanges.reassign(context.actor, data.profileId, data.userId)
+	);
 
-		const { organizationId, userId: actorUserId } = context.actor;
-
-		if (data.userId === actorUserId) {
-			throw new Error("Can't assign profile to yourself");
-		}
-
-		const user = await db.query.user.findFirst({
-			where: (fields, operators) => operators.eq(fields.id, data.userId),
-			columns: {
-				id: true,
-			},
-		});
-
-		if (!user) {
-			throw new AppError("NotFound", "User doesn't exist");
-		}
-
-		const memberProfile = await db.query.communityProfile.findFirst({
-			where: (fields, operators) =>
-				operators.and(
-					operators.eq(fields.id, data.memberId),
-					operators.eq(fields.organizationId, organizationId),
-					operators.isNull(fields.userId)
-				),
-			columns: {
-				id: true,
-			},
-		});
-
-		if (!memberProfile) {
-			throw new AppError("NotFound", "Member profile doesn't exist or already has linked user");
-		}
-
-		await db
-			.update(communityProfile)
-			.set({
-				userId: user.id,
-			})
-			.where(eq(communityProfile.id, memberProfile.id));
-
-		await invalidateOrgGraph(organizationId);
-
-		return {
-			message: "Profile reassigned successfully",
-		};
-	});
-
-export const addMissingMember = createServerFn({ method: "POST" })
+export const deactivateProfile = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
-	.validator(communityProfileInput)
+	.validator(z.object({ profileId }))
+	.handler(({ context, data }) => profileChanges.deactivate(context.actor, data.profileId));
+
+export const reactivateProfile = createServerFn({ method: "POST" })
+	.middleware([orgMiddleware])
+	.validator(z.object({ profileId }))
+	.handler(({ context, data }) => profileChanges.reactivate(context.actor, data.profileId));
+
+/** Owner-only hard delete. */
+export const deleteProfile = createServerFn({ method: "POST" })
+	.middleware([orgMiddleware])
+	.validator(z.object({ profileId }))
+	.handler(({ context, data }) => profileChanges.remove(context.actor, data.profileId));
+
+/** Pending Change Requests of one profile (owner/admin): lifecycle confirm copy. */
+export const getPendingRequestCount = createServerFn({ method: "GET" })
+	.middleware([orgMiddleware])
+	.validator(z.object({ profileId }))
 	.handler(async ({ context, data }) => {
-		assertCan(context.actor, { communityProfile: ["create"] });
-
-		const { organizationId, userId } = context.actor;
-
-		try {
-			await limits.assertProfileSlot(organizationId, userId);
-		} catch (e) {
-			if (e instanceof LimitError) {
-				throw new AppError("LimitReached", LIMIT_COPY.profileAdmin.description, e.code);
-			}
-			throw e;
-		}
-
-		const actorProfile = await db.query.communityProfile.findFirst({
-			where: (fields, operators) =>
-				operators.and(
-					operators.eq(fields.userId, userId),
-					operators.eq(fields.organizationId, organizationId)
-				),
-			columns: { firstName: true, middleName: true, lastName: true },
-		});
-
-		const result = await safeAsync(
-			db.insert(communityProfile).values({
-				...data,
-				id: generatePrimaryKey(),
-				comment: `Added by ${actorProfile ? fullName(actorProfile) : context.session.user.email}`,
-				organizationId,
-				status: COMMUNITY_PROFILE_STATUS.draft,
-			})
-		);
-
-		if (!result.success) {
-			console.error(result.error);
-			throw new Error("Failed to add member");
-		}
-
-		await invalidateOrgGraph(organizationId);
-
-		return {
-			message: "Member added successfully",
-		};
+		assertCan(context.actor, { changeRequest: ["review"] });
+		const [result] = await db
+			.select({ total: count() })
+			.from(changeRequest)
+			.where(
+				and(
+					eq(changeRequest.organizationId, context.actor.organizationId),
+					eq(changeRequest.profileId, data.profileId),
+					eq(changeRequest.status, CHANGE_REQUEST_STATUS.pending)
+				)
+			);
+		return result?.total ?? 0;
 	});

@@ -8,8 +8,8 @@ import { RelationsTable } from "@/components/relations/RelationsTable";
 import { Button } from "@/components/ui/button";
 import {
 	myRelationshipsQuery,
-	useAddMyRelation,
-	useDeleteMyRelation,
+	useAddRelation,
+	useRemoveRelation,
 } from "@/queries/communityRelation";
 
 export const Route = createFileRoute("/_authed/_community/profile/relationships/")({
@@ -24,8 +24,8 @@ function RouteComponent() {
 	const {
 		data: { profileId, outgoing, incoming },
 	} = useSuspenseQuery(myRelationshipsQuery(orgId));
-	const addRelation = useAddMyRelation();
-	const deleteRelation = useDeleteMyRelation();
+	const addRelation = useAddRelation(profileId ?? "");
+	const deleteRelation = useRemoveRelation(profileId ?? "");
 
 	const counterpartIds = [...outgoing.map((r) => r.toId), ...incoming.map((r) => r.fromId)];
 

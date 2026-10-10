@@ -1,7 +1,36 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+	addressKeys,
+	auditKeys,
+	changeRequestKeys,
+	orgKeys,
+	profileKeys,
+	relationKeys,
+} from "./keys";
 import { isAppError } from "@/domain/errors";
 import { limitMessage } from "@/domain/limits";
 import { useActor } from "@/hooks/useActor";
+
+/**
+ * After any profile / relation / address / lifecycle change (all go through the mutation seam):
+ * refresh every view it can touch, incl. Change Requests and Audit Events.
+ */
+export function useInvalidateProfileChange() {
+	const qc = useQueryClient();
+	const orgId = useOrgId();
+	return () =>
+		Promise.all(
+			[
+				profileKeys.all(orgId),
+				relationKeys.all(orgId),
+				addressKeys.all(orgId),
+				changeRequestKeys.all(orgId),
+				auditKeys.all(orgId),
+				orgKeys.usage(orgId),
+			].map((queryKey) => qc.invalidateQueries({ queryKey }))
+		);
+}
 
 type Copy = { readonly title: string; readonly description: string };
 

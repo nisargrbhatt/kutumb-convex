@@ -2,11 +2,11 @@ import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
-import { COMMUNITY_ADDRESS_TYPE } from "@/db/constants";
-import { communityAddress } from "@/db/app-schema";
-import { generatePrimaryKey } from "@/lib/generate";
-import { eq } from "drizzle-orm";
-import { AppError } from "@/domain/errors";
+import { addressInput } from "@/domain/address";
+import { profileChanges } from "@/lib/profileChanges";
+
+const profileId = z.string().trim().min(1, "Profile is required");
+const addressId = z.string().trim().min(1, "Address is required");
 
 export const getMyCommunityAddresses = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
@@ -35,107 +35,30 @@ export const getMyCommunityAddresses = createServerFn({ method: "GET" })
 		return addresses;
 	});
 
-export const addMyCommunityAddress = createServerFn({ method: "POST" })
+export const addAddress = createServerFn({ method: "POST" })
+	.middleware([orgMiddleware])
+	.validator(z.object({ profileId, address: addressInput }))
+	.handler(({ context, data }) =>
+		profileChanges.submit(context.actor, { kind: "address_add", ...data })
+	);
+
+export const editAddress = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
 	.validator(
 		z.object({
-			line1: z.string().min(1, "Line 1 is required"),
-			line2: z.string().optional(),
-			country: z.string().min(1, "Country is required"),
-			state: z.string().min(1, "State is required"),
-			city: z.string().min(1, "City is required"),
-			postalCode: z.string().min(1, "Postal code is required"),
-			type: z
-				.enum([
-					COMMUNITY_ADDRESS_TYPE.home,
-					COMMUNITY_ADDRESS_TYPE.work,
-					COMMUNITY_ADDRESS_TYPE.other,
-				])
-				.optional(),
-			note: z.string().optional(),
-			digipin: z.string().optional(),
+			profileId,
+			addressId,
+			expectedVersion: z.number().int().min(0),
+			address: addressInput,
 		})
 	)
-	.handler(async ({ context, data }) => {
-		const { organizationId, userId } = context.actor;
+	.handler(({ context, data }) =>
+		profileChanges.submit(context.actor, { kind: "address_edit", ...data })
+	);
 
-		const profile = await db.query.communityProfile.findFirst({
-			where: (fields, operators) =>
-				operators.and(
-					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, userId)
-				),
-			columns: {
-				id: true,
-			},
-		});
-
-		if (!profile) {
-			throw new AppError("NotFound", "Community profile not found");
-		}
-
-		await db.insert(communityAddress).values({
-			id: generatePrimaryKey(),
-			communityProfileId: profile.id,
-			line1: data.line1,
-			line2: data.line2,
-			country: data.country,
-			state: data.state,
-			city: data.city,
-			postalCode: data.postalCode,
-			type: data.type,
-			note: data.note,
-			digipin: data.digipin,
-		});
-
-		return {
-			message: "Address added successfully",
-		};
-	});
-
-export const deleteMyCommunityAddress = createServerFn({ method: "POST" })
+export const removeAddress = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
-	.validator(
-		z.object({
-			id: z.string().trim().min(1, "Address ID is required"),
-		})
-	)
-	.handler(async ({ context, data }) => {
-		const { organizationId, userId } = context.actor;
-
-		const profile = await db.query.communityProfile.findFirst({
-			where: (fields, operators) =>
-				operators.and(
-					operators.eq(fields.organizationId, organizationId),
-					operators.eq(fields.userId, userId)
-				),
-			columns: {
-				id: true,
-			},
-		});
-
-		if (!profile) {
-			throw new AppError("NotFound", "Community profile not found");
-		}
-
-		const address = await db.query.communityAddress.findFirst({
-			where: (fields, operators) =>
-				operators.and(
-					operators.eq(fields.id, data.id),
-					operators.eq(fields.communityProfileId, profile.id)
-				),
-			columns: {
-				id: true,
-			},
-		});
-
-		if (!address) {
-			throw new AppError("NotFound", "Address not found or does not belong to you");
-		}
-
-		await db.delete(communityAddress).where(eq(communityAddress.id, address.id));
-
-		return {
-			message: "Address deleted successfully",
-		};
-	});
+	.validator(z.object({ profileId, addressId }))
+	.handler(({ context, data }) =>
+		profileChanges.submit(context.actor, { kind: "address_remove", ...data })
+	);

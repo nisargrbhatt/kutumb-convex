@@ -24,11 +24,18 @@ const COPY = {
 		description: "Added as a Draft Record; an owner/admin approves it.",
 		submit: "Add member",
 	},
+	/** Owner/admin editing a Userless Profile. */
+	edit: {
+		title: "Edit profile",
+		createTitle: "Edit profile",
+		description: "Changes apply directly and are recorded in the audit log.",
+		submit: "Save profile",
+	},
 } as const;
 
 /**
- * Community Profile create/edit drawer. `mode` only changes copy (and shows Date of Death for
- * admins); the parent owns the submit adapter. `onSubmit` resolving `true` closes the drawer.
+ * Community Profile create/edit drawer. `mode` only changes copy (and shows Date of Death unless
+ * `self`); the parent owns the submit adapter. `onSubmit` resolving `true` closes the drawer.
  */
 export function ProfileForm({
 	mode,
@@ -39,8 +46,11 @@ export function ProfileForm({
 	onSubmit,
 	isPending,
 	isNew = false,
+	description,
 }: {
 	mode: keyof typeof COPY;
+	/** Overrides the mode's drawer description. */
+	description?: string;
 	/** Profile doesn't exist yet: title reads as create. */
 	isNew?: boolean;
 	open: boolean;
@@ -71,14 +81,14 @@ export function ProfileForm({
 			open={open}
 			onOpenChange={onOpenChange}
 			title={isNew ? copy.createTitle : copy.title}
-			description={copy.description}
+			description={description ?? copy.description}
 			form={form}
 			onSubmit={handleSubmit}
 			submitLabel={copy.submit}
 			isPending={isPending}
 			size="lg"
 		>
-			<ProfileFieldsSection showDateOfDeath={mode === "admin"} />
+			<ProfileFieldsSection showDateOfDeath={mode !== "self"} />
 			<CustomFieldsSection defs={customFieldDefs} />
 		</FormDrawer>
 	);

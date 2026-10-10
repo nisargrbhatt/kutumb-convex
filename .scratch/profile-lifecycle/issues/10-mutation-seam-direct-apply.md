@@ -1,6 +1,6 @@
 # Mutation seam: direct apply + audit + lifecycle
 
-Type: AFK Status: ready-for-agent Blocked by: 08, 09
+Type: AFK Status: resolved Blocked by: 08, 09
 
 Spec: [spec.md § Mutation seam, § Audit emission, § UI Lifecycle](../spec.md)
 
@@ -37,3 +37,17 @@ Spec: [spec.md § Mutation seam, § Audit emission, § UI Lifecycle](../spec.md)
   status/name/relation change
 - [ ] existing own-profile, relation, address, reassign, add-member flows unchanged in browser
 - [ ] new drawers + "⋯" menu responsive, breadcrumbs intact
+
+## Comments
+
+- 2026-10-10 (plc-10): done. Seam `src/domain/profileChanges.ts` (+ wiring `src/lib/profileChanges.ts`),
+  38 seam tests (`freshDb` now has a BEGIN/COMMIT/ROLLBACK batch callback). Server fns collapsed:
+  `createProfile`, `updateProfileInfo`, `addRelation`/`removeRelation`, `addAddress`/`editAddress`/
+  `removeAddress`, `reassignProfile`, `deactivateProfile`/`reactivateProfile`/`deleteProfile`,
+  `getPendingRequestCount`. `manageRelations` retired. Browser-verified on local workerd D1
+  (owner: self create/edit, add member → active, edit drawer, address add/edit/delete, relation
+  add, ⋯ deactivate w/ supersede warning / reactivate / delete; mobile width).
+- Deviations: `onGraphChanged` fires on any graph-blob field change (blob caches email/mobile/DOB
+  etc., not only name), only for `active` profiles. Accept/reject untouched (ticket 11), so they
+  still write no audit / no version bump. Member draft create writes no event yet (11 adds
+  request + `change_request.submitted`). Address/relation writes don't bump profile `version`.
