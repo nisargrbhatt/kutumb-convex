@@ -1,6 +1,6 @@
 # better-auth 1.7.6 upgrade
 
-Type: AFK Status: done Blocked by:
+Type: AFK Status: resolved Blocked by:
 
 Spec: [spec.md § Auth stack](../spec.md)
 

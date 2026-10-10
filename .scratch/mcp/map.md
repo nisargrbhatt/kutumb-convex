@@ -11,7 +11,7 @@ revokes Connections.
 
 ## Notes
 
-- Domain: `CONTEXT.md` terms **Actor**, **Connection**, **AI Client**, **Community Profile**,
+- Domain: `GLOSSARY.md` terms **Actor**, **Connection**, **AI Client**, **Community Profile**,
   **Relation**. Relation direction per ADR 0001.
 - Skills to consult: `grilling` + `domain-modeling` (default), `better-auth-best-practices`,
   `better-auth-security-best-practices`, `tanstack-start-best-practices`.

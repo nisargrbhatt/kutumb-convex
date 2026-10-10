@@ -1,6 +1,6 @@
 # get_family_graph tool
 
-Type: AFK Status: done Blocked by: 13
+Type: AFK Status: resolved Blocked by: 13
 
 Spec: [spec.md § Tools](../spec.md)
 

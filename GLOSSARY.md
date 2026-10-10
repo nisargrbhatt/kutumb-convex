@@ -1,4 +1,4 @@
-# Context — Kutumb domain glossary
+# Kutumb
 
 A glossary of the ubiquitous language. Definitions only — no implementation detail.
 

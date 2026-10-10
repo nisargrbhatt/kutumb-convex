@@ -1,6 +1,6 @@
 # MCP endpoint + whoami
 
-Type: AFK Status: done Blocked by: 10
+Type: AFK Status: resolved Blocked by: 10
 
 Spec: [spec.md § MCP endpoint, Tools, Rate limits & analytics](../spec.md)
 
