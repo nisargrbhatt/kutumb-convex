@@ -32,6 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { COMMUNITY_RELATION_TYPE } from "@/db/constants";
 import { fullName } from "@/domain/communityProfile";
+import { editCopy } from "@/domain/memberRequests";
 import { formatRelationType, RELATION_TYPES, relationTypeSchema } from "@/domain/relation";
 import { activeProfilesForRelationQuery } from "@/queries/communityProfile";
 import { useOrgId } from "@/queries/mutation";
@@ -71,7 +72,7 @@ export function RelationForm({
 	description?: string;
 	onSubmit: (values: RelationFormValues) => Promise<unknown>;
 	isPending: boolean;
-	/** Plain member on an active Userless Profile: copy reads as a suggestion. */
+	/** Plain member on an active Userless Profile: submits a Change Request. */
 	suggest?: boolean;
 }) {
 	const orgId = useOrgId();
@@ -103,17 +104,18 @@ export function RelationForm({
 	};
 
 	const selectedId = form.watch("toId");
+	const copy = editCopy(suggest).addRelation;
 
 	return (
 		<FormDrawer
 			open={open}
 			onOpenChange={onOpenChange}
 			trigger={trigger}
-			title={suggest ? "Suggest relation" : "Add relation"}
+			title={copy.title}
 			description={description}
 			form={form}
 			onSubmit={handleSubmit}
-			submitLabel={suggest ? "Submit for review" : "Add relation"}
+			submitLabel={copy.submit}
 			isPending={isPending}
 		>
 			<FormField

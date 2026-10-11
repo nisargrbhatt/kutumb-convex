@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import {
 	changeRequest,
 	communityAddress,
@@ -16,7 +16,7 @@ import {
 } from "@/domain/changeRequest";
 import { fullName } from "@/domain/communityProfile";
 import { assertCan, can, type Actor } from "@/domain/permission";
-import type { QueryDb } from "./db";
+import { inChunks, type QueryDb } from "./db";
 
 type StaleInput = {
 	id: string;
@@ -49,68 +49,65 @@ export async function loadStaleReasons(
 	const counterpartIds = unique(adds.map((r) => (r.payload as RelationAddPayload).toId));
 	const addSubjects = unique(adds.map((r) => r.profileId));
 
-	const none = Promise.resolve([]);
-	const [profiles, addresses, relations, counterparts, pairs] = await Promise.all([
-		infoIds.length
-			? db
-					.select()
-					.from(communityProfile)
-					.where(
-						and(
-							eq(communityProfile.organizationId, organizationId),
-							inArray(communityProfile.id, infoIds)
-						)
+	// Every `IN (...)` list is chunked: D1 rejects statements past 100 bound parameters.
+	const [profiles, addresses, relations, counterparts, outgoing] = await Promise.all([
+		inChunks(infoIds, (ids) =>
+			db
+				.select()
+				.from(communityProfile)
+				.where(
+					and(
+						eq(communityProfile.organizationId, organizationId),
+						inArray(communityProfile.id, ids)
 					)
-			: none,
-		addressIds.length
-			? db.select().from(communityAddress).where(inArray(communityAddress.id, addressIds))
-			: none,
-		relationIds.length
-			? db
-					.select()
-					.from(communityRelation)
-					.where(
-						and(
-							eq(communityRelation.organizationId, organizationId),
-							inArray(communityRelation.id, relationIds)
-						)
+				)
+		),
+		inChunks(addressIds, (ids) =>
+			db.select().from(communityAddress).where(inArray(communityAddress.id, ids))
+		),
+		inChunks(relationIds, (ids) =>
+			db
+				.select()
+				.from(communityRelation)
+				.where(
+					and(
+						eq(communityRelation.organizationId, organizationId),
+						inArray(communityRelation.id, ids)
 					)
-			: none,
-		counterpartIds.length
-			? db
-					.select({ id: communityProfile.id, status: communityProfile.status })
-					.from(communityProfile)
-					.where(
-						and(
-							eq(communityProfile.organizationId, organizationId),
-							inArray(communityProfile.id, counterpartIds)
-						)
+				)
+		),
+		inChunks(counterpartIds, (ids) =>
+			db
+				.select({ id: communityProfile.id, status: communityProfile.status })
+				.from(communityProfile)
+				.where(
+					and(
+						eq(communityProfile.organizationId, organizationId),
+						inArray(communityProfile.id, ids)
 					)
-			: none,
-		adds.length
-			? db
-					.select({ fromId: communityRelation.fromId, toId: communityRelation.toId })
-					.from(communityRelation)
-					.where(
-						or(
-							and(
-								inArray(communityRelation.fromId, addSubjects),
-								inArray(communityRelation.toId, counterpartIds)
-							),
-							and(
-								inArray(communityRelation.fromId, counterpartIds),
-								inArray(communityRelation.toId, addSubjects)
-							)
-						)
+				)
+		),
+		// Relations out of any subject or counterpart; pairs filtered below (either direction).
+		inChunks(unique([...addSubjects, ...counterpartIds]), (ids) =>
+			db
+				.select({ fromId: communityRelation.fromId, toId: communityRelation.toId })
+				.from(communityRelation)
+				.where(
+					and(
+						eq(communityRelation.organizationId, organizationId),
+						inArray(communityRelation.fromId, ids)
 					)
-			: none,
+				)
+		),
 	]);
 
 	const profileById = new Map(profiles.map((p) => [p.id, p]));
 	const addressById = new Map(addresses.map((a) => [a.id, a]));
 	const relationById = new Map(relations.map((r) => [r.id, r]));
 	const statusById = new Map(counterparts.map((c) => [c.id, c.status]));
-	const related = new Set(pairs.flatMap((p) => [`${p.fromId}>${p.toId}`, `${p.toId}>${p.fromId}`]));
+	const related = new Set(
+		outgoing.flatMap((p) => [`${p.fromId}>${p.toId}`, `${p.toId}>${p.fromId}`])
+	);
 
 	return new Map(
 		requests.map((r) => {
@@ -280,9 +277,17 @@ export async function unseenCount(db: QueryDb, actor: Actor) {
 	return row?.total ?? 0;
 }
 
-/** Visiting My requests: stamps `submitterSeenAt` on the Actor's unseen resolved requests. */
-export async function markRequestsSeen(db: QueryDb, actor: Actor, at: Date) {
-	await db.update(changeRequest).set({ submitterSeenAt: at }).where(unseenWhere(actor));
+/**
+ * Visiting My requests: stamps `submitterSeenAt` on the Actor's unseen resolved requests.
+ * Returns their ids (the visit highlights them as "New").
+ */
+export async function markRequestsSeen(db: QueryDb, actor: Actor, at: Date): Promise<string[]> {
+	const rows = await db
+		.update(changeRequest)
+		.set({ submitterSeenAt: at })
+		.where(unseenWhere(actor))
+		.returning({ id: changeRequest.id });
+	return rows.map((r) => r.id);
 }
 
 /**

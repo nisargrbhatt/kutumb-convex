@@ -20,15 +20,13 @@ type Seed = Partial<typeof communityProfile.$inferInsert> & { id: string; firstN
 describe("profile queries", () => {
 	let db: ReturnType<typeof freshDb>["db"];
 
-	const seed = (rows: Seed[]) =>
-		db.insert(communityProfile).values(
-			rows.map((r) => ({
-				lastName: "Doe",
-				status: "active" as const,
-				organizationId: "o1",
-				...r,
-			}))
-		);
+	// Row by row: a multi-row insert would pass D1's bound-parameter cap.
+	const seed = async (rows: Seed[]) => {
+		for (const r of rows)
+			await db
+				.insert(communityProfile)
+				.values({ lastName: "Doe", status: "active" as const, organizationId: "o1", ...r });
+	};
 
 	/** `create` Change Request: its submitter is the draft's creator. */
 	const createRequest = (

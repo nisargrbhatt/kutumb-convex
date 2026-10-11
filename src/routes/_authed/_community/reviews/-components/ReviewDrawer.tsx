@@ -87,8 +87,8 @@ function RequestCard({
 					<AlertTriangle />
 					<AlertTitle>Stale: can't approve</AlertTitle>
 					<AlertDescription>
-						{staleReasonText(request.stale)}. Reject it, or ask the submitter to withdraw and
-						resubmit.
+						{staleReasonText(request.stale, request)}. Reject it, or ask the submitter to withdraw
+						and resubmit.
 					</AlertDescription>
 				</Alert>
 			) : null}

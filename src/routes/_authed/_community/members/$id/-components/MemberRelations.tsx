@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { RelationForm } from "@/components/relations/RelationForm";
 import { RelationsTable } from "@/components/relations/RelationsTable";
 import { Button } from "@/components/ui/button";
-import type { ProfileEditMode } from "@/domain/memberRequests";
+import { editCopy, type ProfileEditMode } from "@/domain/memberRequests";
 import { useAddRelation, useRemoveRelation } from "@/queries/communityRelation";
 import type { getCommunityMemberById } from "@/server/communityProfile";
 
@@ -50,15 +50,11 @@ export function MemberRelations({
 							trigger={
 								<Button size="sm">
 									<Plus className="size-4" />
-									{suggest ? "Suggest relation" : "Add relation"}
+									{editCopy(suggest).addRelation.title}
 								</Button>
 							}
 							suggest={suggest}
-							description={
-								suggest
-									? "Suggest an outgoing relation for this profile. An owner/admin reviews it."
-									: "Record an outgoing relation for this profile on its behalf."
-							}
+							description={editCopy(suggest).addRelation.description}
 							onSubmit={addRelation.mutateAsync}
 							isPending={addRelation.isPending}
 						/>

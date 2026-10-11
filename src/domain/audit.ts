@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { AUDIT_ACTION } from "@/db/constants";
-import type { AuditAction } from "@/db/constants";
+import { AUDIT_ACTION, ORGANIZATION_ROLES } from "@/db/constants";
+import type { AuditAction, OrganizationRole } from "@/db/constants";
 
 /**
  * Audit read filter (wire + query). A group matches when any one of its events satisfies every
@@ -29,7 +29,7 @@ export type AuditPayload =
 /** The slice of an Audit Event the History presentation needs. */
 export type AuditEventView = {
 	action: AuditAction;
-	actorRole: string;
+	actorRole: OrganizationRole;
 	profileName: string;
 	counterpartName: string | null;
 	payload: unknown;
@@ -58,7 +58,7 @@ export function groupHow(events: AuditEventView[]): AuditHow {
 		const outcome = latest.action.slice("change_request.".length);
 		return outcome === "submitted" ? "pending" : (outcome as AuditHow);
 	}
-	return events[0]?.actorRole === "member" ? "self-edit" : "direct";
+	return events[0]?.actorRole === ORGANIZATION_ROLES.member ? "self-edit" : "direct";
 }
 
 const humanize = (key: string) => {

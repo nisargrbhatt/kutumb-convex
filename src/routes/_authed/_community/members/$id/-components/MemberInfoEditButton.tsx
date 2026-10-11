@@ -4,6 +4,7 @@ import { ProfileForm } from "@/components/profile/ProfileForm";
 import { Button } from "@/components/ui/button";
 import { toFormValues, type CommunityProfileRow } from "@/domain/communityProfile";
 import type { CustomFieldDefinition } from "@/domain/customFields";
+import { editCopy } from "@/domain/memberRequests";
 import { useUpdateProfileInfo } from "@/queries/communityProfile";
 
 /**
@@ -26,7 +27,7 @@ export function MemberInfoEditButton({
 		<>
 			<Button variant="outline" onClick={() => setOpen(true)}>
 				<PencilIcon />
-				{suggest ? "Suggest edit" : "Edit"}
+				{editCopy(suggest).info.trigger}
 			</Button>
 			<ProfileForm
 				mode={suggest ? "suggest" : "edit"}

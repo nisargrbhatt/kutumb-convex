@@ -94,15 +94,7 @@ function RouteComponent() {
 									</p>
 								</div>
 								{canEditUserless ? (
-									<AddAddressButton
-										profileId={profile.id}
-										suggest={suggest}
-										description={
-											suggest
-												? "Suggest an address for this profile. An owner/admin reviews it."
-												: "Add an address for this profile on its behalf."
-										}
-									/>
+									<AddAddressButton profileId={profile.id} suggest={suggest} />
 								) : null}
 							</div>
 

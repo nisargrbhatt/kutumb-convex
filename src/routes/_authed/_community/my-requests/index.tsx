@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { KindBadge, RequestDiff } from "@/components/changeRequest/RequestDiff";
 import { RequestStatusBadge } from "@/components/changeRequest/RequestStatusBadge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
@@ -38,8 +39,9 @@ export const Route = createFileRoute("/_authed/_community/my-requests/")({
 	component: RouteComponent,
 });
 
+/** Resolved by someone else and not yet seen (mirrors the server's unseen rule). */
 const isUnseen = (r: MyRequest) =>
-	r.submitterSeenAt == null && (r.status === "approved" || r.status === "rejected");
+	r.submitterSeenAt == null && r.status !== "pending" && r.status !== "withdrawn";
 
 /** Profile still exists (a rejected / withdrawn create deleted its draft). */
 const profileExists = (r: MyRequest) =>
@@ -74,11 +76,13 @@ function RouteComponent() {
 	const { organizationId: orgId } = Route.useRouteContext();
 	const { data: requests } = useSuspenseQuery(myRequestsQuery(orgId));
 	const [openId, setOpenId] = useState<string | null>(null);
-	const markSeen = useMarkRequestsSeen(orgId);
-	const { mutate: markSeenMutate } = markSeen;
+	const { mutate: markSeenMutate, data: markedIds } = useMarkRequestsSeen(orgId);
+	// Unseen at arrival (loader data), captured before marking seen clears them.
+	const [unseenOnArrival] = useState(() => new Set(requests.filter(isUnseen).map((r) => r.id)));
+	// "New" for this whole visit, even after the list refetches with them seen.
+	const newIds = new Set([...unseenOnArrival, ...(markedIds ?? [])]);
 
-	// Visiting marks resolved requests seen (clears the nav badge). Rows keep their "New" dot until
-	// the list refetches.
+	// Visiting marks resolved requests seen (clears the nav badge).
 	useEffect(() => {
 		markSeenMutate();
 	}, [markSeenMutate]);
@@ -89,10 +93,8 @@ function RouteComponent() {
 			header: "Request",
 			cell: ({ row }) => (
 				<div className="flex items-center gap-2">
-					{isUnseen(row.original) ? (
-						<span className="size-2 shrink-0 rounded-full bg-primary" aria-label="New outcome" />
-					) : null}
 					<KindBadge kind={row.original.kind} />
+					{newIds.has(row.original.id) ? <Badge>New</Badge> : null}
 				</div>
 			),
 		},
@@ -216,7 +218,7 @@ function RequestDrawer({ request, onClose }: { request: MyRequest | null; onClos
 										<AlertTriangle />
 										<AlertTitle>Can't be approved as is</AlertTitle>
 										<AlertDescription>
-											{staleReasonText(request.stale)}. Withdraw it and suggest again.
+											{staleReasonText(request.stale, request)}. Withdraw it and suggest again.
 										</AlertDescription>
 									</Alert>
 								) : null}

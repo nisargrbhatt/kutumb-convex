@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { AuditAction } from "@/db/constants";
 import { diffRows, groupHow, groupSummary } from "./audit";
+import type { AuditEventView } from "./audit";
 
-const ev = (action: AuditAction, extra: Record<string, unknown> = {}) => ({
+const ev = (action: AuditAction, extra: Partial<AuditEventView> = {}): AuditEventView => ({
 	action,
 	actorRole: "owner",
 	profileName: "Ravi Patel",

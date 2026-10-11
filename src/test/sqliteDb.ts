@@ -3,6 +3,9 @@ import { DatabaseSync } from "node:sqlite";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import * as schema from "@/db/schema";
 
+/** D1's per-statement bound-parameter cap, enforced by `freshDb` so tests catch overflows. */
+export const D1_MAX_BOUND_PARAMS = 100;
+
 const MIGRATIONS_DIR = new URL("../../migrations/", import.meta.url);
 
 /**
@@ -34,6 +37,9 @@ export function freshDb({ before }: { before?: string } = {}) {
 	applyMigrations(sqlite, { before });
 	type Method = "run" | "all" | "values" | "get";
 	const exec = (sql: string, params: unknown[], method: Method) => {
+		// D1 rejects statements with more than 100 bound parameters; local sqlite doesn't.
+		if (params.length > D1_MAX_BOUND_PARAMS)
+			throw new Error(`too many SQL variables: ${params.length} > ${D1_MAX_BOUND_PARAMS}`);
 		const stmt = sqlite.prepare(sql);
 		if (method === "run") {
 			stmt.run(...(params as never[]));

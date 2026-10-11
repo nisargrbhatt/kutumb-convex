@@ -13,6 +13,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { fullName } from "@/domain/communityProfile";
+import { editCopy } from "@/domain/memberRequests";
 import { formatRelationType } from "@/domain/relation";
 
 type Counterpart = {
@@ -60,11 +61,12 @@ export function RelationsTable({
 	action?: ReactNode;
 	onDelete?: (relationId: string) => Promise<unknown>;
 	isDeleting?: boolean;
-	/** Plain member on an active Userless Profile: delete becomes a removal suggestion. */
+	/** Plain member on an active Userless Profile: delete becomes a removal Change Request. */
 	suggest?: boolean;
 }) {
 	const [deleteId, setDeleteId] = useState<string | null>(null);
 	const icon = DIRECTION_ICON[direction];
+	const copy = editCopy(suggest).removeRelation;
 	const canDelete = direction === "outgoing" && onDelete !== undefined;
 
 	const confirmDelete = () => {
@@ -123,11 +125,7 @@ export function RelationsTable({
 												<Button
 													variant="ghost"
 													size="icon"
-													aria-label={
-														suggest
-															? `Suggest removing relation with ${name}`
-															: `Delete relation with ${name}`
-													}
+													aria-label={copy.label(name)}
 													onClick={() => setDeleteId(row.id)}
 												>
 													<Trash2 className="size-4 text-destructive" />
@@ -155,13 +153,9 @@ export function RelationsTable({
 				<ConfirmDialog
 					open={deleteId !== null}
 					onOpenChange={(open) => !open && setDeleteId(null)}
-					title={suggest ? "Suggest removing this relation?" : "Delete relation"}
-					description={
-						suggest
-							? "An owner/admin reviews the removal. The relation stays until then."
-							: "This removes the relation. This action cannot be undone."
-					}
-					confirmLabel={suggest ? "Submit for review" : "Delete"}
+					title={copy.title}
+					description={copy.description}
+					confirmLabel={copy.confirm}
 					destructive
 					onConfirm={confirmDelete}
 					isPending={isDeleting}
