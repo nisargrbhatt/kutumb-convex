@@ -90,9 +90,7 @@ async function limitCase(env: Env, n: number, mode: "batch" | "serial") {
 	let ran = 0;
 	try {
 		if (mode === "batch") {
-			const res = await env.DB.batch(
-				Array.from({ length: n }, () => env.DB.prepare("SELECT 1"))
-			);
+			const res = await env.DB.batch(Array.from({ length: n }, () => env.DB.prepare("SELECT 1")));
 			ran = res.length;
 		} else {
 			for (let i = 0; i < n; i++) {

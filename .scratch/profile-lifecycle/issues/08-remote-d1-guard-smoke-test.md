@@ -23,8 +23,8 @@ Delete the DB afterwards. If wrangler is not authenticated → stop, hand human 
 ## Acceptance criteria
 
 - [x] results table (technique × pass/fail) appended to
-  `.scratch/profile-lifecycle/research/01-d1-batch-atomicity.md` (branch
-  `research/d1-batch-atomicity`) or to this ticket's Resolution
+      `.scratch/profile-lifecycle/research/01-d1-batch-atomicity.md` (branch
+      `research/d1-batch-atomicity`) or to this ticket's Resolution
 - [x] chosen technique stated; if (a) fails, spec § Atomicity updated to the fallback
 - [x] throwaway DB deleted, no change to `wrangler.jsonc`
 
@@ -39,12 +39,12 @@ guarded DML. No schema change. Spec § Atomicity unchanged except gotcha notes.
 
 Batch: `INSERT audit 'pre'; guarded UPDATE (id=1 AND version=?); <guard>; INSERT audit 'post'`.
 
-| Technique | 0-row UPDATE (stale) | 1-row UPDATE (fresh) | Error surfaced |
-| --- | --- | --- | --- |
-| (a) `changes()` + `json('stale')` | pass: whole batch rolled back ('pre' gone) | pass: commits | `D1_ERROR: malformed JSON: SQLITE_ERROR` |
-| (b) CHECK guard table | pass | pass | `CHECK constraint failed … SQLITE_CONSTRAINT_CHECK` |
-| (d) `RAISE(ABORT,'stale')` trigger | pass | pass | `stale: SQLITE_CONSTRAINT (extended: SQLITE_CONSTRAINT_TRIGGER)` |
-| (a) via `wrangler d1 execute --remote` multi-stmt | pass (rolled back) | — | `malformed JSON` [code 7500] |
+| Technique                                         | 0-row UPDATE (stale)                       | 1-row UPDATE (fresh) | Error surfaced                                                   |
+| ------------------------------------------------- | ------------------------------------------ | -------------------- | ---------------------------------------------------------------- |
+| (a) `changes()` + `json('stale')`                 | pass: whole batch rolled back ('pre' gone) | pass: commits        | `D1_ERROR: malformed JSON: SQLITE_ERROR`                         |
+| (b) CHECK guard table                             | pass                                       | pass                 | `CHECK constraint failed … SQLITE_CONSTRAINT_CHECK`              |
+| (d) `RAISE(ABORT,'stale')` trigger                | pass                                       | pass                 | `stale: SQLITE_CONSTRAINT (extended: SQLITE_CONSTRAINT_TRIGGER)` |
+| (a) via `wrangler d1 execute --remote` multi-stmt | pass (rolled back)                         | —                    | `malformed JSON` [code 7500]                                     |
 
 - `changes()` across batch statements: UPDATE 3 rows → 3; UPDATE 0 rows → 0; UPDATE 2 rows,
   `SELECT 1`, then `changes()` → 2; INSERT 1 → 1. So it = last completed INSERT/UPDATE/DELETE
@@ -52,7 +52,9 @@ Batch: `INSERT audit 'pre'; guarded UPDATE (id=1 AND version=?); <guard>; INSERT
   between.
 - Query limit: one `batch()` = one API request. Batches of 60/1100/5000 `SELECT 1` OK in one
   invocation; serial awaits stopped at 1000 (`Too many API requests by single Worker invocation`).
-  Account is paid (60 serial OK, free cap is 50). Statements inside a batch don't count individually.
-- Gotcha: drizzle `db.run(sql\`…${param}\`)` (raw SQL with bound params) inside `db.batch` throws
-  `Cannot read properties of undefined (reading 'bind')` (session.js uses `preparedQuery.stmt`,
-  undefined for raw sql). Param-less raw sql and query builders work. Use builders for guarded DML.
+  Account is paid (60 serial OK, free cap is 50). Statements inside a batch don't count
+  individually.
+- Gotcha: drizzle
+  `db.run(sql\`…${param}\`)`(raw SQL with bound params) inside`db.batch`throws`Cannot read
+  properties of undefined (reading 'bind')`(session.js uses`preparedQuery.stmt`, undefined for raw
+  sql). Param-less raw sql and query builders work. Use builders for guarded DML.

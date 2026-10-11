@@ -12,8 +12,8 @@ Spec: [spec.md § Mutation seam, § Audit emission](../spec.md)
   `profile.activated`; reject (reason required) → hard-delete + `rejected` + `profile.deleted`
   (snapshot), slot freed. Guard on `status='pending'` → `Conflict` when already closed.
 - `withdraw` for `create` (submitter only): hard-delete + `withdrawn` + `profile.deleted`.
-- Existing accept/reject buttons on member detail call `review`; reject opens reason dialog.
-  Retire `acceptCommunityProfile` / `rejectCommunityProfile`, `communityProfile.approve/reject`.
+- Existing accept/reject buttons on member detail call `review`; reject opens reason dialog. Retire
+  `acceptCommunityProfile` / `rejectCommunityProfile`, `communityProfile.approve/reject`.
 - Add `changeRequestKeys` to `src/queries/keys.ts`; mutations invalidate it.
 - Analytics: `change_request_submitted {kind}`, `change_request_reviewed {kind, decision}`,
   `change_request_withdrawn {kind}`; retire `member_profile_accepted/rejected`.
@@ -21,7 +21,7 @@ Spec: [spec.md § Mutation seam, § Audit emission](../spec.md)
 ## Acceptance criteria
 
 - [x] seam tests: create request lifecycle (approve / reject / withdraw / supersede via reassign &
-  delete), backfilled request (null submitter) reviewable, double review → `Conflict`
+      delete), backfilled request (null submitter) reviewable, double review → `Conflict`
 - [x] Member limit freed after reject/withdraw (test)
 - [x] browser: member creates draft, admin approves/rejects from detail page
 
@@ -32,10 +32,10 @@ Spec: [spec.md § Mutation seam, § Audit emission](../spec.md)
   other kinds → `Invalid` until 13) and `withdraw(actor, id)` (generic close; create also deletes
   draft); both return `{kind, profileId}`. `remove` refactored onto shared `planDelete`. 8 new seam
   tests. Server fns `src/server/changeRequest.ts` (`reviewChangeRequest`, `withdrawChangeRequest`,
-  `getPendingCreateRequest`); hooks `src/queries/changeRequest.ts`; reusable
-  `RejectRequestDialog`. Old accept/reject fns + hooks, `communityProfile.approve/reject`,
-  `member_profile_accepted/rejected` retired. `keys.ts` untouched (already had
-  `changeRequestKeys`). Browser-verified on worktree local D1: member adds 2 drafts; owner accepts
-  one (→ active), rejects other w/ reason (empty reason blocked; draft deleted, redirect to list).
+  `getPendingCreateRequest`); hooks `src/queries/changeRequest.ts`; reusable `RejectRequestDialog`.
+  Old accept/reject fns + hooks, `communityProfile.approve/reject`,
+  `member_profile_accepted/rejected` retired. `keys.ts` untouched (already had `changeRequestKeys`).
+  Browser-verified on worktree local D1: member adds 2 drafts; owner accepts one (→ active), rejects
+  other w/ reason (empty reason blocked; draft deleted, redirect to list).
 - "Supersede via reassign" N/A for create: reassign of a draft is `Invalid` per 04; tested that the
   create CR stays pending. Delete supersede tested.

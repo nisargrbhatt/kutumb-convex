@@ -1,23 +1,22 @@
 # Change Request and Audit Event data model
 
-Type: grilling
-Status: resolved
-Blocked by: 01, 02
+Type: grilling Status: resolved Blocked by: 01, 02
 
 ## Question
 
 Design the D1/Drizzle tables for Change Requests and Audit Events. Settle:
 
 - Change Request columns: kind (create / info / relation-add / relation-remove / address-add /
-  address-edit / address-remove), status (pending / approved / rejected / withdrawn /
-  superseded), submitter, reviewer, reason/note, timestamps, profile id, payload JSON.
+  address-edit / address-remove), status (pending / approved / rejected / withdrawn / superseded),
+  submitter, reviewer, reason/note, timestamps, profile id, payload JSON.
 - Payload shape per kind, including base values for stale detection (info patch) and how
   relation/address requests detect staleness.
 - Status/kind enums in `src/db/constants.ts`.
-- FK behaviour: Change Request on profile delete (cascade vs superseded-then-kept); Audit Event
-  has no profile FK, cascades with org only.
+- FK behaviour: Change Request on profile delete (cascade vs superseded-then-kept); Audit Event has
+  no profile FK, cascades with org only.
 - Indexes for the Reviews queue, My requests, History tab, org-wide log.
-- How the atomic apply is expressed given the findings of [D1 batch atomicity via Drizzle](01-d1-batch-atomicity.md).
+- How the atomic apply is expressed given the findings of
+  [D1 batch atomicity via Drizzle](01-d1-batch-atomicity.md).
 - Migration: new tables + backfill of pending create requests for existing `draft` profiles.
 
 ## Answer
@@ -33,8 +32,8 @@ Resolved 2026-10-10 (grilling).
 
 - `id`, `organizationId`, `profileId`, `profileName` (snapshot), `kind`, `status`, `targetId`
   (relation/address id, nullable), `payload` (`text({mode:"json"})`), `submitterUserId` (nullable),
-  `submitterName`, `createdAt`, `resolvedByUserId`, `resolvedByName`, `resolvedAt`,
-  `resolutionNote` (reject reason / approve note; null for withdrawn/superseded).
+  `submitterName`, `createdAt`, `resolvedByUserId`, `resolvedByName`, `resolvedAt`, `resolutionNote`
+  (reject reason / approve note; null for withdrawn/superseded).
 - Survives profile hard-delete so "My requests" still shows the outcome + reason.
 - Timestamps `integer timestamp_ms`.
 
@@ -46,8 +45,8 @@ Resolved 2026-10-10 (grilling).
 
 **Enums** (`src/db/constants.ts`)
 
-- `CHANGE_REQUEST_KIND`: `create | info | relation_add | relation_remove | address_add |
-  address_edit | address_remove`.
+- `CHANGE_REQUEST_KIND`:
+  `create | info | relation_add | relation_remove | address_add | address_edit | address_remove`.
 - `CHANGE_REQUEST_STATUS`: `pending | approved | rejected | withdrawn | superseded`.
 - `AUDIT_ACTION`: dotted names per [Audit Event taxonomy](02-audit-event-taxonomy.md).
 
@@ -94,8 +93,8 @@ auto-closed)
 - `changeRequest(organizationId, submitterUserId, createdAt)`: My requests
 - `changeRequest(profileId, status)`: supersede on reassign/delete, pending markers
 - `auditEvent(organizationId, createdAt)`: org log
-- `auditEvent(organizationId, profileId, createdAt)` + `(organizationId, counterpartProfileId,
-  createdAt)`: History tab (OR)
+- `auditEvent(organizationId, profileId, createdAt)` +
+  `(organizationId, counterpartProfileId, createdAt)`: History tab (OR)
 - `auditEvent(organizationId, actorUserId, createdAt)`: Actor filter
 - Action/category filter via `action IN (...)`; cursor `(createdAt, id)`.
 

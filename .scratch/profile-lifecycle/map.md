@@ -12,8 +12,8 @@ change, visible to owner/admin.
 ## Notes
 
 - Domain: `GLOSSARY.md` terms **Community Profile**, **Userless Profile**, **Change Request**,
-  **Review**, **Audit Event**, **Relation**, **Actor**, **Member limit**.
-  Relation direction per ADR 0001. Limits per ADR 0003.
+  **Review**, **Audit Event**, **Relation**, **Actor**, **Member limit**. Relation direction per
+  ADR 0001. Limits per ADR 0003.
 - Skills to consult: `grilling` + `domain-modeling` (default), `codebase-design`,
   `tanstack-start-best-practices`, `tanstack-query-best-practices`, `better-auth-best-practices`.
 - Existing code: create → `draft` → approve/reject already in `src/server/communityProfile.ts`
@@ -23,8 +23,8 @@ change, visible to owner/admin.
 - Settled at charting (2026-10-10):
   - One concept: every member change to a Userless Profile is a Change Request, one queue. Create
     still materialises a `draft` row.
-  - One Change Request = one thing: create, or one info patch, one relation add/remove, one
-    address add/edit/remove.
+  - One Change Request = one thing: create, or one info patch, one relation add/remove, one address
+    add/edit/remove.
   - While `draft`, creator + owner/admin edit it freely; the whole draft is judged at the create
     Review.
   - Owner/admin changes apply directly, audited as auto-approved. Admin may approve own request.
@@ -44,8 +44,8 @@ change, visible to owner/admin.
   - UI: "Reviews" page (DataTable + diff drawer + reject-reason dialog), pending badge for
     owner/admin, "My requests" for members; "History" tab on member detail + org-wide audit
     DataTable, owner/admin only.
-  - Permissions: new statements `changeRequest: ["create","review"]`, `auditEvent: ["read"]`;
-    retire `communityProfile.approve/reject/manageRelations`.
+  - Permissions: new statements `changeRequest: ["create","review"]`, `auditEvent: ["read"]`; retire
+    `communityProfile.approve/reject/manageRelations`.
   - Migration backfills a pending create request for every existing `draft` profile; existing
     `inactive` untouched.
   - In-app notification only.
@@ -55,9 +55,9 @@ change, visible to owner/admin.
 <!-- one line per closed ticket -->
 
 - [D1 batch atomicity via Drizzle](issues/01-d1-batch-atomicity.md): `db.batch` = one transaction
-  with rollback; no interactive tx. Guards go in-batch via `WHERE`; 0-row guard must be forced
-  into an error (`changes()` + `json('stale')` trick recommended). Text JSON payload columns.
-  Remote smoke test still owed.
+  with rollback; no interactive tx. Guards go in-batch via `WHERE`; 0-row guard must be forced into
+  an error (`changes()` + `json('stale')` trick recommended). Text JSON payload columns. Remote
+  smoke test still owed.
 - [Audit Event taxonomy](issues/02-audit-event-taxonomy.md): 17 dotted actions; approve = request
   event + applied event; direct edits unlinked; diff for updates, snapshots otherwise; Actor +
   profile + counterpart snapshotted, no FKs; cascades emit per-relation events; History/org-log
@@ -76,12 +76,12 @@ change, visible to owner/admin.
   active-only org-wide; pending banner on detail only; MCP tightened to active-only.
 - [Review and audit UI prototype](issues/06-review-and-audit-ui-prototype.md): Reviews grouped by
   profile + stacked drawer w/ overlap warning; whole-info suggest drawer + own My requests page with
-  unseen-outcome nav badge (`submitterSeenAt`); History/audit grouped by Change Request; Reviews,
-  My requests, Audit log all in Community nav.
+  unseen-outcome nav badge (`submitterSeenAt`); History/audit grouped by Change Request; Reviews, My
+  requests, Audit log all in Community nav.
 - [Assemble spec and implementation slices](issues/07-assemble-spec-and-slices.md):
-  [spec.md](spec.md) + slices 08–16 (all AFK); badges via `changeRequestKeys`, 60s stale + focus,
-  no polling; audit paged by group; client-side PostHog events; remote-D1 smoke test first;
-  ADR 0005 for audit retention/PII.
+  [spec.md](spec.md) + slices 08–16 (all AFK); badges via `changeRequestKeys`, 60s stale + focus, no
+  polling; audit paged by group; client-side PostHog events; remote-D1 smoke test first; ADR 0005
+  for audit retention/PII.
 - [Remote-D1 guard smoke test](issues/08-remote-d1-guard-smoke-test.md): remote D1 confirms (a)
   `changes()`+`json('stale')` (chosen), (b), (d) roll back whole batch; `changes()` = last DML;
   batch = 1 API request toward 1000 cap; raw `sql` w/ params breaks in `db.batch`, use builders.

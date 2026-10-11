@@ -1,13 +1,11 @@
 # Read-side visibility of drafts and pending changes
 
-Type: grilling
-Status: resolved
-Blocked by:
+Type: grilling Status: resolved Blocked by:
 
 ## Question
 
-Enumerate every read of Community Profiles, relations, and addresses (members list + filters,
-member detail, community tree/graph + KV cache, relation picker `getActiveProfilesForRelation`,
+Enumerate every read of Community Profiles, relations, and addresses (members list + filters, member
+detail, community tree/graph + KV cache, relation picker `getActiveProfilesForRelation`,
 `searchCommunityProfilesLite`, dashboard counts, memories, MCP tools) and settle per read:
 
 - Whether `draft` profiles appear, and for whom (creator + owner/admin only).
@@ -21,13 +19,14 @@ Use a sub-agent to list the reads; the decisions are the user's.
 
 Resolved 2026-10-10 (grilling). Read inventory: 17 paths; no read checked role before this.
 
-**Visibility rule** (one Actor-aware predicate in `src/domain/queries/profiles.ts`, applied by
-every D1 read: list, detail, relations, counts; non-visible → `NotFound`, never `Forbidden`):
+**Visibility rule** (one Actor-aware predicate in `src/domain/queries/profiles.ts`, applied by every
+D1 read: list, detail, relations, counts; non-visible → `NotFound`, never `Forbidden`):
 
 - Owner/admin: every profile, any status.
 - Plain member: `active` profiles + drafts they created (creator = submitter of pending create
-  request, per [Change Request and Audit Event data model](03-change-request-and-audit-data-model.md);
-  backfilled drafts → owner/admin only) + own linked profile whatever its status.
+  request, per
+  [Change Request and Audit Event data model](03-change-request-and-audit-data-model.md); backfilled
+  drafts → owner/admin only) + own linked profile whatever its status.
 - `inactive` hidden from plain members (list, detail, counterparts).
 
 **Per read**
@@ -49,6 +48,6 @@ every D1 read: list, detail, relations, counts; non-visible → `NotFound`, neve
 Submitter: "Your change is pending" → My requests. Draft: "Awaiting review". Everyone else: nothing.
 Displayed data = approved state, no merged preview. No marker in members list.
 
-**MCP** (in scope, own slice; all roles incl. admin): `search_profiles` loses `status` input
-(active only); `get_profile` NotFound for non-active except caller's own; counterparts filtered to
-active; `get_family_graph` unchanged.
+**MCP** (in scope, own slice; all roles incl. admin): `search_profiles` loses `status` input (active
+only); `get_profile` NotFound for non-active except caller's own; counterparts filtered to active;
+`get_family_graph` unchanged.

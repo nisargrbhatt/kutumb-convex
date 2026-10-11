@@ -1,8 +1,6 @@
 # Audit Event taxonomy
 
-Type: grilling
-Status: resolved
-Blocked by:
+Type: grilling Status: resolved Blocked by:
 
 ## Question
 
@@ -13,8 +11,8 @@ What exactly does an Audit Event record? Settle:
   withdrawn/superseded, direct owner/admin edit) — names go in `src/db/constants.ts`.
 - Payload per action: full before/after snapshot vs diff; whether the Actor's name/role is
   snapshotted at the time (actor may leave the org).
-- Subject keys: profile id always; relation/address ids; Change Request id; how events stay
-  readable after the profile is hard-deleted (display name snapshot?).
+- Subject keys: profile id always; relation/address ids; Change Request id; how events stay readable
+  after the profile is hard-deleted (display name snapshot?).
 - Is a Review one event or does it emit both "request approved" and the applied change event?
 - Which reads the History tab vs org-wide log need (filters → indexes).
 

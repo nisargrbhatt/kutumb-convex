@@ -9,7 +9,7 @@
 		{
 			"binding": "DB",
 			"database_name": "kutumb-guard-smoke",
-			"database_id": "bc82d5a0-6126-4ed2-9b18-7be8c7026f33"
-		}
-	]
+			"database_id": "bc82d5a0-6126-4ed2-9b18-7be8c7026f33",
+		},
+	],
 }

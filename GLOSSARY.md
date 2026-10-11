@@ -18,17 +18,16 @@ When unqualified "member" is unavoidable, it means **Community Profile** in the 
 
 A person in a community. Has a `status` (`draft | active | inactive`) and an optional link to an Org
 Member (the linked user). Created either by a user describing themselves, or by another member on
-someone else's behalf (see Userless Profile).
-`inactive` means deactivated: seen only by owner/admin and its linked user. Other members see
-only `active` profiles, plus drafts they created.
+someone else's behalf (see Userless Profile). `inactive` means deactivated: seen only by owner/admin
+and its linked user. Other members see only `active` profiles, plus drafts they created.
 
 ## Userless Profile
 
 A Community Profile with no linked Org Member. Created by another member (e.g. to record a relative
 who has no account). One created by an owner/admin is `active` at once; one created by any other
 member starts `draft`, becomes `active` once an owner/admin approves it, and is removed if rejected
-or withdrawn. Because no user "owns" it, owner/admin act on its behalf, and every other
-member's change to it is a Change Request. _Avoid_: "orphan profile".
+or withdrawn. Because no user "owns" it, owner/admin act on its behalf, and every other member's
+change to it is a Change Request. _Avoid_: "orphan profile".
 
 ## Change Request
 
@@ -39,8 +38,8 @@ Ends **approved** or **rejected** by a Review, **withdrawn** by its submitter, o
 when its profile is reassigned or deleted while it is pending. Only an `active` Userless Profile
 takes Change Requests beyond its creation. The member who proposes it is its **submitter**. A
 pending Change Request is **stale** when its profile or target changed since submission so it can no
-longer apply as proposed; a stale one can only be rejected or withdrawn.
-_Avoid_: "suggestion", "edit request".
+longer apply as proposed; a stale one can only be rejected or withdrawn. _Avoid_: "suggestion",
+"edit request".
 
 ## Review
 

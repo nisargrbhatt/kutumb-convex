@@ -11,16 +11,16 @@ of who changed what. Drafts and `inactive` profiles are also visible to every me
 
 ## Solution
 
-Every member change to a Userless Profile becomes a **Change Request** in one owner/admin
-**Review** queue. Owner/admin changes apply directly. Every Community Profile change (linked or
-userless, direct or reviewed) writes an **Audit Event**, atomically with the change, kept forever.
-Owner/admin get a Reviews page, an org-wide Audit log and a History tab per profile. Members get
-"Suggest" drawers and a My requests page. Reads hide drafts and `inactive` profiles from members who
-shouldn't see them.
+Every member change to a Userless Profile becomes a **Change Request** in one owner/admin **Review**
+queue. Owner/admin changes apply directly. Every Community Profile change (linked or userless,
+direct or reviewed) writes an **Audit Event**, atomically with the change, kept forever. Owner/admin
+get a Reviews page, an org-wide Audit log and a History tab per profile. Members get "Suggest"
+drawers and a My requests page. Reads hide drafts and `inactive` profiles from members who shouldn't
+see them.
 
 Terms (`GLOSSARY.md`): **Community Profile**, **Userless Profile**, **Change Request**, **Review**,
-**Audit Event**, **Relation** (direction per ADR 0001), **Actor**, **Member limit** (ADR 0003).
-ADR 0005 records audit retention / PII.
+**Audit Event**, **Relation** (direction per ADR 0001), **Actor**, **Member limit** (ADR 0003). ADR
+0005 records audit retention / PII.
 
 ## User stories
 
@@ -30,8 +30,8 @@ ADR 0005 records audit retention / PII.
   until reviewed; I can withdraw it (deleted, slot freed).
 - On an `active` Userless Profile: suggest an info edit (incl. Custom Field Values), an outgoing
   relation add/remove, an address add/edit/remove. Each is one Change Request.
-- See "Your change is pending" on that profile; see all my requests, their outcome, reason/note
-  and reviewer on My requests; badge when something was resolved since I last looked.
+- See "Your change is pending" on that profile; see all my requests, their outcome, reason/note and
+  reviewer on My requests; badge when something was resolved since I last looked.
 - Withdraw a pending request.
 - Edit my own linked profile directly (still audited).
 - Never see others' drafts, `inactive` profiles, or others' pending requests.
@@ -41,8 +41,8 @@ ADR 0005 records audit retention / PII.
 - Reviews page: profiles with pending requests, oldest first; drawer with each request's
   before/after diff, stale reason, overlap warning; approve (optional note) or reject (required
   reason). Nav badge with pending count.
-- Edit any Userless Profile directly (info, relations, addresses); deactivate / reactivate;
-  owner deletes. Pending requests are superseded on reassign/deactivate/delete.
+- Edit any Userless Profile directly (info, relations, addresses); deactivate / reactivate; owner
+  deletes. Pending requests are superseded on reassign/deactivate/delete.
 - History tab on member detail; org-wide Audit log with filters.
 
 ## Implementation decisions
@@ -54,24 +54,24 @@ Race-free guards live in `WHERE` (`id=? AND version=?`, `status='pending'`), fol
 `SELECT CASE WHEN changes()=1 THEN 1 ELSE json('stale') END` to turn a 0-row guard into an error
 that rolls the batch back. Confirmed on remote D1 by
 [slice 08](issues/08-remote-d1-guard-smoke-test.md); CHECK guard table / trigger also work. The
-guard must come right after its guarded DML (`changes()` = last INSERT/UPDATE/DELETE). Batch DML
-via Drizzle builders; raw `db.run(sql\`…${param}\`)` inside `db.batch` throws (drizzle 0.45.2).
+guard must come right after its guarded DML (`changes()` = last INSERT/UPDATE/DELETE). Batch DML via
+Drizzle builders; raw `db.run(sql\`…${param}\`)`inside`db.batch` throws (drizzle 0.45.2).
 
 ### Schema
 
 Per [data model](issues/03-change-request-and-audit-data-model.md), plus `submitterSeenAt`:
 
 - `communityProfile.version`, `communityAddress.version`: int default 0, bumped on every write.
-- `changeRequest`: `id, organizationId (FK cascade), profileId, profileName, kind, status,
-  targetId?, payload json, submitterUserId?, submitterName, createdAt, resolvedByUserId?,
-  resolvedByName?, resolvedAt?, resolutionNote?, submitterSeenAt?`. No profile/user FKs.
-- `auditEvent`: `id, organizationId (FK cascade), action, createdAt, actorUserId, actorName,
-  actorRole, profileId, profileName, counterpartProfileId?, counterpartName?, targetId?,
-  changeRequestId?, payload json`. No other FKs.
-- Enums in `src/db/constants.ts`: `CHANGE_REQUEST_KIND` (`create | info | relation_add |
-  relation_remove | address_add | address_edit | address_remove`), `CHANGE_REQUEST_STATUS`
-  (`pending | approved | rejected | withdrawn | superseded`), `AUDIT_ACTION` (17 dotted names per
-  [taxonomy](issues/02-audit-event-taxonomy.md)).
+- `changeRequest`:
+  `id, organizationId (FK cascade), profileId, profileName, kind, status, targetId?, payload json, submitterUserId?, submitterName, createdAt, resolvedByUserId?, resolvedByName?, resolvedAt?, resolutionNote?, submitterSeenAt?`.
+  No profile/user FKs.
+- `auditEvent`:
+  `id, organizationId (FK cascade), action, createdAt, actorUserId, actorName, actorRole, profileId, profileName, counterpartProfileId?, counterpartName?, targetId?, changeRequestId?, payload json`.
+  No other FKs.
+- Enums in `src/db/constants.ts`: `CHANGE_REQUEST_KIND`
+  (`create | info | relation_add | relation_remove | address_add | address_edit | address_remove`),
+  `CHANGE_REQUEST_STATUS` (`pending | approved | rejected | withdrawn | superseded`), `AUDIT_ACTION`
+  (17 dotted names per [taxonomy](issues/02-audit-event-taxonomy.md)).
 - Indexes: per data model ticket.
 - One migration; hand-appended `INSERT … SELECT` backfills a pending `create` request (null
   submitter, "Unknown") per existing `draft`; no audit backfill.
@@ -80,13 +80,14 @@ Per [data model](issues/03-change-request-and-audit-data-model.md), plus `submit
 
 `changeRequest: ["create", "review"]` (member: create; admin/owner: create + review),
 `auditEvent: ["read"]` (admin/owner). Retire `communityProfile.approve / reject / manageRelations`
-and the glossary-less "Manage Relations" UI copy. Keep `communityProfile.create / delete /
-reassign`.
+and the glossary-less "Manage Relations" UI copy. Keep
+`communityProfile.create / delete / reassign`.
 
 ### Mutation seam
 
-[Profile mutation seam](issues/04-profile-mutation-seam.md): `makeProfileChanges({ db, limits,
-onGraphChanged })` in `src/domain/profileChanges.ts`, wired in `src/lib/profileChanges.ts`.
+[Profile mutation seam](issues/04-profile-mutation-seam.md):
+`makeProfileChanges({ db, limits, onGraphChanged })` in `src/domain/profileChanges.ts`, wired in
+`src/lib/profileChanges.ts`.
 
 - `submit(actor, change)` → `applied | requested(changeRequestId) | unchanged`. Routing inside:
   linked → only its user, direct; userless `draft` → creator or owner/admin direct, else NotFound;
@@ -111,8 +112,8 @@ onGraphChanged })` in `src/domain/profileChanges.ts`, wired in `src/lib/profileC
 
 Per [taxonomy](issues/02-audit-event-taxonomy.md): approve = `change_request.approved` + applied
 event (Actor = reviewer, `changeRequestId` set); reject create = `rejected` + `profile.deleted`;
-withdraw create = `withdrawn` + `profile.deleted`; direct/draft edits = change event only;
-delete = full snapshot + `relation.removed` per cascaded relation. `*.updated` payload
+withdraw create = `withdrawn` + `profile.deleted`; direct/draft edits = change event only; delete =
+full snapshot + `relation.removed` per cascaded relation. `*.updated` payload
 `{ field: [before, after] }`; create/delete/add/remove = snapshots.
 
 ### Read-side visibility
@@ -134,10 +135,10 @@ NotFound for non-active except caller's own, counterparts active-only.
 - **Reviews** `/reviews`: DataTable grouped by profile (profile, count, stale, kinds, oldest age);
   right drawer stacks the profile's requests with diff, stale reason, overlap warning, optional
   approve note, reject → reason dialog ("draft will be deleted" for create).
-- **Suggest** drawers on active Userless Profile detail: whole info form, address, relation.
-  Toast + pending banner.
-- **My requests** `/my-requests`: DataTable (kind, profile, status, outcome, submitted); drawer
-  with outcome + diff; Withdraw → confirm dialog. Visiting marks resolved requests seen.
+- **Suggest** drawers on active Userless Profile detail: whole info form, address, relation. Toast +
+  pending banner.
+- **My requests** `/my-requests`: DataTable (kind, profile, status, outcome, submitted); drawer with
+  outcome + diff; Withdraw → confirm dialog. Visiting marks resolved requests seen.
 - **History**: one component for member detail tab and `/audit-log`; rows grouped by Change Request
   (summary, How badge: pending / approved / rejected / withdrawn / superseded / direct / self-edit,
   when), expandable to per-event rows with Actor, role, diff. Org log filters: action by category,
@@ -145,8 +146,8 @@ NotFound for non-active except caller's own, counterparts active-only.
 - **Lifecycle actions**: member detail "⋯" menu (owner/admin): Deactivate / Reactivate, Delete
   (owner). Confirm dialogs warn "N pending requests will be superseded".
 - Owner/admin edit drawers on Userless Profile detail for info + addresses (relations exist).
-- Every page: breadcrumbs, responsive, react-hook-form + zod, right drawers for create/edit,
-  dialogs for confirms.
+- Every page: breadcrumbs, responsive, react-hook-form + zod, right drawers for create/edit, dialogs
+  for confirms.
 
 ### Query keys + badges
 
