@@ -97,7 +97,9 @@ export function diffRows(payload: unknown): DiffRow[] {
 			}
 			continue;
 		}
-		if (isPair(v)) rows.push({ label: humanize(key), before: v[0], after: v[1] });
+		// Nested snapshot (e.g. submitted create `{ kind, profile }`): flatten one level.
+		if (isRecord(v)) rows.push(...diffRows(v));
+		else if (isPair(v)) rows.push({ label: humanize(key), before: v[0], after: v[1] });
 		else if (v !== null && v !== undefined && v !== "")
 			rows.push({ label: humanize(key), value: v });
 	}

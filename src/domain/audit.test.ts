@@ -86,6 +86,12 @@ describe("diffRows", () => {
 		]);
 	});
 
+	it("nested snapshot (submitted create `{ kind, profile }`) is flattened", () => {
+		expect(diffRows({ kind: "create", profile: { id: "p", firstName: "A" } })).toEqual([
+			{ label: "First name", value: "A" },
+		]);
+	});
+
 	it("non-objects yield nothing", () => {
 		expect(diffRows(null)).toEqual([]);
 	});
