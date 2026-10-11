@@ -1,20 +1,8 @@
-import type { ChangeRequestKind } from "./changeRequest";
 import { isAppError } from "./errors";
 
 /**
  * Member-side Change Request presentation (Suggest drawers, My requests). Pure, client-safe.
  */
-
-/** Short label per Change Request kind (tables, drawer titles). */
-export const CHANGE_REQUEST_KIND_LABEL: Record<ChangeRequestKind, string> = {
-	create: "New profile",
-	info: "Edit info",
-	relation_add: "Add relation",
-	relation_remove: "Remove relation",
-	address_add: "Add address",
-	address_edit: "Edit address",
-	address_remove: "Remove address",
-};
 
 export type ProfileEditMode ="direct" | "suggest" | "none";
 

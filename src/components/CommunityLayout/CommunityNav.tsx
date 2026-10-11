@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { History, Inbox, LayoutList, LayoutDashboard } from "lucide-react";
+import { ClipboardCheck, History, Inbox, LayoutList, LayoutDashboard } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { unseenCountQuery } from "@/queries/changeRequest";
-import { useOrgId } from "@/queries/mutation";
+import { pendingCountQuery, unseenCountQuery } from "@/queries/changeRequest";
+import { useActor } from "@/hooks/useActor";
 
 import {
 	SidebarGroup,
@@ -19,7 +19,13 @@ import { IconBinaryTree, IconPhoto } from "@tabler/icons-react";
 export function CommunityNav() {
 	const { toggleSidebar, isMobile, open } = useSidebar();
 	const canReadAudit = useCan({ auditEvent: ["read"] });
-	const { data: unseen } = useQuery(unseenCountQuery(useOrgId()));
+	const canReview = useCan({ changeRequest: ["review"] });
+	const orgId = useActor()?.organizationId ?? "";
+	const { data: pendingCount = 0 } = useQuery({
+		...pendingCountQuery(orgId),
+		enabled: canReview,
+	});
+	const { data: unseen = 0 } = useQuery({ ...unseenCountQuery(orgId), enabled: orgId !== "" });
 
 	return (
 		<SidebarGroup>
@@ -125,6 +131,30 @@ export function CommunityNav() {
 						</SidebarMenuBadge>
 					) : null}
 				</SidebarMenuItem>
+				{canReview ? (
+					<SidebarMenuItem
+						onClick={() => {
+							if (open && isMobile) {
+								toggleSidebar();
+							}
+						}}
+					>
+						<SidebarMenuButton
+							render={<Link to={"/reviews"} activeProps={{ className: "bg-muted" }} />}
+						>
+							<ClipboardCheck />
+							<span>Reviews</span>
+						</SidebarMenuButton>
+						{pendingCount > 0 ? (
+							<SidebarMenuBadge
+								className="bg-primary text-primary-foreground peer-hover/menu-button:text-primary-foreground peer-data-active/menu-button:text-primary-foreground"
+								aria-label={`${pendingCount} pending`}
+							>
+								{pendingCount > 99 ? "99+" : pendingCount}
+							</SidebarMenuBadge>
+						) : null}
+					</SidebarMenuItem>
+				) : null}
 				{canReadAudit ? (
 					<SidebarMenuItem
 						onClick={() => {

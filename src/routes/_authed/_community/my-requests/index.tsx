@@ -5,11 +5,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { formatDistanceToNow, format } from "date-fns";
 import { AlertTriangle, ExternalLink, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
-import {
-	RequestDiff,
-	RequestKindBadge,
-	RequestStatusBadge,
-} from "@/components/changeRequest/RequestDiff";
+import { KindBadge, RequestDiff } from "@/components/changeRequest/RequestDiff";
+import { RequestStatusBadge } from "@/components/changeRequest/RequestStatusBadge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -24,7 +21,8 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { staleReasonText } from "@/domain/changeRequest";
-import { CHANGE_REQUEST_KIND_LABEL, requestOutcome } from "@/domain/memberRequests";
+import { requestOutcome } from "@/domain/memberRequests";
+import { requestKindLabel } from "@/domain/requestDiff";
 import type { MyRequest } from "@/domain/queries/changeRequests";
 import { cn } from "@/lib/utils";
 import {
@@ -94,7 +92,7 @@ function RouteComponent() {
 					{isUnseen(row.original) ? (
 						<span className="size-2 shrink-0 rounded-full bg-primary" aria-label="New outcome" />
 					) : null}
-					<RequestKindBadge kind={row.original.kind} />
+					<KindBadge kind={row.original.kind} />
 				</div>
 			),
 		},
@@ -174,7 +172,7 @@ function RequestDrawer({ request, onClose }: { request: MyRequest | null; onClos
 					<>
 						<SheetHeader className="border-b pr-12">
 							<SheetTitle>
-								{CHANGE_REQUEST_KIND_LABEL[request.kind]} · {request.profileName}
+								{requestKindLabel(request.kind)} · {request.profileName}
 							</SheetTitle>
 							<SheetDescription>
 								Submitted <When at={request.createdAt} />
@@ -224,7 +222,10 @@ function RequestDrawer({ request, onClose }: { request: MyRequest | null; onClos
 								) : null}
 								<section className="flex flex-col gap-2">
 									<h3 className="text-sm font-medium">What you suggested</h3>
-									<RequestDiff kind={request.kind} payload={request.payload} />
+									<RequestDiff
+										request={request}
+										emptyText="A new profile, saved as a draft until reviewed."
+									/>
 								</section>
 							</div>
 						</ScrollArea>

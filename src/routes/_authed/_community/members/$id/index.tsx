@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { MapPin } from "lucide-react";
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
+import { PendingReviewBanner } from "@/components/changeRequest/PendingReviewBanner";
 import { AddAddressButton, AddressActions } from "@/components/address/AddressActions";
 import { ProfileIdentityHeader } from "@/components/profile/ProfileIdentityHeader";
 import { ProfileInfoView } from "@/components/profile/ProfileInfoView";
@@ -71,6 +72,7 @@ function RouteComponent() {
 				/>
 
 				<ProfileRequestBanner orgId={orgId} profile={profile} canReview={canReview} />
+				{canReview ? <PendingReviewBanner orgId={orgId} profileId={profile.id} /> : null}
 
 				<Tabs defaultValue="overview" className="gap-4">
 					{canAudit ? (
