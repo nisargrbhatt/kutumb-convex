@@ -4,7 +4,7 @@ import { isAppError } from "./errors";
  * Member-side Change Request presentation (Suggest drawers, My requests). Pure, client-safe.
  */
 
-export type ProfileEditMode ="direct" | "suggest" | "none";
+export type ProfileEditMode = "direct" | "suggest" | "none";
 
 /**
  * What the viewer's edit controls do on a member detail page. Owner/admin edit Userless Profiles

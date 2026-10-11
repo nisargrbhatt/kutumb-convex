@@ -84,7 +84,12 @@ function PendingMineBanner({ orgId, profileId }: { orgId: string; profileId: str
 				info until an owner/admin reviews {n === 1 ? "it" : "them"}.
 			</AlertDescription>
 			<AlertAction>
-				<Button size="sm" variant="outline" render={<Link to="/my-requests" />} nativeButton={false}>
+				<Button
+					size="sm"
+					variant="outline"
+					render={<Link to="/my-requests" />}
+					nativeButton={false}
+				>
 					My requests
 				</Button>
 			</AlertAction>

@@ -94,7 +94,7 @@ export function toastSubmitError(title: string, fallback: string) {
 	};
 }
 
-type BetterAuthResult<T> ={ data: T | null; error: { code?: string; message?: string } | null };
+type BetterAuthResult<T> = { data: T | null; error: { code?: string; message?: string } | null };
 
 /** better-auth client returns `{ data, error }`; mutations want a throw carrying `code`. */
 export async function unwrap<T>(result: Promise<BetterAuthResult<T>>): Promise<T> {

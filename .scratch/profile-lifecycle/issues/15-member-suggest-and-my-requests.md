@@ -1,6 +1,6 @@
 # Member side: Suggest drawers + My requests
 
-Type: AFK Status: ready-for-agent Blocked by: 12, 13
+Type: AFK Status: resolved Blocked by: 12, 13
 
 Spec: [spec.md § UI, § Query keys + badges](../spec.md)
 
@@ -19,7 +19,25 @@ Spec: [spec.md § UI, § Query keys + badges](../spec.md)
 
 ## Acceptance criteria
 
-- [ ] responsive; drawers usable on phone
-- [ ] browser: member suggests each kind, sees pending, admin approves (via 14 or seam), member
+- [x] responsive; drawers usable on phone
+- [x] browser: member suggests each kind, sees pending, admin approves (via 14 or seam), member
   sees badge → visits → badge clears
-- [ ] `Stale` on submit → "Profile changed, reload" toast
+- [x] `Stale` on submit → "Profile changed, reload" toast
+
+## Comments
+
+- 2026-10-11 (plc-15): done. `profileEditMode` / `requestOutcome` / `submitFeedback` /
+  `submitErrorFeedback` (pure, `src/domain/memberRequests.ts`, 7 tests). Submit hooks
+  (info/address/relation) outcome-aware via `useNotifySubmit` + `toastSubmitError`
+  (`src/queries/mutation.ts`): `requested` → "Sent for review" + `change_request_submitted {kind}`.
+  Existing drawers take a `suggest` copy flag; `ProfileForm` mode `suggest`. Banners
+  `ProfileRequestBanner` (draft "Awaiting review" + submitter Withdraw; member "Your change is
+  pending"). `/my-requests` DataTable + drawer (outcome, stale, 14's `RequestDiff`, Withdraw
+  confirm) + `markRequestsSeen`; nav item w/ unseen badge. Own draft: member edits directly.
+- Fix: `src/start.ts` registers an `AppError` serialization adapter — server fn errors reached the
+  client as plain `Error` (message only), so every client `isAppError` check (Stale toast, 14's
+  `stale_blocked`, limit codes, loader NotFound on client nav) silently failed.
+- Browser-verified (worktree D1, 127.0.0.1:3015): member suggests info/address add/edit/remove,
+  relation add/remove; banner count; owner approves/rejects in Reviews; badge 2 → visit → clears;
+  withdraw; Stale toast; own draft edit + withdraw; other's draft / inactive by URL → 404 (SSR +
+  client nav; closes 12's unverified item); 375px no overflow.
