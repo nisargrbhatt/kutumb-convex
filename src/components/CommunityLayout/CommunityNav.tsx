@@ -1,4 +1,5 @@
-import { LayoutList, LayoutDashboard } from "lucide-react";
+import { History, LayoutList, LayoutDashboard } from "lucide-react";
+import { useCan } from "@/hooks/useCan";
 
 import {
 	SidebarGroup,
@@ -13,6 +14,7 @@ import { IconBinaryTree, IconPhoto } from "@tabler/icons-react";
 
 export function CommunityNav() {
 	const { toggleSidebar, isMobile, open } = useSidebar();
+	const canReadAudit = useCan({ auditEvent: ["read"] });
 
 	return (
 		<SidebarGroup>
@@ -96,6 +98,22 @@ export function CommunityNav() {
 						<span>Memories</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
+				{canReadAudit ? (
+					<SidebarMenuItem
+						onClick={() => {
+							if (open && isMobile) {
+								toggleSidebar();
+							}
+						}}
+					>
+						<SidebarMenuButton
+							render={<Link to={"/audit-log"} activeProps={{ className: "bg-muted" }} />}
+						>
+							<History />
+							<span>Audit log</span>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				) : null}
 			</SidebarMenu>
 		</SidebarGroup>
 	);

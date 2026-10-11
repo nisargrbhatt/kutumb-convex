@@ -1,6 +1,6 @@
 # History tab + org audit log
 
-Type: AFK Status: ready-for-agent Blocked by: 10
+Type: AFK Status: resolved Blocked by: 10
 
 Spec: [spec.md § UI, § Audit pagination](../spec.md)
 
@@ -19,8 +19,18 @@ Spec: [spec.md § UI, § Audit pagination](../spec.md)
 
 ## Acceptance criteria
 
-- [ ] query tests: group spanning days with interleaved groups stays one row, page boundaries
+- [x] query tests: group spanning days with interleaved groups stays one row, page boundaries
   never split a group, filters match group if any event matches, counterpart events appear in
   both profiles' History, deleted profile's events still listed
-- [ ] responsive; table → stacked on mobile
-- [ ] plain member: no tab, `/audit-log` redirects
+- [x] responsive; table → stacked on mobile
+- [x] plain member: no tab, `/audit-log` redirects
+
+## Comments
+
+- 2026-10-11: done on `plc-16-history-audit`. Query `listAuditGroups` / `listAuditFacets`
+  (`src/domain/queries/audit.ts`), presentation helpers `groupHow` / `groupSummary` / `diffRows`
+  (`src/domain/audit.ts`), shared `AuditHistory` (`src/components/audit/`), History tab on member
+  detail, `/audit-log` (filters in URL search, load-more), nav item. How: `self-edit` = unlinked
+  member-role event (incl. own-draft edits), per prototype C. Profile/Actor filter options come
+  from the log itself (deleted profiles + departed Actors stay selectable; subjects only). Browser
+  verified desktop/tablet/mobile + member redirect.
