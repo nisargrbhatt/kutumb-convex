@@ -1,10 +1,14 @@
-import { History, LayoutList, LayoutDashboard } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ClipboardCheck, History, LayoutList, LayoutDashboard } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
+import { pendingCountQuery } from "@/queries/changeRequest";
+import { useActor } from "@/hooks/useActor";
 
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
+	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	useSidebar,
@@ -15,6 +19,12 @@ import { IconBinaryTree, IconPhoto } from "@tabler/icons-react";
 export function CommunityNav() {
 	const { toggleSidebar, isMobile, open } = useSidebar();
 	const canReadAudit = useCan({ auditEvent: ["read"] });
+	const canReview = useCan({ changeRequest: ["review"] });
+	const orgId = useActor()?.organizationId ?? "";
+	const { data: pendingCount = 0 } = useQuery({
+		...pendingCountQuery(orgId),
+		enabled: canReview,
+	});
 
 	return (
 		<SidebarGroup>
@@ -98,6 +108,30 @@ export function CommunityNav() {
 						<span>Memories</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
+				{canReview ? (
+					<SidebarMenuItem
+						onClick={() => {
+							if (open && isMobile) {
+								toggleSidebar();
+							}
+						}}
+					>
+						<SidebarMenuButton
+							render={<Link to={"/reviews"} activeProps={{ className: "bg-muted" }} />}
+						>
+							<ClipboardCheck />
+							<span>Reviews</span>
+						</SidebarMenuButton>
+						{pendingCount > 0 ? (
+							<SidebarMenuBadge
+								className="bg-primary text-primary-foreground peer-hover/menu-button:text-primary-foreground peer-data-active/menu-button:text-primary-foreground"
+								aria-label={`${pendingCount} pending`}
+							>
+								{pendingCount > 99 ? "99+" : pendingCount}
+							</SidebarMenuBadge>
+						) : null}
+					</SidebarMenuItem>
+				) : null}
 				{canReadAudit ? (
 					<SidebarMenuItem
 						onClick={() => {
