@@ -3,26 +3,29 @@ import { Plus } from "lucide-react";
 import { RelationForm } from "@/components/relations/RelationForm";
 import { RelationsTable } from "@/components/relations/RelationsTable";
 import { Button } from "@/components/ui/button";
-import { COMMUNITY_PROFILE_STATUS } from "@/db/constants";
-import { useCan } from "@/hooks/useCan";
-import { useAddRelationToProfile, useDeleteRelationFromProfile } from "@/queries/communityRelation";
+import { editCopy, type ProfileEditMode } from "@/domain/memberRequests";
+import { useAddRelation, useRemoveRelation } from "@/queries/communityRelation";
 import type { getCommunityMemberById } from "@/server/communityProfile";
 
 type Member = Awaited<ReturnType<typeof getCommunityMemberById>>;
 
-/** Relations of a member. Owner/admin manage outgoing relations of userless, active profiles. */
+/**
+ * Relations of a member. Outgoing relations of Userless Profiles: edited directly (`direct`) or
+ * suggested as Change Requests (`suggest`, plain member on an active profile).
+ */
 export function MemberRelations({
 	profile,
 	outgoingRelations,
 	incomingRelations,
-}: Pick<Member, "profile" | "outgoingRelations" | "incomingRelations">) {
+	editMode,
+}: Pick<Member, "profile" | "outgoingRelations" | "incomingRelations"> & {
+	editMode: ProfileEditMode;
+}) {
 	const [isAddOpen, setIsAddOpen] = useState(false);
-	const canManage =
-		useCan({ communityProfile: ["manageRelations"] }) &&
-		profile.userId == null &&
-		profile.status === COMMUNITY_PROFILE_STATUS.active;
-	const addRelation = useAddRelationToProfile(profile.id);
-	const deleteRelation = useDeleteRelationFromProfile(profile.id);
+	const canManage = editMode !== "none";
+	const suggest = editMode === "suggest";
+	const addRelation = useAddRelation(profile.id);
+	const deleteRelation = useRemoveRelation(profile.id);
 
 	const counterpartIds = [
 		...outgoingRelations.map((r) => r.toId),
@@ -47,10 +50,11 @@ export function MemberRelations({
 							trigger={
 								<Button size="sm">
 									<Plus className="size-4" />
-									Add relation
+									{editCopy(suggest).addRelation.title}
 								</Button>
 							}
-							description="Record an outgoing relation for this profile on its behalf."
+							suggest={suggest}
+							description={editCopy(suggest).addRelation.description}
 							onSubmit={addRelation.mutateAsync}
 							isPending={addRelation.isPending}
 						/>
@@ -58,6 +62,7 @@ export function MemberRelations({
 				}
 				onDelete={canManage ? deleteRelation.mutateAsync : undefined}
 				isDeleting={deleteRelation.isPending}
+				suggest={suggest}
 			/>
 			<RelationsTable
 				title="Listed as relative by"

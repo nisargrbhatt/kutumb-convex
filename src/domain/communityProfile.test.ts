@@ -4,6 +4,7 @@ import {
 	fullName,
 	initials,
 	memberFilterSchema,
+	memberStatusFilterOptions,
 	toFormValues,
 	toInput,
 	type CommunityProfileFormValues,
@@ -134,5 +135,22 @@ describe("initials", () => {
 
 	it("? when blank", () => {
 		expect(initials({ firstName: " ", lastName: "" })).toBe("?");
+	});
+});
+
+describe("memberStatusFilterOptions", () => {
+	const actor = (role: "owner" | "admin" | "member") => ({
+		userId: "u",
+		organizationId: "o",
+		role,
+	});
+
+	it("owner/admin: every status", () => {
+		expect(memberStatusFilterOptions(actor("owner"))).toEqual(["active", "inactive", "draft"]);
+		expect(memberStatusFilterOptions(actor("admin"))).toEqual(["active", "inactive", "draft"]);
+	});
+
+	it("plain member: draft only (their own drafts); no inactive", () => {
+		expect(memberStatusFilterOptions(actor("member"))).toEqual(["draft"]);
 	});
 });

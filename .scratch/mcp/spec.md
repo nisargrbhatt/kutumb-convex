@@ -18,7 +18,7 @@ result is a **Connection**, meaning one consent row, and every tool call runs as
 lists the member's Connections and lets them revoke any of them. A public setup guide explains how
 to connect each client.
 
-Terms (`CONTEXT.md`): **Actor**, **Connection**, **AI Client**, **Community Profile**, **Relation**
+Terms (`GLOSSARY.md`): **Actor**, **Connection**, **AI Client**, **Community Profile**, **Relation**
 (direction per ADR 0001). ADR 0004 records the auth decision.
 
 ## User stories

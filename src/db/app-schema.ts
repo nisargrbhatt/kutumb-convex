@@ -1,11 +1,15 @@
 import { integer, sqliteTable, text, blob, index } from "drizzle-orm/sqlite-core";
 import {
+	AUDIT_ACTION,
+	CHANGE_REQUEST_KIND,
+	CHANGE_REQUEST_STATUS,
 	COMMUNITY_ADDRESS_TYPE,
 	COMMUNITY_PROFILE_BLOOD_GROUP,
 	COMMUNITY_PROFILE_STATUS,
 	COMMUNITY_RELATION_TYPE,
 	CUSTOM_FIELD_TYPE,
 	GENDERS,
+	ORGANIZATION_ROLES,
 	enumValues,
 } from "./constants";
 import { relations } from "drizzle-orm";
@@ -62,6 +66,8 @@ export const communityProfile = sqliteTable(
 			})
 			.notNull(),
 		customFieldData: blob({ mode: "json" }).$type<CustomFieldValues>(),
+		/** Optimistic-concurrency counter, bumped on every write. */
+		version: integer("version").notNull().default(0),
 	},
 	(table) => [index("communityProfile_org_status_idx").on(table.organizationId, table.status)]
 );
@@ -95,6 +101,8 @@ export const communityAddress = sqliteTable("communityAddress", {
 	communityProfileId: text("communityProfileId").references(() => communityProfile.id, {
 		onDelete: "cascade",
 	}),
+	/** Optimistic-concurrency counter, bumped on every write. */
+	version: integer("version").notNull().default(0),
 });
 
 export const communityAddressRelations = relations(communityAddress, ({ one }) => ({
@@ -166,6 +174,89 @@ export const communityMemoryRelations = relations(communityMemory, ({ one }) => 
 		references: [organization.id],
 	}),
 }));
+
+// Change Request: a proposed profile change awaiting Review. FK to org only; profile/user are
+// snapshotted so the row survives profile hard-delete (My requests still shows the outcome).
+export const changeRequest = sqliteTable(
+	"changeRequest",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organizationId")
+			.references(() => organization.id, { onDelete: "cascade" })
+			.notNull(),
+		profileId: text("profileId").notNull(),
+		profileName: text("profileName").notNull(),
+		kind: text("kind", { mode: "text", enum: enumValues(CHANGE_REQUEST_KIND) }).notNull(),
+		status: text("status", { mode: "text", enum: enumValues(CHANGE_REQUEST_STATUS) })
+			.notNull()
+			.default(CHANGE_REQUEST_STATUS.pending),
+		/** Relation / address id for relation_remove, address_edit, address_remove. */
+		targetId: text("targetId"),
+		payload: text("payload", { mode: "json" }).$type<unknown>(),
+		submitterUserId: text("submitterUserId"),
+		submitterName: text("submitterName").notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+		resolvedByUserId: text("resolvedByUserId"),
+		resolvedByName: text("resolvedByName"),
+		resolvedAt: integer("resolvedAt", { mode: "timestamp_ms" }),
+		resolutionNote: text("resolutionNote"),
+		submitterSeenAt: integer("submitterSeenAt", { mode: "timestamp_ms" }),
+	},
+	(table) => [
+		index("changeRequest_org_status_created_idx").on(
+			table.organizationId,
+			table.status,
+			table.createdAt
+		),
+		index("changeRequest_org_submitter_created_idx").on(
+			table.organizationId,
+			table.submitterUserId,
+			table.createdAt
+		),
+		index("changeRequest_profile_status_idx").on(table.profileId, table.status),
+	]
+);
+
+// Audit Event: append-only record of a profile change or Review. FK to org only.
+export const auditEvent = sqliteTable(
+	"auditEvent",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organizationId")
+			.references(() => organization.id, { onDelete: "cascade" })
+			.notNull(),
+		action: text("action", { mode: "text", enum: enumValues(AUDIT_ACTION) }).notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+		actorUserId: text("actorUserId").notNull(),
+		actorName: text("actorName").notNull(),
+		actorRole: text("actorRole", { mode: "text", enum: enumValues(ORGANIZATION_ROLES) }).notNull(),
+		profileId: text("profileId").notNull(),
+		profileName: text("profileName").notNull(),
+		counterpartProfileId: text("counterpartProfileId"),
+		counterpartName: text("counterpartName"),
+		targetId: text("targetId"),
+		changeRequestId: text("changeRequestId"),
+		payload: text("payload", { mode: "json" }).$type<unknown>(),
+	},
+	(table) => [
+		index("auditEvent_org_created_idx").on(table.organizationId, table.createdAt),
+		index("auditEvent_org_profile_created_idx").on(
+			table.organizationId,
+			table.profileId,
+			table.createdAt
+		),
+		index("auditEvent_org_counterpart_created_idx").on(
+			table.organizationId,
+			table.counterpartProfileId,
+			table.createdAt
+		),
+		index("auditEvent_org_actor_created_idx").on(
+			table.organizationId,
+			table.actorUserId,
+			table.createdAt
+		),
+	]
+);
 
 // better-auth rate limiter state. Written only by `createD1RateLimitStorage`
 // (src/lib/rate-limit-d1.ts), never through the better-auth adapter.

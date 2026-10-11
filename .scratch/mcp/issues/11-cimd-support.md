@@ -1,6 +1,6 @@
 # CIMD support
 
-Type: AFK Status: done Blocked by: 10
+Type: AFK Status: resolved Blocked by: 10
 
 Spec: [spec.md § Auth stack, OAuth screens](../spec.md)
 

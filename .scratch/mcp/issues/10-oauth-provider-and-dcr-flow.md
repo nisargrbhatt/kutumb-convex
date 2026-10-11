@@ -1,6 +1,6 @@
 # OAuth provider + DCR flow
 
-Type: AFK Status: done Blocked by: 09
+Type: AFK Status: resolved Blocked by: 09
 
 Spec: [spec.md § Auth stack, OAuth screens, Rate limits](../spec.md)
 

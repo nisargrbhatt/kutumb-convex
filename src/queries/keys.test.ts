@@ -1,9 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { MEMBER_FILTER_DEFAULTS } from "@/domain/communityProfile";
-import { accountKeys, addressKeys, fieldKeys, orgKeys, profileKeys, relationKeys } from "./keys";
+import {
+	accountKeys,
+	addressKeys,
+	auditKeys,
+	changeRequestKeys,
+	fieldKeys,
+	orgKeys,
+	profileKeys,
+	relationKeys,
+} from "./keys";
 
 const ORG = "org_1";
-const factories = { profileKeys, relationKeys, addressKeys, fieldKeys, orgKeys };
+const factories = {
+	profileKeys,
+	relationKeys,
+	addressKeys,
+	fieldKeys,
+	orgKeys,
+	changeRequestKeys,
+	auditKeys,
+};
 
 // Sample args per factory name; orgId is always the first arg.
 const ARGS: Record<string, unknown[]> = {
@@ -12,6 +29,9 @@ const ARGS: Record<string, unknown[]> = {
 	forRelation: ["p1"],
 	graph: ["p1", 2],
 	search: ["q"],
+	forProfile: ["p1"],
+	log: [{}],
+	profile: ["p1", {}],
 };
 
 describe("org-scoped key factories", () => {

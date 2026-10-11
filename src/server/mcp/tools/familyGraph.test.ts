@@ -77,7 +77,7 @@ const chain = (n: number) =>
 
 function seed(extra = "") {
 	h.fresh.sqlite.exec(`
-		DELETE FROM communityRelation; DELETE FROM communityProfile; DELETE FROM user;
+		DELETE FROM changeRequest; DELETE FROM communityRelation; DELETE FROM communityProfile; DELETE FROM user;
 		DELETE FROM organization;
 		INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('u1', 'U1', 'u1@x.test', 1, 0, 0);
 		INSERT INTO organization (id, name, slug, created_at) VALUES ('o1', 'Org 1', 'o1', 0), ('o2', 'Org 2', 'o2', 0);
@@ -192,11 +192,21 @@ describe("get_family_graph", () => {
 		}
 	});
 
-	it("inactive profiles never appear as nodes or edges", async () => {
-		seed(family);
-		const g = (await call({ focusId: "jared" })).result.structuredContent;
-		expect(g.nodes.map((n: { id: string }) => n.id)).not.toContain("ghost");
-		expect(JSON.stringify(g.edges)).not.toContain("ghost");
+	it("inactive and draft profiles never appear as nodes or edges, for any role", async () => {
+		seed(
+			`${family}
+			${profile("dina", "Dina", { status: "draft" })}
+			${relation("r5", "jared", "dina", "sister")}
+			INSERT INTO changeRequest (id, organizationId, profileId, profileName, kind, status, submitterUserId, submitterName, createdAt)
+				VALUES ('cr1', 'o1', 'dina', 'Dina Shah', 'create', 'pending', 'u1', 'U1', 0);`
+		);
+		for (const role of ["member", "admin", "owner"] as const) {
+			const g = (await call({ focusId: "jared" }, { ...ACTOR, role })).result.structuredContent;
+			const ids = g.nodes.map((n: { id: string }) => n.id);
+			expect(ids).not.toContain("ghost");
+			expect(ids).not.toContain("dina");
+			expect(JSON.stringify(g.edges)).not.toMatch(/ghost|dina/);
+		}
 	});
 
 	it("description states the edge direction", async () => {

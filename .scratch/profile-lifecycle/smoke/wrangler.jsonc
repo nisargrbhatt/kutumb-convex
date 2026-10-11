@@ -1,0 +1,15 @@
+// Throwaway smoke-test Worker for ticket 08. NOT the app. DB + Worker deleted after run;
+// recreate with `wrangler d1 create kutumb-guard-smoke` and paste the new id to rerun.
+{
+	"name": "kutumb-guard-smoke",
+	"main": "worker.ts",
+	"compatibility_date": "2026-09-01",
+	"workers_dev": true,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "kutumb-guard-smoke",
+			"database_id": "bc82d5a0-6126-4ed2-9b18-7be8c7026f33",
+		},
+	],
+}

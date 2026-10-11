@@ -5,12 +5,15 @@ import {
 	memberAc,
 	ownerAc,
 } from "better-auth/plugins/organization/access";
+import type { OrganizationRole } from "@/db/constants";
 import { AppError } from "@/domain/errors";
 
 export const statement = {
 	...defaultStatements,
-	communityProfile: ["create", "approve", "reject", "delete", "reassign", "manageRelations"],
+	communityProfile: ["create", "delete", "reassign"],
 	customFields: ["create", "read", "delete"],
+	changeRequest: ["create", "review"],
+	auditEvent: ["read"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -19,23 +22,28 @@ export const member = ac.newRole({
 	...memberAc.statements,
 	communityProfile: ["create"],
 	customFields: ["read"],
+	changeRequest: ["create"],
 });
 
 export const admin = ac.newRole({
 	...adminAc.statements,
-	communityProfile: ["create", "approve", "reject", "reassign", "manageRelations"],
+	communityProfile: ["create", "reassign"],
 	customFields: ["read"],
+	changeRequest: ["create", "review"],
+	auditEvent: ["read"],
 });
 
 export const owner = ac.newRole({
 	...ownerAc.statements,
-	communityProfile: ["create", "approve", "reject", "delete", "reassign", "manageRelations"],
+	communityProfile: ["create", "delete", "reassign"],
 	customFields: ["read", "create", "delete"],
+	changeRequest: ["create", "review"],
+	auditEvent: ["read"],
 });
 
 const roles = { owner, admin, member };
 
-export type Role = "owner" | "admin" | "member";
+export type Role = OrganizationRole;
 export type Actor = { userId: string; organizationId: string; role: Role };
 export type Permissions = Partial<{
 	[K in keyof typeof statement]: (typeof statement)[K][number][];

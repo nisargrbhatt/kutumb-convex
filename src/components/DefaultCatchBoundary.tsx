@@ -7,6 +7,9 @@ const APP_ERROR_COPY: Record<string, string> = {
 	NotFound: "We couldn't find what you're looking for.",
 	LimitReached: "You've hit a plan limit.",
 	NoActiveOrg: "Select an organization first.",
+	Stale: "This record changed since you loaded it. Reload and try again.",
+	Conflict: "Someone else changed this at the same time. Reload and try again.",
+	Invalid: "That change isn't allowed.",
 };
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {

@@ -1,4 +1,14 @@
-export type AppErrorKind = "NotFound" | "Forbidden" | "LimitReached" | "NoActiveOrg";
+export type AppErrorKind =
+	| "NotFound"
+	| "Forbidden"
+	| "LimitReached"
+	| "NoActiveOrg"
+	/** Version mismatch / approve blocked: the record changed since it was read. */
+	| "Stale"
+	/** Concurrent write tripped a guard (e.g. request already closed). */
+	| "Conflict"
+	/** Domain rule broken (self-relation, duplicate pair, reassign a draft). */
+	| "Invalid";
 
 export class AppError extends Error {
 	name = "AppError" as const;

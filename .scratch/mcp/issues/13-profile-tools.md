@@ -1,6 +1,6 @@
 # Profile tools: search_profiles + get_profile
 
-Type: AFK Status: done Blocked by: 12
+Type: AFK Status: resolved Blocked by: 12
 
 Spec: [spec.md § Tools](../spec.md)
 

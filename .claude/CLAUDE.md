@@ -119,6 +119,10 @@ inline. `db` (`src/db/index.ts`) is the Drizzle client bound to the `D1` Cloudfl
 
 Local markdown under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
 
+### Triage labels
+
+Default five roles as `Status:` values. See `docs/agents/triage-labels.md`.
+
 ### Domain docs
 
-Single-context: `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
+Single-context: `GLOSSARY.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.

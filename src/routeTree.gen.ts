@@ -29,10 +29,13 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunitySettingsRouteImport } from './routes/_authed/_community/settings'
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
+import { Route as AuthedCommunityReviewsIndexRouteImport } from './routes/_authed/_community/reviews/index'
+import { Route as AuthedCommunityMyRequestsIndexRouteImport } from './routes/_authed/_community/my-requests/index'
 import { Route as AuthedCommunityMemoriesIndexRouteImport } from './routes/_authed/_community/memories/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
 import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
+import { Route as AuthedCommunityAuditLogIndexRouteImport } from './routes/_authed/_community/audit-log/index'
 import { Route as publicDocsMcpIndexRouteImport } from './routes/(public)/docs/mcp/index'
 import { Route as DotwellKnownOpenidConfigurationApiAuthRouteImport } from './routes/[.]well-known/openid-configuration/api/auth'
 import { Route as DotwellKnownOauthProtectedResourceApiMcpRouteImport } from './routes/[.]well-known/oauth-protected-resource/api/mcp'
@@ -148,6 +151,18 @@ const AuthedOnboardingCreateIndexRoute =
     path: '/onboarding/create/',
     getParentRoute: () => AuthedRoute,
   } as any)
+const AuthedCommunityReviewsIndexRoute =
+  AuthedCommunityReviewsIndexRouteImport.update({
+    id: '/reviews/',
+    path: '/reviews/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
+const AuthedCommunityMyRequestsIndexRoute =
+  AuthedCommunityMyRequestsIndexRouteImport.update({
+    id: '/my-requests/',
+    path: '/my-requests/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
 const AuthedCommunityMemoriesIndexRoute =
   AuthedCommunityMemoriesIndexRouteImport.update({
     id: '/memories/',
@@ -170,6 +185,12 @@ const AuthedCommunityCommunityTreeIndexRoute =
   AuthedCommunityCommunityTreeIndexRouteImport.update({
     id: '/community-tree/',
     path: '/community-tree/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
+const AuthedCommunityAuditLogIndexRoute =
+  AuthedCommunityAuditLogIndexRouteImport.update({
+    id: '/audit-log/',
+    path: '/audit-log/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
 const publicDocsMcpIndexRoute = publicDocsMcpIndexRouteImport.update({
@@ -264,10 +285,13 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
   '/docs/mcp/': typeof publicDocsMcpIndexRoute
+  '/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
   '/memories/': typeof AuthedCommunityMemoriesIndexRoute
+  '/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
+  '/reviews/': typeof AuthedCommunityReviewsIndexRoute
   '/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
   '/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
@@ -299,10 +323,13 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
   '/docs/mcp': typeof publicDocsMcpIndexRoute
+  '/audit-log': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
   '/memories': typeof AuthedCommunityMemoriesIndexRoute
+  '/my-requests': typeof AuthedCommunityMyRequestsIndexRoute
+  '/reviews': typeof AuthedCommunityReviewsIndexRoute
   '/onboarding/create': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
   '/members/$id': typeof AuthedCommunityMembersIdIndexRoute
@@ -338,10 +365,13 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
   '/(public)/docs/mcp/': typeof publicDocsMcpIndexRoute
+  '/_authed/_community/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
   '/_authed/_community/memories/': typeof AuthedCommunityMemoriesIndexRoute
+  '/_authed/_community/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
+  '/_authed/_community/reviews/': typeof AuthedCommunityReviewsIndexRoute
   '/_authed/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
   '/_authed/_community/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
@@ -375,10 +405,13 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
     | '/docs/mcp/'
+    | '/audit-log/'
     | '/community-tree/'
     | '/dashboard/'
     | '/members/'
     | '/memories/'
+    | '/my-requests/'
+    | '/reviews/'
     | '/onboarding/create/'
     | '/onboarding/invitations/'
     | '/members/$id/'
@@ -410,10 +443,13 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
     | '/docs/mcp'
+    | '/audit-log'
     | '/community-tree'
     | '/dashboard'
     | '/members'
     | '/memories'
+    | '/my-requests'
+    | '/reviews'
     | '/onboarding/create'
     | '/onboarding/invitations'
     | '/members/$id'
@@ -448,10 +484,13 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
     | '/(public)/docs/mcp/'
+    | '/_authed/_community/audit-log/'
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
     | '/_authed/_community/memories/'
+    | '/_authed/_community/my-requests/'
+    | '/_authed/_community/reviews/'
     | '/_authed/onboarding/create/'
     | '/_authed/onboarding/invitations/'
     | '/_authed/_community/members/$id/'
@@ -625,6 +664,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedOnboardingCreateIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/_community/reviews/': {
+      id: '/_authed/_community/reviews/'
+      path: '/reviews'
+      fullPath: '/reviews/'
+      preLoaderRoute: typeof AuthedCommunityReviewsIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
+    '/_authed/_community/my-requests/': {
+      id: '/_authed/_community/my-requests/'
+      path: '/my-requests'
+      fullPath: '/my-requests/'
+      preLoaderRoute: typeof AuthedCommunityMyRequestsIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
     '/_authed/_community/memories/': {
       id: '/_authed/_community/memories/'
       path: '/memories'
@@ -651,6 +704,13 @@ declare module '@tanstack/react-router' {
       path: '/community-tree'
       fullPath: '/community-tree/'
       preLoaderRoute: typeof AuthedCommunityCommunityTreeIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
+    '/_authed/_community/audit-log/': {
+      id: '/_authed/_community/audit-log/'
+      path: '/audit-log'
+      fullPath: '/audit-log/'
+      preLoaderRoute: typeof AuthedCommunityAuditLogIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
     '/(public)/docs/mcp/': {
@@ -781,10 +841,13 @@ const AuthedCommunitySettingsRouteWithChildren =
 
 interface AuthedCommunityRouteChildren {
   AuthedCommunitySettingsRoute: typeof AuthedCommunitySettingsRouteWithChildren
+  AuthedCommunityAuditLogIndexRoute: typeof AuthedCommunityAuditLogIndexRoute
   AuthedCommunityCommunityTreeIndexRoute: typeof AuthedCommunityCommunityTreeIndexRoute
   AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
   AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
   AuthedCommunityMemoriesIndexRoute: typeof AuthedCommunityMemoriesIndexRoute
+  AuthedCommunityMyRequestsIndexRoute: typeof AuthedCommunityMyRequestsIndexRoute
+  AuthedCommunityReviewsIndexRoute: typeof AuthedCommunityReviewsIndexRoute
   AuthedCommunityMembersIdIndexRoute: typeof AuthedCommunityMembersIdIndexRoute
   AuthedCommunityProfileAddressesIndexRoute: typeof AuthedCommunityProfileAddressesIndexRoute
   AuthedCommunityProfileAiIndexRoute: typeof AuthedCommunityProfileAiIndexRoute
@@ -794,11 +857,14 @@ interface AuthedCommunityRouteChildren {
 
 const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
   AuthedCommunitySettingsRoute: AuthedCommunitySettingsRouteWithChildren,
+  AuthedCommunityAuditLogIndexRoute: AuthedCommunityAuditLogIndexRoute,
   AuthedCommunityCommunityTreeIndexRoute:
     AuthedCommunityCommunityTreeIndexRoute,
   AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
   AuthedCommunityMembersIndexRoute: AuthedCommunityMembersIndexRoute,
   AuthedCommunityMemoriesIndexRoute: AuthedCommunityMemoriesIndexRoute,
+  AuthedCommunityMyRequestsIndexRoute: AuthedCommunityMyRequestsIndexRoute,
+  AuthedCommunityReviewsIndexRoute: AuthedCommunityReviewsIndexRoute,
   AuthedCommunityMembersIdIndexRoute: AuthedCommunityMembersIdIndexRoute,
   AuthedCommunityProfileAddressesIndexRoute:
     AuthedCommunityProfileAddressesIndexRoute,
@@ -854,10 +920,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

@@ -1,7 +1,40 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
+import type { ChangeRequestKind } from "@/domain/changeRequest";
+import { submitErrorFeedback, submitFeedback } from "@/domain/memberRequests";
+import type { SubmitResult } from "@/domain/profileChanges";
+import {
+	addressKeys,
+	auditKeys,
+	changeRequestKeys,
+	orgKeys,
+	profileKeys,
+	relationKeys,
+} from "./keys";
 import { isAppError } from "@/domain/errors";
 import { limitMessage } from "@/domain/limits";
 import { useActor } from "@/hooks/useActor";
+
+/**
+ * After any profile / relation / address / lifecycle change (all go through the mutation seam):
+ * refresh every view it can touch, incl. Change Requests and Audit Events.
+ */
+export function useInvalidateProfileChange() {
+	const qc = useQueryClient();
+	const orgId = useOrgId();
+	return () =>
+		Promise.all(
+			[
+				profileKeys.all(orgId),
+				relationKeys.all(orgId),
+				addressKeys.all(orgId),
+				changeRequestKeys.all(orgId),
+				auditKeys.all(orgId),
+				orgKeys.usage(orgId),
+			].map((queryKey) => qc.invalidateQueries({ queryKey }))
+		);
+}
 
 type Copy = { readonly title: string; readonly description: string };
 
@@ -31,6 +64,59 @@ export function toastMutationError(title: string, fallback: string, limitCopy?: 
 		const message = error instanceof Error ? error.message : undefined;
 		toast.error(title, { description: message || fallback });
 	};
+}
+
+/**
+ * Toast + analytics for a seam submit (`applied` / `requested` / `unchanged`). Returns whether
+ * anything was written (caller invalidates only then).
+ */
+export function useNotifySubmit() {
+	const posthog = usePostHog();
+	return (outcome: SubmitResult["outcome"], kind: ChangeRequestKind, appliedTitle: string) => {
+		const f = submitFeedback(outcome, appliedTitle);
+		if (f.type === "info") toast.info(f.title, { description: f.description });
+		else toast.success(f.title, { description: f.description });
+		if (outcome === "requested") posthog.capture("change_request_submitted", { kind });
+		return outcome !== "unchanged";
+	};
+}
+
+/** Submit error toast: `Stale` → "Profile changed, reload" (with Reload), else generic copy. */
+export function toastSubmitError(title: string, fallback: string) {
+	const generic = toastMutationError(title, fallback);
+	return (error: unknown) => {
+		const stale = submitErrorFeedback(error);
+		if (!stale) return generic(error);
+		toast.error(stale.title, {
+			description: stale.description,
+			action: { label: "Reload", onClick: () => window.location.reload() },
+		});
+	};
+}
+
+/**
+ * Mutation for a seam submit (profile info / relation / address): outcome toast + analytics, then
+ * invalidation when something was written; Stale-aware error toast. `onWritten` runs on
+ * `applied` / `requested`, before invalidation.
+ */
+export function useSubmitMutation<TVars>(o: {
+	mutationFn: (vars: TVars) => Promise<SubmitResult>;
+	kind: ChangeRequestKind;
+	appliedTitle: string;
+	error: { title: string; fallback: string };
+	onWritten?: (result: SubmitResult) => void;
+}) {
+	const invalidate = useInvalidateProfileChange();
+	const notify = useNotifySubmit();
+	return useMutation({
+		mutationFn: o.mutationFn,
+		onSuccess: async (result) => {
+			if (!notify(result.outcome, o.kind, o.appliedTitle)) return;
+			o.onWritten?.(result);
+			await invalidate();
+		},
+		onError: toastSubmitError(o.error.title, o.error.fallback),
+	});
 }
 
 type BetterAuthResult<T> = { data: T | null; error: { code?: string; message?: string } | null };

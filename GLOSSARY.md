@@ -1,4 +1,4 @@
-# Context — Kutumb domain glossary
+# Kutumb
 
 A glossary of the ubiquitous language. Definitions only — no implementation detail.
 
@@ -18,13 +18,39 @@ When unqualified "member" is unavoidable, it means **Community Profile** in the 
 
 A person in a community. Has a `status` (`draft | active | inactive`) and an optional link to an Org
 Member (the linked user). Created either by a user describing themselves, or by another member on
-someone else's behalf (see Userless Profile).
+someone else's behalf (see Userless Profile). `inactive` means deactivated: seen only by owner/admin
+and its linked user. Other members see only `active` profiles, plus drafts they created.
 
 ## Userless Profile
 
 A Community Profile with no linked Org Member. Created by another member (e.g. to record a relative
-who has no account). Starts `draft`, becomes `active` once an owner/admin approves it. Because no
-user "owns" it, owner/admin act on its behalf — including managing its relations.
+who has no account). One created by an owner/admin is `active` at once; one created by any other
+member starts `draft`, becomes `active` once an owner/admin approves it, and is removed if rejected
+or withdrawn. Because no user "owns" it, owner/admin act on its behalf, and every other member's
+change to it is a Change Request. _Avoid_: "orphan profile".
+
+## Change Request
+
+A member's proposed change to one Userless Profile, awaiting an owner/admin Review. Covers exactly
+one thing: creating the profile, or one change to its info, one relation, or one address. Changes by
+owner/admin apply directly instead. A profile linked to an Org Member never has Change Requests.
+Ends **approved** or **rejected** by a Review, **withdrawn** by its submitter, or **superseded**
+when its profile is reassigned or deleted while it is pending. Only an `active` Userless Profile
+takes Change Requests beyond its creation. The member who proposes it is its **submitter**. A
+pending Change Request is **stale** when its profile or target changed since submission so it can no
+longer apply as proposed; a stale one can only be rejected or withdrawn. _Avoid_: "suggestion",
+"edit request".
+
+## Review
+
+An owner/admin's decision on a Change Request: **approve** (the change applies) or **reject** (it
+does not; a reason is required).
+
+## Audit Event
+
+A permanent record of one change to a Community Profile: who, what, when, and which Change Request
+or Review it came from. Recorded for every profile change, linked or userless, and outlives the
+profile. Visible to owner/admin only. _Avoid_: "log", "history entry".
 
 ## Relation
 
@@ -38,11 +64,6 @@ A directional link between two Community Profiles: `from → to`, carrying a `ty
   role to the counterpart; it is **not** inverted for display.
 
 A relation is unique across a pair regardless of direction (no duplicate A–B / B–A).
-
-## Manage Relations
-
-The owner/admin capability to add/remove a Userless (and `active`) Community Profile's outgoing
-relations on its behalf. Distinct from a user editing their own relations on their own profile.
 
 ## Organization limit
 

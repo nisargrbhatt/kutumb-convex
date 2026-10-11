@@ -1,7 +1,13 @@
 import { z } from "zod";
-import { COMMUNITY_PROFILE_BLOOD_GROUP, COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
+import {
+	COMMUNITY_PROFILE_BLOOD_GROUP,
+	COMMUNITY_PROFILE_STATUS,
+	GENDERS,
+	ORGANIZATION_ROLES,
+} from "@/db/constants";
 import type { communityProfile } from "@/db/app-schema";
 import { customFieldValuesSchema, toCustomFieldValues } from "@/domain/customFields";
+import type { Actor } from "@/domain/permission";
 
 export type CommunityProfileRow = typeof communityProfile.$inferSelect;
 
@@ -149,6 +155,16 @@ export const memberFilterSchema = z.object({
 });
 export type MemberFilter = z.infer<typeof memberFilterSchema>;
 
+/**
+ * Members list status filter options (besides "All"). Owner/admin: every status. Plain member:
+ * `draft` only — reads as "my drafts", since they see no one else's; `inactive` is hidden from them.
+ */
+export function memberStatusFilterOptions(actor: Actor): z.infer<typeof profileStatusSchema>[] {
+	return actor.role === ORGANIZATION_ROLES.member
+		? [COMMUNITY_PROFILE_STATUS.draft]
+		: Object.values(COMMUNITY_PROFILE_STATUS);
+}
+
 /** AI Client search tool input. `limit` is clamped again server-side. */
 export const searchProfilesInput = z.object({
 	query: z
@@ -156,7 +172,6 @@ export const searchProfilesInput = z.object({
 		.trim()
 		.optional()
 		.describe("Name text; every word must match part of a first/middle/last/nick name."),
-	status: profileStatusSchema.default("active").describe("Profile status. Defaults to active."),
 	gender: genderSchema.optional().describe("Only profiles with this gender."),
 	limit: z.number().int().min(1).max(100).default(25).describe("Page size, 1-100. Default 25."),
 	cursor: z.string().optional().describe("`nextCursor` from the previous page."),

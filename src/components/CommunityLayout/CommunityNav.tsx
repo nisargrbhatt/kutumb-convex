@@ -1,9 +1,14 @@
-import { LayoutList, LayoutDashboard } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ClipboardCheck, History, Inbox, LayoutList, LayoutDashboard } from "lucide-react";
+import { useCan } from "@/hooks/useCan";
+import { pendingCountQuery, unseenCountQuery } from "@/queries/changeRequest";
+import { useActor } from "@/hooks/useActor";
 
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
+	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	useSidebar,
@@ -13,6 +18,14 @@ import { IconBinaryTree, IconPhoto } from "@tabler/icons-react";
 
 export function CommunityNav() {
 	const { toggleSidebar, isMobile, open } = useSidebar();
+	const canReadAudit = useCan({ auditEvent: ["read"] });
+	const canReview = useCan({ changeRequest: ["review"] });
+	const orgId = useActor()?.organizationId ?? "";
+	const { data: pendingCount = 0 } = useQuery({
+		...pendingCountQuery(orgId),
+		enabled: canReview,
+	});
+	const { data: unseen = 0 } = useQuery({ ...unseenCountQuery(orgId), enabled: orgId !== "" });
 
 	return (
 		<SidebarGroup>
@@ -96,6 +109,68 @@ export function CommunityNav() {
 						<span>Memories</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
+				<SidebarMenuItem
+					onClick={() => {
+						if (open && isMobile) {
+							toggleSidebar();
+						}
+					}}
+				>
+					<SidebarMenuButton
+						render={<Link to={"/my-requests"} activeProps={{ className: "bg-muted" }} />}
+					>
+						<Inbox />
+						<span>My requests</span>
+					</SidebarMenuButton>
+					{unseen ? (
+						<SidebarMenuBadge
+							className="bg-primary text-primary-foreground peer-hover/menu-button:text-primary-foreground peer-data-active/menu-button:text-primary-foreground"
+							aria-label={`${unseen} new ${unseen === 1 ? "outcome" : "outcomes"}`}
+						>
+							{unseen > 99 ? "99+" : unseen}
+						</SidebarMenuBadge>
+					) : null}
+				</SidebarMenuItem>
+				{canReview ? (
+					<SidebarMenuItem
+						onClick={() => {
+							if (open && isMobile) {
+								toggleSidebar();
+							}
+						}}
+					>
+						<SidebarMenuButton
+							render={<Link to={"/reviews"} activeProps={{ className: "bg-muted" }} />}
+						>
+							<ClipboardCheck />
+							<span>Reviews</span>
+						</SidebarMenuButton>
+						{pendingCount > 0 ? (
+							<SidebarMenuBadge
+								className="bg-primary text-primary-foreground peer-hover/menu-button:text-primary-foreground peer-data-active/menu-button:text-primary-foreground"
+								aria-label={`${pendingCount} pending`}
+							>
+								{pendingCount > 99 ? "99+" : pendingCount}
+							</SidebarMenuBadge>
+						) : null}
+					</SidebarMenuItem>
+				) : null}
+				{canReadAudit ? (
+					<SidebarMenuItem
+						onClick={() => {
+							if (open && isMobile) {
+								toggleSidebar();
+							}
+						}}
+					>
+						<SidebarMenuButton
+							render={<Link to={"/audit-log"} activeProps={{ className: "bg-muted" }} />}
+						>
+							<History />
+							<span>Audit log</span>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				) : null}
 			</SidebarMenu>
 		</SidebarGroup>
 	);
