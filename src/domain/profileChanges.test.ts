@@ -130,11 +130,29 @@ describe("makeProfileChanges", () => {
 			expect(onGraphChanged).toHaveBeenCalledWith("o1");
 		});
 
-		it("member create → draft, no graph change (request row arrives with the queue)", async () => {
+		it("member create → draft + pending create request + change_request.submitted", async () => {
 			const res = await changes.submit(MEMBER, { kind: "create", profile: input() });
 
-			expect(res.outcome).toBe("applied");
-			expect(await profile(res.profileId)).toMatchObject({ status: "draft", userId: null });
+			expect(res).toEqual({ outcome: "requested", profileId: "id1", changeRequestId: "id2" });
+			expect(await profile("id1")).toMatchObject({ status: "draft", userId: null });
+			const req = await db.query.changeRequest.findFirst({ where: (f, o) => o.eq(f.id, "id2") });
+			expect(req).toMatchObject({
+				profileId: "id1",
+				profileName: "Asha Patel",
+				kind: "create",
+				status: "pending",
+				submitterUserId: "u-member",
+				submitterName: "Mira Member",
+				payload: null,
+			});
+			const evs = await events();
+			expect(evs.map((e) => [e.action, e.changeRequestId, e.profileId])).toEqual([
+				["change_request.submitted", "id2", "id1"],
+			]);
+			expect(evs[0]!.payload).toEqual({
+				kind: "create",
+				profile: expect.objectContaining({ id: "id1", firstName: "Asha", status: "draft" }),
+			});
 			expect(onGraphChanged).not.toHaveBeenCalled();
 		});
 
@@ -161,6 +179,167 @@ describe("makeProfileChanges", () => {
 			);
 			expect(await db.select().from(communityProfile)).toEqual([]);
 			expect(await events()).toEqual([]);
+		});
+	});
+
+	describe("create request: review / withdraw", () => {
+		const request = (id: string) =>
+			db.query.changeRequest.findFirst({ where: (f, o) => o.eq(f.id, id) });
+		const memberDraft = async () => {
+			const res = await changes.submit(MEMBER, { kind: "create", profile: input() });
+			if (res.outcome !== "requested") throw new Error("expected requested");
+			return res;
+		};
+
+		it("approve → active + change_request.approved (note) + profile.activated, graph changed", async () => {
+			const { profileId, changeRequestId } = await memberDraft();
+
+			await changes.review(ADMIN, changeRequestId, { decision: "approve", note: "Welcome" });
+
+			expect(await profile(profileId)).toMatchObject({ status: "active", version: 1 });
+			expect(await request(changeRequestId)).toMatchObject({
+				status: "approved",
+				resolvedByUserId: "u-admin",
+				resolvedByName: "Adi Admin",
+				resolutionNote: "Welcome",
+			});
+			const evs = (await events()).slice(1);
+			expect(evs.map((e) => [e.action, e.changeRequestId, e.actorUserId])).toEqual([
+				["change_request.approved", changeRequestId, "u-admin"],
+				["profile.activated", changeRequestId, "u-admin"],
+			]);
+			expect(evs[0]!.payload).toEqual({ kind: "create", note: "Welcome" });
+			expect(evs[1]!.payload).toEqual({ status: ["draft", "active"] });
+			expect(onGraphChanged).toHaveBeenCalledWith("o1");
+		});
+
+		it("reject (reason required) → draft hard-deleted, rejected + profile.deleted snapshot", async () => {
+			const { profileId, changeRequestId } = await memberDraft();
+			await changes.submit(MEMBER, { kind: "address_add", profileId, address });
+
+			await expectError(
+				changes.review(ADMIN, changeRequestId, { decision: "reject", note: "  " }),
+				"Invalid"
+			);
+			await changes.review(OWNER, changeRequestId, { decision: "reject", note: "Duplicate" });
+
+			expect(await profile(profileId)).toBeUndefined();
+			expect(await db.select().from(communityAddress)).toEqual([]);
+			expect(await request(changeRequestId)).toMatchObject({
+				status: "rejected",
+				resolvedByUserId: "u-owner",
+				resolutionNote: "Duplicate",
+			});
+			const evs = (await events()).slice(2);
+			expect(evs.map((e) => [e.action, e.changeRequestId])).toEqual([
+				["change_request.rejected", changeRequestId],
+				["profile.deleted", changeRequestId],
+			]);
+			expect(evs[0]!.payload).toEqual({ kind: "create", reason: "Duplicate" });
+			expect(evs[1]!.payload).toMatchObject({
+				id: profileId,
+				status: "draft",
+				addresses: [expect.objectContaining({ city: "Surat" })],
+			});
+			expect(onGraphChanged).not.toHaveBeenCalled();
+		});
+
+		it("withdraw (submitter only) → draft hard-deleted, withdrawn + profile.deleted", async () => {
+			const { profileId, changeRequestId } = await memberDraft();
+
+			await expectError(changes.withdraw(OTHER, changeRequestId), "NotFound");
+			await expectError(changes.withdraw(ADMIN, changeRequestId), "NotFound");
+			await changes.withdraw(MEMBER, changeRequestId);
+
+			expect(await profile(profileId)).toBeUndefined();
+			expect(await request(changeRequestId)).toMatchObject({
+				status: "withdrawn",
+				resolvedByUserId: "u-member",
+				resolutionNote: null,
+			});
+			const evs = (await events()).slice(1);
+			expect(evs.map((e) => [e.action, e.changeRequestId, e.actorUserId])).toEqual([
+				["change_request.withdrawn", changeRequestId, "u-member"],
+				["profile.deleted", changeRequestId, "u-member"],
+			]);
+			expect(evs[0]!.payload).toEqual({ kind: "create" });
+		});
+
+		it("double review / review after withdraw → Conflict; member cannot review", async () => {
+			const a = await memberDraft();
+			const b = await memberDraft();
+			await expectError(
+				changes.review(MEMBER, a.changeRequestId, { decision: "approve" }),
+				"Forbidden"
+			);
+			await changes.review(ADMIN, a.changeRequestId, { decision: "approve" });
+			await expectError(
+				changes.review(OWNER, a.changeRequestId, { decision: "approve" }),
+				"Conflict"
+			);
+			await changes.withdraw(MEMBER, b.changeRequestId);
+			await expectError(
+				changes.review(ADMIN, b.changeRequestId, { decision: "reject", note: "x" }),
+				"Conflict"
+			);
+			await expectError(changes.withdraw(MEMBER, a.changeRequestId), "Conflict");
+		});
+
+		it("concurrent close between read and batch → Conflict, nothing applied", async () => {
+			const { profileId, changeRequestId } = await memberDraft();
+			const realBatch = db.batch.bind(db);
+			db.batch = (async (items: never) => {
+				fresh.sqlite.exec(
+					`UPDATE changeRequest SET status = 'withdrawn' WHERE id = '${changeRequestId}'`
+				);
+				return realBatch(items);
+			}) as typeof db.batch;
+
+			await expectError(
+				changes.review(ADMIN, changeRequestId, { decision: "approve" }),
+				"Conflict"
+			);
+			expect((await profile(profileId))!.status).toBe("draft");
+			expect((await events()).length).toBe(1);
+		});
+
+		it("backfilled request (null submitter) reviewable; nobody can withdraw it", async () => {
+			await seed({ id: "old", status: "draft" });
+			fresh.sqlite.exec(`
+				INSERT INTO changeRequest (id, organizationId, profileId, profileName, kind, status, submitterUserId, submitterName, createdAt)
+				VALUES ('bf', 'o1', 'old', 'OLD Doe', 'create', 'pending', NULL, 'Unknown', 0);
+			`);
+			await expectError(changes.withdraw(MEMBER, "bf"), "NotFound");
+			await changes.review(ADMIN, "bf", { decision: "approve" });
+			expect((await profile("old"))!.status).toBe("active");
+		});
+
+		it("owner delete of a draft supersedes its create request; reassign of a draft → Invalid", async () => {
+			const { profileId, changeRequestId } = await memberDraft();
+			await expectError(changes.reassign(ADMIN, profileId, "u-new"), "Invalid");
+			expect((await request(changeRequestId))!.status).toBe("pending");
+
+			await changes.remove(OWNER, profileId);
+			expect((await request(changeRequestId))!.status).toBe("superseded");
+			expect((await events()).slice(1).map((e) => e.action)).toEqual([
+				"change_request.superseded",
+				"profile.deleted",
+			]);
+		});
+
+		it("Member limit slot freed after reject and withdraw", async () => {
+			// Real-ish limit: at most 1 profile in the org.
+			assertProfileSlot.mockImplementation(async () => {
+				const rows = await db.select().from(communityProfile);
+				if (rows.length >= 1) throw new LimitError("profile");
+			});
+			const first = await memberDraft();
+			await expectError(memberDraft(), "LimitReached");
+			await changes.review(ADMIN, first.changeRequestId, { decision: "reject", note: "No" });
+			const second = await memberDraft();
+			await expectError(memberDraft(), "LimitReached");
+			await changes.withdraw(MEMBER, second.changeRequestId);
+			await memberDraft();
 		});
 	});
 

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { RejectRequestDialog } from "@/components/changeRequest/RejectRequestDialog";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,14 +44,13 @@ import { toFormValues, type CommunityProfileRow } from "@/domain/communityProfil
 import type { CustomFieldDefinition } from "@/domain/customFields";
 import { useCan } from "@/hooks/useCan";
 import { authClient } from "@/lib/auth-client";
+import { pendingCreateRequestQuery, useReviewChangeRequest } from "@/queries/changeRequest";
 import {
 	pendingRequestCountQuery,
-	useApproveProfile,
 	useDeactivateProfile,
 	useDeleteProfile,
 	useReactivateProfile,
 	useReassignProfile,
-	useRejectProfile,
 	useUpdateProfileInfo,
 } from "@/queries/communityProfile";
 import { useOrgId } from "@/queries/mutation";
@@ -60,7 +60,7 @@ const formSchema = z.object({
 });
 
 type Profile = Omit<CommunityProfileRow, "organizationId">;
-type Confirm = "deactivate" | "reactivate" | "delete" | null;
+type Confirm = "deactivate" | "reactivate" | "delete" | "reject" | null;
 
 /** "N pending requests will be superseded." (or nothing while loading / none). */
 function SupersedeWarning({ profileId, enabled }: { profileId: string; enabled: boolean }) {
@@ -87,7 +87,7 @@ export function MemberActions({
 	const [editOpen, setEditOpen] = useState(false);
 	const [confirm, setConfirm] = useState<Confirm>(null);
 	const { data: activeOrg } = authClient.useActiveOrganization();
-	const canApprove = useCan({ communityProfile: ["approve"] });
+	const canReview = useCan({ changeRequest: ["review"] });
 	const canReassign = useCan({ communityProfile: ["reassign"] });
 	const canDelete = useCan({ communityProfile: ["delete"] });
 
@@ -99,8 +99,15 @@ export function MemberActions({
 		},
 	});
 
-	const approve = useApproveProfile(profile.id);
-	const reject = useRejectProfile(profile.id);
+	const orgId = useOrgId();
+	const isDraft = profile.status === COMMUNITY_PROFILE_STATUS.draft;
+	const { data: createRequest } = useQuery({
+		...pendingCreateRequestQuery(orgId, profile.id),
+		enabled: canReview && isDraft,
+	});
+	const approve = useReviewChangeRequest();
+	// Rejecting a create deletes the draft: leave its page first.
+	const reject = useReviewChangeRequest(() => navigate({ to: "/members" }));
 	const reassign = useReassignProfile(profile.id);
 	const update = useUpdateProfileInfo(profile.id);
 	const deactivate = useDeactivateProfile(profile.id);
@@ -116,10 +123,9 @@ export function MemberActions({
 		});
 
 	const isUserless = profile.userId == null;
-	const isDraft = profile.status === COMMUNITY_PROFILE_STATUS.draft;
 	const isActive = profile.status === COMMUNITY_PROFILE_STATUS.active;
 	const isInactive = profile.status === COMMUNITY_PROFILE_STATUS.inactive;
-	const showDecision = canApprove && isDraft;
+	const showDecision = canReview && isDraft && createRequest != null;
 	const showReassign = canReassign && isUserless && isActive;
 	const showLifecycle = isActive || isInactive || canDelete;
 	const closeConfirm = () => setConfirm(null);
@@ -141,12 +147,20 @@ export function MemberActions({
 				<DropdownMenuContent align="end">
 					{showDecision ? (
 						<DropdownMenuGroup>
-							<DropdownMenuLabel>Profile Decision</DropdownMenuLabel>
-							<DropdownMenuItem onClick={() => approve.mutate()} disabled={approve.isPending}>
+							<DropdownMenuLabel>Review draft</DropdownMenuLabel>
+							<DropdownMenuItem
+								onClick={() =>
+									approve.mutate({
+										changeRequestId: createRequest.id,
+										review: { decision: "approve" },
+									})
+								}
+								disabled={approve.isPending}
+							>
 								<CheckIcon />
 								Accept
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => reject.mutate()} disabled={reject.isPending}>
+							<DropdownMenuItem onClick={() => setConfirm("reject")}>
 								<XIcon />
 								Reject
 							</DropdownMenuItem>
@@ -188,6 +202,20 @@ export function MemberActions({
 				</DropdownMenuContent>
 			</DropdownMenu>
 
+			{createRequest ? (
+				<RejectRequestDialog
+					open={confirm === "reject"}
+					onOpenChange={(o) => !o && closeConfirm()}
+					description={`Requested by ${createRequest.submitterName}. The draft will be deleted.`}
+					onReject={(reason) =>
+						reject.mutate({
+							changeRequestId: createRequest.id,
+							review: { decision: "reject", note: reason },
+						})
+					}
+					isPending={reject.isPending}
+				/>
+			) : null}
 			<ConfirmDialog
 				open={confirm === "deactivate"}
 				onOpenChange={(o) => !o && closeConfirm()}
