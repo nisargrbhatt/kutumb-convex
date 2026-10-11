@@ -1,6 +1,6 @@
 import type { CommunityProfileInput, MemberFilter } from "@/domain/communityProfile";
 import { LIMIT_COPY } from "@/domain/limits";
-import { useCan } from "@/hooks/useCan";
+import { addMemberFeedback } from "@/domain/memberRequests";
 import { queryOptions, useMutation } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
@@ -21,12 +21,7 @@ import {
 	updateProfileInfo,
 } from "@/server/communityProfile";
 import { changeRequestKeys, profileKeys } from "./keys";
-import {
-	toastMutationError,
-	toastSubmitError,
-	useInvalidateProfileChange,
-	useNotifySubmit,
-} from "./mutation";
+import { toastMutationError, useInvalidateProfileChange, useSubmitMutation } from "./mutation";
 
 export const myProfileQuery = (orgId: string) =>
 	queryOptions({
@@ -118,27 +113,22 @@ export function useSaveMyProfile() {
 
 /** Info edit of a Userless Profile: owner/admin + own draft apply, plain member on active requests. */
 export function useUpdateProfileInfo(profileId: string) {
-	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
-	const notify = useNotifySubmit();
-	return useMutation({
+	return useSubmitMutation({
 		mutationFn: (v: { expectedVersion: number; input: CommunityProfileInput }) =>
 			updateProfileInfo({
 				data: { profileId, expectedVersion: v.expectedVersion, profile: v.input },
 			}),
-		onSuccess: async (result) => {
-			if (!notify(result.outcome, "info", "Profile saved")) return;
-			posthog.capture("profile_saved", { outcome: result.outcome });
-			await invalidate();
-		},
-		onError: toastSubmitError("Profile", "Failed to save profile"),
+		kind: "info",
+		appliedTitle: "Profile saved",
+		error: { title: "Profile", fallback: "Failed to save profile" },
+		onWritten: (result) => posthog.capture("profile_saved", { outcome: result.outcome }),
 	});
 }
 
 export function useAddMissingMember() {
 	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
-	const appliesActive = useCan({ changeRequest: ["review"] });
 	return useMutation({
 		mutationFn: (input: CommunityProfileInput) =>
 			createProfile({ data: { self: false, profile: input } }),
@@ -147,11 +137,9 @@ export function useAddMissingMember() {
 			if (result.outcome === "requested") {
 				posthog.capture("change_request_submitted", { kind: "create" });
 			}
-			toast.success("Member added", {
-				description: appliesActive
-					? "The profile is active."
-					: "Added as a Draft Record. An owner/admin will approve the profile.",
-			});
+			// A create is never `unchanged`; anything not applied is a pending Draft Record.
+			const f = addMemberFeedback(result.outcome === "applied" ? "applied" : "requested");
+			toast.success(f.title, { description: f.description });
 			await invalidate();
 		},
 		onError: toastMutationError("Add member", "Failed to add member"),

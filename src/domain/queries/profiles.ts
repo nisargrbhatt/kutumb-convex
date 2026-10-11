@@ -5,6 +5,7 @@ import {
 	CHANGE_REQUEST_KIND,
 	CHANGE_REQUEST_STATUS,
 	COMMUNITY_PROFILE_STATUS,
+	ORGANIZATION_ROLES,
 } from "@/db/constants";
 import { changeRequest, communityProfile, communityRelation } from "@/db/app-schema";
 import { AppError } from "@/domain/errors";
@@ -27,7 +28,7 @@ const crCol = (col: SQLiteColumn) => sql`cr.${sql.identifier(col.name)}`;
  */
 export function visibleProfileWhere(actor: Actor): SQL {
 	const inOrg = eq(communityProfile.organizationId, actor.organizationId);
-	if (actor.role !== "member") return inOrg;
+	if (actor.role !== ORGANIZATION_ROLES.member) return inOrg;
 
 	const ownDraft = and(
 		eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.draft),

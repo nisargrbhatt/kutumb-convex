@@ -26,7 +26,7 @@ import { AppError, type AppErrorKind } from "@/domain/errors";
 import { can, type Actor } from "@/domain/permission";
 import type { RelationType } from "@/domain/relation";
 import { loadStaleReasons } from "@/domain/queries/changeRequests";
-import type { QueryDb } from "@/domain/queries/db";
+import { inChunks, type QueryDb } from "@/domain/queries/db";
 
 /** Drizzle client that can run an all-or-nothing `batch` (D1 client and `freshDb` both fit). */
 export type BatchDb = QueryDb & {
@@ -613,17 +613,14 @@ export function makeProfileChanges({
 		{ deleteRows }: { deleteRows: boolean }
 	) {
 		const counterpartIds = relations.map((r) => (r.fromId === subject.id ? r.toId : r.fromId));
-		const counterparts =
-			counterpartIds.length > 0
-				? await db.query.communityProfile.findMany({
-						where: (f, o) =>
-							o.inArray(
-								f.id,
-								counterpartIds.filter((x): x is string => !!x)
-							),
-						columns: { id: true, firstName: true, middleName: true, lastName: true },
-					})
-				: [];
+		const counterparts = await inChunks(
+			counterpartIds.filter((x): x is string => !!x),
+			(ids) =>
+				db.query.communityProfile.findMany({
+					where: (f, o) => o.inArray(f.id, ids),
+					columns: { id: true, firstName: true, middleName: true, lastName: true },
+				})
+		);
 		const names = new Map(counterparts.map((c) => [c.id, fullName(c)]));
 		const statements: BatchItem<"sqlite">[] = deleteRows
 			? relations.flatMap((r) => [

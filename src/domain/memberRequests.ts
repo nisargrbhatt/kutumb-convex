@@ -35,13 +35,27 @@ export function submitFeedback(
 			return {
 				type: "success",
 				title: "Sent for review",
-				description: "An owner/admin will review your suggestion. Track it on My requests.",
+				description: "An owner/admin will review your change request. Track it on My requests.",
 			};
 		case "unchanged":
 			return { type: "info", title: "No changes" };
 		case "applied":
 			return { type: "success", title: appliedTitle };
 	}
+}
+
+/** "Add member" toast by the seam's create outcome (applied = active, requested = Draft Record). */
+export function addMemberFeedback(outcome: "applied" | "requested"): {
+	title: string;
+	description: string;
+} {
+	return {
+		title: "Member added",
+		description:
+			outcome === "applied"
+				? "The profile is active."
+				: "Added as a Draft Record. An owner/admin will approve the profile.",
+	};
 }
 
 /** `Stale` (version moved since load) → reload hint; null = use the generic error toast. */
@@ -81,3 +95,84 @@ export function requestOutcome(r: {
 			return { tone: "muted", summary: "Awaiting review", note: null };
 	}
 }
+
+/**
+ * Edit-control copy by mode: `direct` applies the change; `suggest` (plain member on an active
+ * Userless Profile) submits a Change Request. One source for the Suggest drawers / dialogs.
+ */
+export const EDIT_COPY = {
+	direct: {
+		info: {
+			trigger: "Edit",
+			title: "Edit profile",
+			description: "Changes apply directly and are recorded in the audit log.",
+			submit: "Save profile",
+		},
+		addAddress: {
+			title: "Add address",
+			description: "Add an address for this profile on its behalf.",
+			submit: "Add address",
+		},
+		editAddress: {
+			title: "Edit address",
+			description: "Update this address.",
+			submit: "Save address",
+		},
+		removeAddress: {
+			label: "Delete address",
+			title: "Delete address?",
+			description: "This will permanently delete this address. This action cannot be undone.",
+			confirm: "Delete",
+		},
+		addRelation: {
+			title: "Add relation",
+			description: "Record an outgoing relation for this profile on its behalf.",
+			submit: "Add relation",
+		},
+		removeRelation: {
+			label: (name: string) => `Delete relation with ${name}`,
+			title: "Delete relation",
+			description: "This removes the relation. This action cannot be undone.",
+			confirm: "Delete",
+		},
+	},
+	suggest: {
+		info: {
+			trigger: "Suggest edit",
+			title: "Suggest edit",
+			description:
+				"Your changes go to an owner/admin for review; only changed fields are sent. Everyone sees the current info until then.",
+			submit: "Submit for review",
+		},
+		addAddress: {
+			title: "Suggest address",
+			description: "Suggest an address for this profile. An owner/admin reviews it.",
+			submit: "Submit for review",
+		},
+		editAddress: {
+			title: "Suggest address edit",
+			description: "Your changes go to an owner/admin for review; only changed fields are sent.",
+			submit: "Submit for review",
+		},
+		removeAddress: {
+			label: "Suggest address removal",
+			title: "Suggest removing this address?",
+			description: "An owner/admin reviews the removal. The address stays until then.",
+			confirm: "Submit for review",
+		},
+		addRelation: {
+			title: "Suggest relation",
+			description: "Suggest an outgoing relation for this profile. An owner/admin reviews it.",
+			submit: "Submit for review",
+		},
+		removeRelation: {
+			label: (name: string) => `Suggest removing relation with ${name}`,
+			title: "Suggest removing this relation?",
+			description: "An owner/admin reviews the removal. The relation stays until then.",
+			confirm: "Submit for review",
+		},
+	},
+} as const;
+
+/** `suggest` flag → its copy set. */
+export const editCopy = (suggest: boolean) => EDIT_COPY[suggest ? "suggest" : "direct"];

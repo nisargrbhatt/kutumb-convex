@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AppError } from "./errors";
 import {
+	addMemberFeedback,
 	profileEditMode,
 	requestOutcome,
 	submitErrorFeedback,
@@ -33,7 +34,7 @@ describe("submitFeedback", () => {
 		expect(submitFeedback("requested", "Address saved")).toEqual({
 			type: "success",
 			title: "Sent for review",
-			description: "An owner/admin will review your suggestion. Track it on My requests.",
+			description: "An owner/admin will review your change request. Track it on My requests.",
 		});
 		expect(submitFeedback("unchanged", "Address saved")).toEqual({
 			type: "info",
@@ -88,5 +89,18 @@ describe("requestOutcome", () => {
 		expect(requestOutcome(r("superseded")).summary).toBe(
 			"Closed: the profile was linked, deactivated or deleted"
 		);
+	});
+});
+
+describe("addMemberFeedback", () => {
+	it("copy follows the seam outcome: applied → active, requested → Draft Record awaiting approval", () => {
+		expect(addMemberFeedback("applied")).toEqual({
+			title: "Member added",
+			description: "The profile is active.",
+		});
+		expect(addMemberFeedback("requested")).toEqual({
+			title: "Member added",
+			description: "Added as a Draft Record. An owner/admin will approve the profile.",
+		});
 	});
 });

@@ -1,4 +1,4 @@
-import { queryOptions, useMutation } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 
 import {
@@ -10,7 +10,7 @@ import {
 } from "@/server/communityRelation";
 import type { RelationType } from "@/domain/relation";
 import { relationKeys } from "./keys";
-import { toastSubmitError, useInvalidateProfileChange, useNotifySubmit } from "./mutation";
+import { useSubmitMutation } from "./mutation";
 
 export type RelationFormValues = {
 	toId: string;
@@ -37,40 +37,34 @@ export const myOutgoingRelationCountQuery = (orgId: string) =>
 		queryFn: () => getMyOutgoingRelationCount(),
 	});
 
-const onRelationError = (fallback: string) => toastSubmitError("Relation", fallback);
-
 /**
  * Outgoing relation of `profileId`: own linked profile, or a Userless one (owner/admin + own draft
  * apply directly; a plain member on an active one sends a Change Request).
  */
 export function useAddRelation(profileId: string) {
-	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
-	const notify = useNotifySubmit();
-	return useMutation({
+	return useSubmitMutation({
 		mutationFn: (values: RelationFormValues) => addRelation({ data: { ...values, profileId } }),
-		onSuccess: async (result) => {
-			if (!notify(result.outcome, "relation_add", "Relation added successfully")) return;
+		kind: "relation_add",
+		appliedTitle: "Relation added successfully",
+		error: { title: "Relation", fallback: "Failed to add relation" },
+		onWritten: (result) => {
 			if (result.outcome === "applied")
 				posthog.capture("member_relation_added", { member_id: profileId });
-			await invalidate();
 		},
-		onError: onRelationError("Failed to add relation"),
 	});
 }
 
 export function useRemoveRelation(profileId: string) {
-	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
-	const notify = useNotifySubmit();
-	return useMutation({
+	return useSubmitMutation({
 		mutationFn: (relationId: string) => removeRelation({ data: { profileId, relationId } }),
-		onSuccess: async (result) => {
-			if (!notify(result.outcome, "relation_remove", "Relation deleted successfully")) return;
+		kind: "relation_remove",
+		appliedTitle: "Relation deleted successfully",
+		error: { title: "Relation", fallback: "Failed to delete relation" },
+		onWritten: (result) => {
 			if (result.outcome === "applied")
 				posthog.capture("member_relation_deleted", { member_id: profileId });
-			await invalidate();
 		},
-		onError: onRelationError("Failed to delete relation"),
 	});
 }

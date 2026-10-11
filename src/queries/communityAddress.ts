@@ -1,4 +1,4 @@
-import { queryOptions, useMutation } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 import type { AddressInput } from "@/domain/profileChanges";
 import {
 	addAddress,
@@ -7,7 +7,7 @@ import {
 	removeAddress,
 } from "@/server/communityAddress";
 import { addressKeys } from "./keys";
-import { toastSubmitError, useInvalidateProfileChange, useNotifySubmit } from "./mutation";
+import { useSubmitMutation } from "./mutation";
 
 export const myAddressesQuery = (orgId: string) =>
 	queryOptions({
@@ -19,40 +19,27 @@ export const myAddressesQuery = (orgId: string) =>
  * Addresses of `profileId`: own linked profile, or a Userless one (owner/admin + own draft apply
  * directly; a plain member on an active one sends a Change Request).
  */
-export function useAddAddress(profileId: string) {
-	const invalidate = useInvalidateProfileChange();
-	const notify = useNotifySubmit();
-	return useMutation({
+export const useAddAddress = (profileId: string) =>
+	useSubmitMutation({
 		mutationFn: (address: AddressInput) => addAddress({ data: { profileId, address } }),
-		onSuccess: async (result) => {
-			if (notify(result.outcome, "address_add", "Address added successfully")) await invalidate();
-		},
-		onError: toastSubmitError("Address", "Failed to add address"),
+		kind: "address_add",
+		appliedTitle: "Address added successfully",
+		error: { title: "Address", fallback: "Failed to add address" },
 	});
-}
 
-export function useEditAddress(profileId: string) {
-	const invalidate = useInvalidateProfileChange();
-	const notify = useNotifySubmit();
-	return useMutation({
+export const useEditAddress = (profileId: string) =>
+	useSubmitMutation({
 		mutationFn: (v: { addressId: string; expectedVersion: number; address: AddressInput }) =>
 			editAddress({ data: { profileId, ...v } }),
-		onSuccess: async (result) => {
-			if (notify(result.outcome, "address_edit", "Address saved")) await invalidate();
-		},
-		onError: toastSubmitError("Address", "Failed to save address"),
+		kind: "address_edit",
+		appliedTitle: "Address saved",
+		error: { title: "Address", fallback: "Failed to save address" },
 	});
-}
 
-export function useRemoveAddress(profileId: string) {
-	const invalidate = useInvalidateProfileChange();
-	const notify = useNotifySubmit();
-	return useMutation({
+export const useRemoveAddress = (profileId: string) =>
+	useSubmitMutation({
 		mutationFn: (addressId: string) => removeAddress({ data: { profileId, addressId } }),
-		onSuccess: async (result) => {
-			if (notify(result.outcome, "address_remove", "Address deleted successfully"))
-				await invalidate();
-		},
-		onError: toastSubmitError("Address", "Failed to delete address"),
+		kind: "address_remove",
+		appliedTitle: "Address deleted successfully",
+		error: { title: "Address", fallback: "Failed to delete address" },
 	});
-}

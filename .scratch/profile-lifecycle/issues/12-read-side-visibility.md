@@ -21,7 +21,7 @@ Per [Read-side visibility](05-read-side-visibility.md):
 
 - [x] query tests per role × status (draft own/other/backfilled, inactive, own inactive linked)
 - [x] MCP tool tests updated; cross-role NotFound
-- [ ] browser: plain member can't open another's draft or inactive profile by URL
+- [x] browser: plain member can't open another's draft or inactive profile by URL
 
 ## Comments
 
@@ -35,3 +35,4 @@ Per [Read-side visibility](05-read-side-visibility.md):
   (`getActiveProfilesForRelation`) unchanged, no test (server fn on `@/db`).
 - Browser check not done: worktree has no local D1/seed; needs multi-user + role setup. NotFound
   by URL covered by query test only.
+- Browser item verified in ticket 15 comment (other's draft / inactive by URL → 404, SSR + client nav).

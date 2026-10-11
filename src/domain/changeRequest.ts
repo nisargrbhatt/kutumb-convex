@@ -105,10 +105,49 @@ export type StaleReason =
 	/** `relation_add`: the pair is now related in either direction. */
 	| { code: "already_related" };
 
-export const staleReasonText = (r: StaleReason) => {
+const FIELD_LABEL: Record<InfoField | AddressField, string> = {
+	firstName: "First name",
+	middleName: "Middle name",
+	lastName: "Last name",
+	nickName: "Nickname",
+	gender: "Gender",
+	email: "Email",
+	bloodGroup: "Blood group",
+	mobileNumber: "Mobile number",
+	dateOfBirth: "Date of birth",
+	dateOfDeath: "Date of death",
+	line1: "Line 1",
+	line2: "Line 2",
+	country: "Country",
+	state: "State",
+	city: "City",
+	postalCode: "Postal code",
+	type: "Type",
+	note: "Note",
+	digipin: "DIGIPIN",
+};
+
+const CUSTOM_FIELD_PREFIX = "customFieldData.";
+
+/** A `fields_changed` key → display label (custom field: its name snapshot from the payload). */
+function staleFieldLabel(key: string, request: { kind: ChangeRequestKind; payload: unknown }) {
+	if (key.startsWith(CUSTOM_FIELD_PREFIX)) {
+		const id = key.slice(CUSTOM_FIELD_PREFIX.length);
+		const cf =
+			request.kind === "info" ? (request.payload as InfoPayload).customFieldData?.[id] : undefined;
+		return cf?.label || "Custom field";
+	}
+	return FIELD_LABEL[key as keyof typeof FIELD_LABEL] ?? key;
+}
+
+/** Stale reason as a sentence; `request` (its kind + payload) names custom fields. */
+export const staleReasonText = (
+	r: StaleReason,
+	request: { kind: ChangeRequestKind; payload: unknown }
+) => {
 	switch (r.code) {
 		case "fields_changed":
-			return `Changed since requested: ${r.fields.join(", ")}`;
+			return `Changed since requested: ${r.fields.map((f) => staleFieldLabel(f, request)).join(", ")}`;
 		case "target_gone":
 			return "No longer exists";
 		case "counterpart_not_active":

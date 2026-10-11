@@ -101,7 +101,10 @@ onGraphChanged })` in `src/domain/profileChanges.ts`, wired in `src/lib/profileC
   `active` or pair related either way; relation/address remove target gone; address_add never.
 - Errors: `Stale`, `Conflict`, `Invalid` added to `AppErrorKind`.
 - Member-limit check before batch (race accepted). `onGraphChanged` after commit only when
-  status, name or relations changed.
+  graph-held data of an `active` profile changed: any info field (name, nickname, gender, dates,
+  contact, blood group — not Custom Fields), a relation add/remove, or a status change that moves a
+  profile in/out of the graph (create-active, draft activation, deactivate/reactivate, delete of an
+  active profile). Address and Custom Field changes, and requests, never fire it.
 - Server fns: one thin fn per kind taking `profileId`; "My…" / "…ToProfile" pairs collapse.
 
 ### Audit emission

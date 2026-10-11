@@ -22,24 +22,25 @@ type Ev = {
 describe("listAuditGroups", () => {
 	let db: ReturnType<typeof freshDb>["db"];
 
-	const seed = (events: Ev[]) =>
-		db.insert(auditEvent).values(
-			events.map((e) => ({
+	// Row by row: a multi-row insert would pass D1's bound-parameter cap.
+	const seed = async (events: Ev[]) => {
+		for (const e of events)
+			await db.insert(auditEvent).values({
 				id: e.id,
 				organizationId: e.org ?? "o1",
 				action: e.action ?? "profile.updated",
 				createdAt: new Date(e.at),
 				actorUserId: e.actor ?? "u-owner",
 				actorName: "Owner",
-				actorRole: "owner",
+				actorRole: "owner" as const,
 				profileId: e.profileId ?? "p1",
 				profileName: "P",
 				counterpartProfileId: e.counterpart ?? null,
 				counterpartName: e.counterpart ? "C" : null,
 				changeRequestId: e.cr ?? null,
 				payload: null,
-			}))
-		);
+			});
+	};
 
 	const keys = (r: Awaited<ReturnType<typeof listAuditGroups>>) => r.groups.map((g) => g.key);
 

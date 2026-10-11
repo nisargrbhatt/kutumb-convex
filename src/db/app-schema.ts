@@ -9,6 +9,7 @@ import {
 	COMMUNITY_RELATION_TYPE,
 	CUSTOM_FIELD_TYPE,
 	GENDERS,
+	ORGANIZATION_ROLES,
 	enumValues,
 } from "./constants";
 import { relations } from "drizzle-orm";
@@ -228,7 +229,7 @@ export const auditEvent = sqliteTable(
 		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
 		actorUserId: text("actorUserId").notNull(),
 		actorName: text("actorName").notNull(),
-		actorRole: text("actorRole").notNull(),
+		actorRole: text("actorRole", { mode: "text", enum: enumValues(ORGANIZATION_ROLES) }).notNull(),
 		profileId: text("profileId").notNull(),
 		profileName: text("profileName").notNull(),
 		counterpartProfileId: text("counterpartProfileId"),

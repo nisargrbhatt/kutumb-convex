@@ -80,8 +80,8 @@ function PendingMineBanner({ orgId, profileId }: { orgId: string; profileId: str
 			<Clock />
 			<AlertTitle>Your change is pending</AlertTitle>
 			<AlertDescription>
-				{n === 1 ? "1 suggestion" : `${n} suggestions`} awaiting review. Everyone sees the current
-				info until an owner/admin reviews {n === 1 ? "it" : "them"}.
+				{n === 1 ? "1 change request" : `${n} change requests`} awaiting review. Everyone sees the
+				current info until an owner/admin reviews {n === 1 ? "it" : "them"}.
 			</AlertDescription>
 			<AlertAction>
 				<Button

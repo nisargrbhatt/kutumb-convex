@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { communityAddress, communityProfile, communityRelation } from "@/db/schema";
 import { AppError } from "@/domain/errors";
 import {
 	ADMIN,
@@ -88,6 +90,54 @@ describe("Change Request read fns", () => {
 			expect(groups[0]!.requests[0]!.stale).toBeNull();
 		});
 
+		it("stale check scales past D1's 100 bound-parameter cap", async () => {
+			const N = 105;
+			for (let i = 0; i < N; i++) {
+				await h.seed({ id: `s${i}` }, { id: `c${i}` });
+				await h.db
+					.insert(communityAddress)
+					.values({ id: `a${i}`, communityProfileId: `s${i}`, ...address });
+				await info(MEMBER, `s${i}`, { nickName: `N${i}` });
+				await h.changes.submit(MEMBER, {
+					kind: "address_edit",
+					profileId: `s${i}`,
+					addressId: `a${i}`,
+					expectedVersion: 0,
+					address: { ...address, line1: `${i} New St` },
+				});
+				await h.changes.submit(MEMBER, {
+					kind: "relation_add",
+					profileId: `s${i}`,
+					toId: `c${i}`,
+					type: "brother",
+					note: null,
+					bloodRelation: false,
+				});
+			}
+			// One counterpart gone inactive: its relation_add is stale, the rest approvable.
+			await h.db
+				.update(communityProfile)
+				.set({ status: "inactive" })
+				.where(eq(communityProfile.id, "c7"));
+			// Reverse relation recorded meanwhile (counterpart → subject): s3's add is stale too.
+			await h.db.insert(communityRelation).values({
+				id: "r-c3-s3",
+				organizationId: "o1",
+				fromId: "c3",
+				toId: "s3",
+				type: "brother",
+			});
+
+			const groups = await listPendingByProfile(h.db, ADMIN);
+
+			const requests = groups.flatMap((g) => g.requests.map((r) => ({ ...r, at: g.profileId })));
+			expect(requests).toHaveLength(N * 3);
+			expect(requests.filter((r) => r.stale).map((r) => [r.at, r.kind])).toEqual([
+				["s3", "relation_add"],
+				["s7", "relation_add"],
+			]);
+		});
+
 		it("plain member → Forbidden", async () => {
 			await expect(listPendingByProfile(h.db, MEMBER)).rejects.toBeInstanceOf(AppError);
 			await expect(pendingCount(h.db, MEMBER)).rejects.toBeInstanceOf(AppError);
@@ -134,8 +184,10 @@ describe("Change Request read fns", () => {
 			expect(await unseenCount(h.db, MEMBER)).toBe(2);
 			expect(await unseenCount(h.db, OTHER)).toBe(0);
 
-			await markRequestsSeen(h.db, MEMBER, h.now());
+			// Returns what it just marked: the visit's "New" rows.
+			expect((await markRequestsSeen(h.db, MEMBER, h.now())).sort()).toEqual([a, b].sort());
 			expect(await unseenCount(h.db, MEMBER)).toBe(0);
+			expect(await markRequestsSeen(h.db, MEMBER, h.now())).toEqual([]);
 
 			await h.changes.deactivate(ADMIN, "p");
 			expect(await unseenCount(h.db, MEMBER)).toBe(1);

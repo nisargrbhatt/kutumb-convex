@@ -10,6 +10,8 @@ export const ORGANIZATION_ROLES = {
 	member: "member",
 } as const;
 
+export type OrganizationRole = (typeof ORGANIZATION_ROLES)[keyof typeof ORGANIZATION_ROLES];
+
 export const COMMUNITY_PROFILE_STATUS = {
 	active: "active",
 	inactive: "inactive",

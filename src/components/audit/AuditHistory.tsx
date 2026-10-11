@@ -1,4 +1,12 @@
-import { Fragment, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
+import {
+	flexRender,
+	getCoreRowModel,
+	getExpandedRowModel,
+	useReactTable,
+	type ColumnDef,
+	type ExpandedState,
+} from "@tanstack/react-table";
 import { format, formatDistanceToNow } from "date-fns";
 import { ChevronDown, ChevronRight, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +29,6 @@ import {
 	groupHow,
 	groupSummary,
 } from "@/domain/audit";
-import { cn } from "@/lib/utils";
 import type { AuditGroup } from "@/queries/audit";
 
 type AuditEvent = AuditGroup["events"][number];
@@ -101,6 +108,54 @@ function When({ at }: { at: Date }) {
 	);
 }
 
+type GroupRow = AuditGroup & { summary: string; how: AuditHow; latestAt: Date };
+
+const metaClass = (def: ColumnDef<GroupRow>) =>
+	(def.meta as { className?: string } | undefined)?.className;
+
+const COLUMNS: ColumnDef<GroupRow>[] = [
+	{
+		id: "expand",
+		header: () => <span className="sr-only">Expand</span>,
+		meta: { className: "w-10" },
+		cell: ({ row }) => {
+			const isOpen = row.getIsExpanded();
+			return (
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					aria-expanded={isOpen}
+					aria-label={isOpen ? "Collapse change" : "Expand change"}
+					onClick={(e) => {
+						e.stopPropagation();
+						row.toggleExpanded();
+					}}
+				>
+					{isOpen ? <ChevronDown /> : <ChevronRight />}
+				</Button>
+			);
+		},
+	},
+	{
+		id: "change",
+		header: "Change",
+		meta: { className: "whitespace-normal" },
+		cell: ({ row }) => row.original.summary,
+	},
+	{
+		id: "how",
+		header: "How",
+		meta: { className: "w-32" },
+		cell: ({ row }) => <HowBadge how={row.original.how} />,
+	},
+	{
+		id: "when",
+		header: "When",
+		meta: { className: "w-40 text-muted-foreground" },
+		cell: ({ row }) => <When at={row.original.latestAt} />,
+	},
+];
+
 /**
  * History grouped by Change Request: one row per logical change (summary, How badge, when),
  * expandable to its events (action, Actor + role, time, inline diff). Table on md+, stacked
@@ -121,14 +176,28 @@ export function AuditHistory({
 	onLoadMore: () => void;
 	emptyText?: string;
 }) {
-	const [open, setOpen] = useState<Set<string>>(() => new Set());
-	const toggle = (key: string) =>
-		setOpen((s) => {
-			const next = new Set(s);
-			if (next.has(key)) next.delete(key);
-			else next.add(key);
-			return next;
-		});
+	const [expanded, setExpanded] = useState<ExpandedState>({});
+	const data = useMemo<GroupRow[]>(
+		() =>
+			groups.map((g) => ({
+				...g,
+				summary: groupSummary(g.events),
+				how: groupHow(g.events),
+				latestAt: g.events[0]?.createdAt ?? new Date(0),
+			})),
+		[groups]
+	);
+	const table = useReactTable({
+		data,
+		columns: COLUMNS,
+		state: { expanded },
+		onExpandedChange: setExpanded,
+		getRowId: (g) => g.key,
+		getRowCanExpand: () => true,
+		getCoreRowModel: getCoreRowModel(),
+		getExpandedRowModel: getExpandedRowModel(),
+	});
+	const rows = table.getRowModel().rows;
 
 	if (isLoading) {
 		return (
@@ -149,60 +218,41 @@ export function AuditHistory({
 		);
 	}
 
-	const rows = groups.map((g) => ({
-		...g,
-		summary: groupSummary(g.events),
-		how: groupHow(g.events),
-		latestAt: g.events[0]?.createdAt ?? new Date(0),
-		isOpen: open.has(g.key),
-	}));
+	const columnCount = table.getVisibleLeafColumns().length;
 
 	return (
 		<div className="flex w-full flex-col gap-3">
-			{/* md+: table */}
+			{/* md+: TanStack Table, group rows expand into their events */}
 			<div className="hidden rounded-md border md:block">
 				<Table>
 					<TableHeader>
-						<TableRow>
-							<TableHead className="w-10">
-								<span className="sr-only">Expand</span>
-							</TableHead>
-							<TableHead>Change</TableHead>
-							<TableHead className="w-32">How</TableHead>
-							<TableHead className="w-40">When</TableHead>
-						</TableRow>
+						{table.getHeaderGroups().map((hg) => (
+							<TableRow key={hg.id}>
+								{hg.headers.map((header) => (
+									<TableHead key={header.id} className={metaClass(header.column.columnDef)}>
+										{header.isPlaceholder
+											? null
+											: flexRender(header.column.columnDef.header, header.getContext())}
+									</TableHead>
+								))}
+							</TableRow>
+						))}
 					</TableHeader>
 					<TableBody>
-						{rows.map((g) => (
-							<Fragment key={g.key}>
-								<TableRow className="cursor-pointer" onClick={() => toggle(g.key)}>
-									<TableCell>
-										<Button
-											variant="ghost"
-											size="icon-sm"
-											aria-expanded={g.isOpen}
-											aria-label={g.isOpen ? "Collapse change" : "Expand change"}
-											onClick={(e) => {
-												e.stopPropagation();
-												toggle(g.key);
-											}}
-										>
-											{g.isOpen ? <ChevronDown /> : <ChevronRight />}
-										</Button>
-									</TableCell>
-									<TableCell className="whitespace-normal">{g.summary}</TableCell>
-									<TableCell>
-										<HowBadge how={g.how} />
-									</TableCell>
-									<TableCell className="text-muted-foreground">
-										<When at={g.latestAt} />
-									</TableCell>
+						{rows.map((row) => (
+							<Fragment key={row.id}>
+								<TableRow className="cursor-pointer" onClick={row.getToggleExpandedHandler()}>
+									{row.getVisibleCells().map((cell) => (
+										<TableCell key={cell.id} className={metaClass(cell.column.columnDef)}>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</TableCell>
+									))}
 								</TableRow>
-								{g.isOpen
-									? g.events.map((e) => (
+								{row.getIsExpanded()
+									? row.original.events.map((e) => (
 											<TableRow key={e.id} className="bg-muted/30 hover:bg-muted/30">
 												<TableCell />
-												<TableCell colSpan={3} className="whitespace-normal">
+												<TableCell colSpan={columnCount - 1} className="whitespace-normal">
 													<EventDetail event={e} />
 												</TableCell>
 											</TableRow>
@@ -214,40 +264,44 @@ export function AuditHistory({
 				</Table>
 			</div>
 
-			{/* < md: stacked */}
+			{/* < md: stacked cards over the same row model / expansion state */}
 			<ul className="flex flex-col gap-2 md:hidden">
-				{rows.map((g) => (
-					<li key={g.key} className="rounded-lg border">
-						<button
-							type="button"
-							className="flex w-full items-start gap-2 p-3 text-left"
-							aria-expanded={g.isOpen}
-							onClick={() => toggle(g.key)}
-						>
-							{g.isOpen ? (
-								<ChevronDown className="mt-0.5 size-4 shrink-0" />
-							) : (
-								<ChevronRight className="mt-0.5 size-4 shrink-0" />
-							)}
-							<span className="flex min-w-0 flex-1 flex-col gap-1.5">
-								<span className="text-sm break-words">{g.summary}</span>
-								<span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-									<HowBadge how={g.how} />
-									<When at={g.latestAt} />
+				{rows.map((row) => {
+					const g = row.original;
+					const isOpen = row.getIsExpanded();
+					return (
+						<li key={row.id} className="rounded-lg border">
+							<button
+								type="button"
+								className="flex w-full items-start gap-2 p-3 text-left"
+								aria-expanded={isOpen}
+								onClick={row.getToggleExpandedHandler()}
+							>
+								{isOpen ? (
+									<ChevronDown className="mt-0.5 size-4 shrink-0" />
+								) : (
+									<ChevronRight className="mt-0.5 size-4 shrink-0" />
+								)}
+								<span className="flex min-w-0 flex-1 flex-col gap-1.5">
+									<span className="text-sm break-words">{g.summary}</span>
+									<span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+										<HowBadge how={g.how} />
+										<When at={g.latestAt} />
+									</span>
 								</span>
-							</span>
-						</button>
-						{g.isOpen ? (
-							<ul className={cn("flex flex-col divide-y border-t bg-muted/30 px-3")}>
-								{g.events.map((e) => (
-									<li key={e.id} className="py-2">
-										<EventDetail event={e} />
-									</li>
-								))}
-							</ul>
-						) : null}
-					</li>
-				))}
+							</button>
+							{isOpen ? (
+								<ul className="flex flex-col divide-y border-t bg-muted/30 px-3">
+									{g.events.map((e) => (
+										<li key={e.id} className="py-2">
+											<EventDetail event={e} />
+										</li>
+									))}
+								</ul>
+							) : null}
+						</li>
+					);
+				})}
 			</ul>
 
 			{hasNextPage ? (

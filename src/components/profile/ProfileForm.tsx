@@ -7,6 +7,7 @@ import {
 	type CommunityProfileInput,
 } from "@/domain/communityProfile";
 import type { CustomFieldDefinition } from "@/domain/customFields";
+import { EDIT_COPY } from "@/domain/memberRequests";
 import { FormDrawer } from "@/components/ui/form-drawer";
 import { ProfileFieldsSection } from "@/components/profile/ProfileFieldsSection";
 import { CustomFieldsSection } from "@/components/custom-fields/CustomFieldsSection";
@@ -25,20 +26,9 @@ const COPY = {
 		submit: "Add member",
 	},
 	/** Owner/admin editing a Userless Profile. */
-	edit: {
-		title: "Edit profile",
-		createTitle: "Edit profile",
-		description: "Changes apply directly and are recorded in the audit log.",
-		submit: "Save profile",
-	},
+	edit: { ...EDIT_COPY.direct.info, createTitle: EDIT_COPY.direct.info.title },
 	/** Plain member on an active Userless Profile: becomes a Change Request. */
-	suggest: {
-		title: "Suggest edit",
-		createTitle: "Suggest edit",
-		description:
-			"Your changes go to an owner/admin for review; only changed fields are sent. Everyone sees the current info until then.",
-		submit: "Submit for review",
-	},
+	suggest: { ...EDIT_COPY.suggest.info, createTitle: EDIT_COPY.suggest.info.title },
 } as const;
 
 /**

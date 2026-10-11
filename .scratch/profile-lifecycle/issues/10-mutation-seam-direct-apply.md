@@ -31,12 +31,12 @@ Spec: [spec.md § Mutation seam, § Audit emission, § UI Lifecycle](../spec.md)
 
 ## Acceptance criteria
 
-- [ ] seam tests via `freshDb` + batch callback: every direct routing cell, events per emission
+- [x] seam tests via `freshDb` + batch callback: every direct routing cell, events per emission
   rule (diff vs snapshot, cascade `relation.removed`, no-op → no event), rollback on guard trip
   leaves no partial rows, `Stale` on version mismatch, `onGraphChanged` only on
-  status/name/relation change
-- [ ] existing own-profile, relation, address, reassign, add-member flows unchanged in browser
-- [ ] new drawers + "⋯" menu responsive, breadcrumbs intact
+  status/name/relation change (as built: any graph-held field, active only; spec updated)
+- [x] existing own-profile, relation, address, reassign, add-member flows unchanged in browser
+- [x] new drawers + "⋯" menu responsive, breadcrumbs intact
 
 ## Comments
 
@@ -51,3 +51,4 @@ Spec: [spec.md § Mutation seam, § Audit emission, § UI Lifecycle](../spec.md)
   etc., not only name), only for `active` profiles. Accept/reject untouched (ticket 11), so they
   still write no audit / no version bump. Member draft create writes no event yet (11 adds
   request + `change_request.submitted`). Address/relation writes don't bump profile `version`.
+- Acceptance ticked in review fix: tests + browser checks per plc-10 comment above.

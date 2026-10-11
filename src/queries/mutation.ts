@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import type { ChangeRequestKind } from "@/domain/changeRequest";
@@ -92,6 +92,31 @@ export function toastSubmitError(title: string, fallback: string) {
 			action: { label: "Reload", onClick: () => window.location.reload() },
 		});
 	};
+}
+
+/**
+ * Mutation for a seam submit (profile info / relation / address): outcome toast + analytics, then
+ * invalidation when something was written; Stale-aware error toast. `onWritten` runs on
+ * `applied` / `requested`, before invalidation.
+ */
+export function useSubmitMutation<TVars>(o: {
+	mutationFn: (vars: TVars) => Promise<SubmitResult>;
+	kind: ChangeRequestKind;
+	appliedTitle: string;
+	error: { title: string; fallback: string };
+	onWritten?: (result: SubmitResult) => void;
+}) {
+	const invalidate = useInvalidateProfileChange();
+	const notify = useNotifySubmit();
+	return useMutation({
+		mutationFn: o.mutationFn,
+		onSuccess: async (result) => {
+			if (!notify(result.outcome, o.kind, o.appliedTitle)) return;
+			o.onWritten?.(result);
+			await invalidate();
+		},
+		onError: toastSubmitError(o.error.title, o.error.fallback),
+	});
 }
 
 type BetterAuthResult<T> = { data: T | null; error: { code?: string; message?: string } | null };

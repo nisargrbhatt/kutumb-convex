@@ -146,7 +146,9 @@ function RouteComponent() {
 							<Inbox />
 						</EmptyMedia>
 						<EmptyTitle>No pending requests</EmptyTitle>
-						<EmptyDescription>Member suggestions and new profiles show up here.</EmptyDescription>
+						<EmptyDescription>
+							Member change requests and new profiles show up here.
+						</EmptyDescription>
 					</EmptyHeader>
 				</Empty>
 			) : (

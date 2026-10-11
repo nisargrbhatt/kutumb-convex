@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { COMMUNITY_PROFILE_BLOOD_GROUP, COMMUNITY_PROFILE_STATUS, GENDERS } from "@/db/constants";
+import {
+	COMMUNITY_PROFILE_BLOOD_GROUP,
+	COMMUNITY_PROFILE_STATUS,
+	GENDERS,
+	ORGANIZATION_ROLES,
+} from "@/db/constants";
 import type { communityProfile } from "@/db/app-schema";
 import { customFieldValuesSchema, toCustomFieldValues } from "@/domain/customFields";
 import type { Actor } from "@/domain/permission";
@@ -155,7 +160,7 @@ export type MemberFilter = z.infer<typeof memberFilterSchema>;
  * `draft` only — reads as "my drafts", since they see no one else's; `inactive` is hidden from them.
  */
 export function memberStatusFilterOptions(actor: Actor): z.infer<typeof profileStatusSchema>[] {
-	return actor.role === "member"
+	return actor.role === ORGANIZATION_ROLES.member
 		? [COMMUNITY_PROFILE_STATUS.draft]
 		: Object.values(COMMUNITY_PROFILE_STATUS);
 }
