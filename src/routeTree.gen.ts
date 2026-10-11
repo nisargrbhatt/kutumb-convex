@@ -29,6 +29,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunitySettingsRouteImport } from './routes/_authed/_community/settings'
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
+import { Route as AuthedCommunityMyRequestsIndexRouteImport } from './routes/_authed/_community/my-requests/index'
 import { Route as AuthedCommunityMemoriesIndexRouteImport } from './routes/_authed/_community/memories/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
@@ -148,6 +149,12 @@ const AuthedOnboardingCreateIndexRoute =
     id: '/onboarding/create/',
     path: '/onboarding/create/',
     getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedCommunityMyRequestsIndexRoute =
+  AuthedCommunityMyRequestsIndexRouteImport.update({
+    id: '/my-requests/',
+    path: '/my-requests/',
+    getParentRoute: () => AuthedCommunityRoute,
   } as any)
 const AuthedCommunityMemoriesIndexRoute =
   AuthedCommunityMemoriesIndexRouteImport.update({
@@ -276,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
   '/memories/': typeof AuthedCommunityMemoriesIndexRoute
+  '/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
   '/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
   '/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
@@ -312,6 +320,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
   '/memories': typeof AuthedCommunityMemoriesIndexRoute
+  '/my-requests': typeof AuthedCommunityMyRequestsIndexRoute
   '/onboarding/create': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
   '/members/$id': typeof AuthedCommunityMembersIdIndexRoute
@@ -352,6 +361,7 @@ export interface FileRoutesById {
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
   '/_authed/_community/memories/': typeof AuthedCommunityMemoriesIndexRoute
+  '/_authed/_community/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
   '/_authed/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
   '/_authed/_community/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
@@ -390,6 +400,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/members/'
     | '/memories/'
+    | '/my-requests/'
     | '/onboarding/create/'
     | '/onboarding/invitations/'
     | '/members/$id/'
@@ -426,6 +437,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/members'
     | '/memories'
+    | '/my-requests'
     | '/onboarding/create'
     | '/onboarding/invitations'
     | '/members/$id'
@@ -465,6 +477,7 @@ export interface FileRouteTypes {
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
     | '/_authed/_community/memories/'
+    | '/_authed/_community/my-requests/'
     | '/_authed/onboarding/create/'
     | '/_authed/onboarding/invitations/'
     | '/_authed/_community/members/$id/'
@@ -638,6 +651,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedOnboardingCreateIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/_community/my-requests/': {
+      id: '/_authed/_community/my-requests/'
+      path: '/my-requests'
+      fullPath: '/my-requests/'
+      preLoaderRoute: typeof AuthedCommunityMyRequestsIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
     '/_authed/_community/memories/': {
       id: '/_authed/_community/memories/'
       path: '/memories'
@@ -806,6 +826,7 @@ interface AuthedCommunityRouteChildren {
   AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
   AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
   AuthedCommunityMemoriesIndexRoute: typeof AuthedCommunityMemoriesIndexRoute
+  AuthedCommunityMyRequestsIndexRoute: typeof AuthedCommunityMyRequestsIndexRoute
   AuthedCommunityMembersIdIndexRoute: typeof AuthedCommunityMembersIdIndexRoute
   AuthedCommunityProfileAddressesIndexRoute: typeof AuthedCommunityProfileAddressesIndexRoute
   AuthedCommunityProfileAiIndexRoute: typeof AuthedCommunityProfileAiIndexRoute
@@ -821,6 +842,7 @@ const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
   AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
   AuthedCommunityMembersIndexRoute: AuthedCommunityMembersIndexRoute,
   AuthedCommunityMemoriesIndexRoute: AuthedCommunityMemoriesIndexRoute,
+  AuthedCommunityMyRequestsIndexRoute: AuthedCommunityMyRequestsIndexRoute,
   AuthedCommunityMembersIdIndexRoute: AuthedCommunityMembersIdIndexRoute,
   AuthedCommunityProfileAddressesIndexRoute:
     AuthedCommunityProfileAddressesIndexRoute,

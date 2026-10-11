@@ -31,6 +31,14 @@ const COPY = {
 		description: "Changes apply directly and are recorded in the audit log.",
 		submit: "Save profile",
 	},
+	/** Plain member on an active Userless Profile: becomes a Change Request. */
+	suggest: {
+		title: "Suggest edit",
+		createTitle: "Suggest edit",
+		description:
+			"Your changes go to an owner/admin for review; only changed fields are sent. Everyone sees the current info until then.",
+		submit: "Submit for review",
+	},
 } as const;
 
 /**
@@ -70,9 +78,12 @@ export function ProfileForm({
 
 	const handleSubmit = async (values: CommunityProfileFormValues) => {
 		if (!(await onSubmit(toInput(values)))) return;
-		// admin = add-member: next open starts blank. self keeps the saved values.
+		// admin = add-member: next open starts blank; suggest: profile unchanged until review.
+		// self keeps the saved values.
 		// keepDirtyValues must be overridden: `reset` merges `resetOptions` in.
-		form.reset(mode === "admin" ? defaultValues : values, { keepDirtyValues: false });
+		form.reset(mode === "admin" || mode === "suggest" ? defaultValues : values, {
+			keepDirtyValues: false,
+		});
 		onOpenChange(false);
 	};
 

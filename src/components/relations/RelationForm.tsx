@@ -61,6 +61,7 @@ export function RelationForm({
 	description,
 	onSubmit,
 	isPending,
+	suggest = false,
 }: {
 	subjectId: string;
 	excludeIds?: ReadonlyArray<string | null>;
@@ -70,6 +71,8 @@ export function RelationForm({
 	description?: string;
 	onSubmit: (values: RelationFormValues) => Promise<unknown>;
 	isPending: boolean;
+	/** Plain member on an active Userless Profile: copy reads as a suggestion. */
+	suggest?: boolean;
 }) {
 	const orgId = useOrgId();
 	const { data = [], isLoading } = useQuery({
@@ -106,11 +109,11 @@ export function RelationForm({
 			open={open}
 			onOpenChange={onOpenChange}
 			trigger={trigger}
-			title="Add relation"
+			title={suggest ? "Suggest relation" : "Add relation"}
 			description={description}
 			form={form}
 			onSubmit={handleSubmit}
-			submitLabel="Add relation"
+			submitLabel={suggest ? "Submit for review" : "Add relation"}
 			isPending={isPending}
 		>
 			<FormField

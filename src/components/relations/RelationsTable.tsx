@@ -50,6 +50,7 @@ export function RelationsTable({
 	action,
 	onDelete,
 	isDeleting = false,
+	suggest = false,
 }: {
 	title: string;
 	description: string;
@@ -59,6 +60,8 @@ export function RelationsTable({
 	action?: ReactNode;
 	onDelete?: (relationId: string) => Promise<unknown>;
 	isDeleting?: boolean;
+	/** Plain member on an active Userless Profile: delete becomes a removal suggestion. */
+	suggest?: boolean;
 }) {
 	const [deleteId, setDeleteId] = useState<string | null>(null);
 	const icon = DIRECTION_ICON[direction];
@@ -120,7 +123,11 @@ export function RelationsTable({
 												<Button
 													variant="ghost"
 													size="icon"
-													aria-label={`Delete relation with ${name}`}
+													aria-label={
+														suggest
+															? `Suggest removing relation with ${name}`
+															: `Delete relation with ${name}`
+													}
 													onClick={() => setDeleteId(row.id)}
 												>
 													<Trash2 className="size-4 text-destructive" />
@@ -148,9 +155,13 @@ export function RelationsTable({
 				<ConfirmDialog
 					open={deleteId !== null}
 					onOpenChange={(open) => !open && setDeleteId(null)}
-					title="Delete relation"
-					description="This removes the relation. This action cannot be undone."
-					confirmLabel="Delete"
+					title={suggest ? "Suggest removing this relation?" : "Delete relation"}
+					description={
+						suggest
+							? "An owner/admin reviews the removal. The relation stays until then."
+							: "This removes the relation. This action cannot be undone."
+					}
+					confirmLabel={suggest ? "Submit for review" : "Delete"}
 					destructive
 					onConfirm={confirmDelete}
 					isPending={isDeleting}
