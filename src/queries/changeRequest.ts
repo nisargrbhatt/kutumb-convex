@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
+import type { ChangeRequestKind } from "@/domain/changeRequest";
 import type { ReviewDecision } from "@/domain/profileChanges";
 import { isAppError } from "@/domain/errors";
 import {
@@ -81,8 +82,15 @@ export function useReviewChangeRequest(afterSuccess?: () => unknown) {
 	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
 	return useMutation({
-		mutationFn: (v: { changeRequestId: string; review: ReviewDecision }) =>
-			reviewChangeRequest({ data: v }),
+		/** `kind`: optional, only for the stale-blocked analytics event (server knows it otherwise). */
+		mutationFn: ({
+			changeRequestId,
+			review,
+		}: {
+			changeRequestId: string;
+			review: ReviewDecision;
+			kind?: ChangeRequestKind;
+		}) => reviewChangeRequest({ data: { changeRequestId, review } }),
 		onSuccess: async (result, v) => {
 			posthog.capture("change_request_reviewed", {
 				kind: result.kind,
@@ -95,6 +103,7 @@ export function useReviewChangeRequest(afterSuccess?: () => unknown) {
 		onError: (error, v) => {
 			if (isAppError(error) && error.kind === "Stale" && v.review.decision === "approve") {
 				posthog.capture("change_request_reviewed", {
+					kind: v.kind,
 					decision: "approve",
 					stale_blocked: true,
 				});
