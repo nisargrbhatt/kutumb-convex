@@ -381,8 +381,9 @@ describe("makeProfileChanges", () => {
 			}
 		}
 
-		it("userless active: member → Forbidden (requests not yet)", async () => {
-			await expectError(changes.submit(MEMBER, info("active")), "Forbidden");
+		it("userless active: member → requested (Change Request), not applied", async () => {
+			expect((await changes.submit(MEMBER, info("active"))).outcome).toBe("requested");
+			expect(await profile("active")).toMatchObject({ firstName: "ACTIVE", version: 0 });
 		});
 
 		it("userless draft: non-creator member → NotFound", async () => {
@@ -543,9 +544,9 @@ describe("makeProfileChanges", () => {
 			await expectError(add(ADMIN, "a", "c"), "NotFound");
 		});
 
-		it("linked user manages own; member on active Userless → Forbidden", async () => {
+		it("linked user manages own; member on active Userless → requested", async () => {
 			await add(MEMBER, "mine", "a");
-			await expectError(add(MEMBER, "a", "b"), "Forbidden");
+			expect((await add(MEMBER, "a", "b")).outcome).toBe("requested");
 		});
 
 		it("remove: outgoing only, relation.removed snapshot", async () => {
@@ -627,11 +628,10 @@ describe("makeProfileChanges", () => {
 			);
 		});
 
-		it("member on active Userless → Forbidden", async () => {
-			await expectError(
-				changes.submit(MEMBER, { kind: "address_add", profileId: "a", address }),
-				"Forbidden"
-			);
+		it("member on active Userless → requested", async () => {
+			expect(
+				(await changes.submit(MEMBER, { kind: "address_add", profileId: "a", address })).outcome
+			).toBe("requested");
 		});
 	});
 

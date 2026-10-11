@@ -13,11 +13,19 @@ import {
 	COMMUNITY_PROFILE_STATUS,
 	type AuditAction,
 } from "@/db/constants";
+import type {
+	AddressEditPayload,
+	ChangeRequestKind,
+	InfoPayload,
+	RelationAddPayload,
+	RelationRemovePayload,
+} from "@/domain/changeRequest";
 import { fullName, type CommunityProfileInput } from "@/domain/communityProfile";
 import type { CustomFieldValues } from "@/domain/customFields";
 import { AppError, type AppErrorKind } from "@/domain/errors";
 import { can, type Actor } from "@/domain/permission";
 import type { RelationType } from "@/domain/relation";
+import { loadStaleReasons } from "@/domain/queries/changeRequests";
 import type { QueryDb } from "@/domain/queries/db";
 
 /** Drizzle client that can run an all-or-nothing `batch` (D1 client and `freshDb` both fit). */
@@ -102,8 +110,8 @@ type Plan = {
 	statements: BatchItem<"sqlite">[];
 	events: EventDraft[];
 	graphChanged: boolean;
-	/** Domain error when an in-batch guard trips. */
-	onGuardTrip: AppErrorKind;
+	/** Domain error when an in-batch guard trips (a fn re-reads to classify it). */
+	onGuardTrip: AppErrorKind | (() => Promise<AppErrorKind>);
 };
 
 const INFO_FIELDS = [
@@ -242,24 +250,103 @@ export function makeProfileChanges({
 	}
 
 	/**
-	 * Who may change `subject`, and how. Direct only in this slice: a member's change to an
-	 * `active` Userless Profile (a Change Request) is `Forbidden` until requests land.
+	 * Who may change `subject`, and how: linked → its user, direct; Userless → owner/admin direct;
+	 * own draft → its creator direct; `active` → a member's Change Request.
 	 */
-	async function routeDirect(actor: Actor, subject: ProfileRow): Promise<void> {
+	async function route(actor: Actor, subject: ProfileRow): Promise<"direct" | "request"> {
 		if (subject.userId) {
-			if (subject.userId === actor.userId) return;
+			if (subject.userId === actor.userId) return "direct";
 			throw new AppError("Forbidden", "Only its linked user can change this profile");
 		}
-		if (isReviewer(actor)) return;
+		if (isReviewer(actor)) return "direct";
 		switch (subject.status) {
 			case COMMUNITY_PROFILE_STATUS.draft:
-				if (await isDraftCreator(actor, subject.id)) return;
+				if (await isDraftCreator(actor, subject.id)) return "direct";
 				throw new AppError("NotFound", "Community Profile not found");
 			case COMMUNITY_PROFILE_STATUS.active:
-				throw new AppError("Forbidden", "Only owner/admin can change this profile");
+				if (can(actor, { changeRequest: ["create"] })) return "request";
+				throw new AppError("Forbidden", "You do not have permission to perform this action");
 			default:
 				throw new AppError("NotFound", "Community Profile not found");
 		}
+	}
+
+	/**
+	 * Turns a validated direct `plan` into a pending Change Request instead: its main event is the
+	 * would-be change, so payload / target / counterpart come from it (statements are dropped).
+	 */
+	function planRequest(
+		actor: Actor,
+		name: string,
+		subject: ProfileRow,
+		change: Exclude<ProfileChange, { kind: "create" }>,
+		applied: Plan
+	) {
+		const main = applied.events[0]!;
+		let payload: unknown = main.payload;
+		let targetId: string | null = null;
+		switch (change.kind) {
+			case "info":
+				break;
+			case "relation_add":
+				payload = {
+					toId: change.toId,
+					toName: main.counterpartName ?? "",
+					type: change.type,
+					note: change.note,
+					bloodRelation: change.bloodRelation,
+				} satisfies RelationAddPayload;
+				break;
+			case "relation_remove":
+				targetId = change.relationId;
+				payload = {
+					...(main.payload as Omit<RelationRemovePayload, "toName">),
+					toName: main.counterpartName ?? null,
+				} satisfies RelationRemovePayload;
+				break;
+			case "address_add":
+				payload = change.address;
+				break;
+			case "address_edit":
+				targetId = change.addressId;
+				break;
+			case "address_remove":
+				targetId = change.addressId;
+				break;
+		}
+		const changeRequestId = newId();
+		const plan: Plan = {
+			statements: [
+				db.insert(changeRequest).values({
+					id: changeRequestId,
+					organizationId: actor.organizationId,
+					profileId: subject.id,
+					profileName: fullName(subject),
+					kind: change.kind,
+					status: CHANGE_REQUEST_STATUS.pending,
+					targetId,
+					payload,
+					submitterUserId: actor.userId,
+					submitterName: name,
+					createdAt: now(),
+				}),
+			],
+			events: [
+				{
+					action: "change_request.submitted",
+					profileId: subject.id,
+					profileName: fullName(subject),
+					counterpartProfileId: main.counterpartProfileId ?? null,
+					counterpartName: main.counterpartName ?? null,
+					targetId,
+					changeRequestId,
+					payload: { kind: change.kind, payload },
+				},
+			],
+			graphChanged: false,
+			onGuardTrip: "Conflict",
+		};
+		return { plan, changeRequestId };
 	}
 
 	/** Statements + events closing every pending request of `profileId` as superseded. */
@@ -325,9 +412,11 @@ export function makeProfileChanges({
 				await db.batch(items as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 			} catch (e) {
 				if (isGuardTrip(e)) {
+					const kind =
+						typeof plan.onGuardTrip === "function" ? await plan.onGuardTrip() : plan.onGuardTrip;
 					throw new AppError(
-						plan.onGuardTrip,
-						plan.onGuardTrip === "Stale"
+						kind,
+						kind === "Stale"
 							? "This record changed since you loaded it. Reload and try again."
 							: "This record was changed by someone else. Reload and try again."
 					);
@@ -820,8 +909,96 @@ export function makeProfileChanges({
 		};
 	}
 
+	/** Stale reason of a pending request against current state (null = approvable). */
+	async function staleOf(actor: Actor, req: RequestRow) {
+		return (await loadStaleReasons(db, actor.organizationId, [req])).get(req.id) ?? null;
+	}
+
+	/**
+	 * Approve of a non-create request: re-plans its payload onto current state through the same
+	 * planners as a direct change (base checked first: stale → `Stale`).
+	 */
+	async function planApprove(actor: Actor, subject: ProfileRow, req: RequestRow): Promise<Plan> {
+		if (await staleOf(actor, req)) throw staleError();
+		const base = { profileId: subject.id };
+		let plan: Plan | null;
+		switch (req.kind as Exclude<ChangeRequestKind, "create">) {
+			case "info": {
+				const { customFieldData: custom, ...fields } = req.payload as InfoPayload;
+				const profile = Object.fromEntries(
+					INFO_FIELDS.map((k) => [k, k in fields ? fields[k]![1] : (subject[k] ?? null)])
+				) as Omit<CommunityProfileInput, "customFieldData">;
+				const cfv: CustomFieldValues = { ...subject.customFieldData };
+				for (const [id, { change }] of Object.entries(custom ?? {})) {
+					if (change[1] === null || change[1] === undefined) delete cfv[id];
+					else cfv[id] = change[1] as CustomFieldValues[string];
+				}
+				plan = planInfo(
+					subject,
+					{
+						...base,
+						kind: "info",
+						expectedVersion: subject.version,
+						profile: { ...profile, customFieldData: Object.keys(cfv).length ? cfv : null },
+					},
+					await customFieldLabels(actor.organizationId)
+				);
+				break;
+			}
+			case "address_edit": {
+				const row = await loadAddress(subject, req.targetId ?? "");
+				const patch = req.payload as AddressEditPayload;
+				const address = Object.fromEntries(
+					ADDRESS_FIELDS.map((k) => [k, k in patch ? patch[k]![1] : (row[k] ?? null)])
+				) as AddressInput;
+				plan = await planAddressEdit(subject, {
+					...base,
+					kind: "address_edit",
+					addressId: row.id,
+					expectedVersion: row.version,
+					address,
+				});
+				break;
+			}
+			case "address_add":
+				plan = planAddressAdd(subject, {
+					...base,
+					kind: "address_add",
+					address: req.payload as AddressInput,
+				});
+				break;
+			case "address_remove":
+				plan = await planAddressRemove(subject, {
+					...base,
+					kind: "address_remove",
+					addressId: req.targetId ?? "",
+				});
+				break;
+			case "relation_add": {
+				const { toId, type, note, bloodRelation } = req.payload as RelationAddPayload;
+				plan = await planRelationAdd(actor, subject, {
+					...base,
+					kind: "relation_add",
+					toId,
+					type,
+					note,
+					bloodRelation,
+				});
+				break;
+			}
+			case "relation_remove":
+				plan = await planRelationRemove(actor, subject, {
+					...base,
+					kind: "relation_remove",
+					relationId: req.targetId ?? "",
+				});
+				break;
+		}
+		return plan ?? emptyPlan();
+	}
+
 	return {
-		/** Applies (or, later, requests) one change. Routing by Actor role + profile linkage. */
+		/** Applies one change directly or files it as a pending Change Request (by routing). Routing by Actor role + profile linkage. */
 		async submit(actor: Actor, change: ProfileChange): Promise<SubmitResult> {
 			const name = await actorName(actor);
 			if (change.kind === "create") {
@@ -833,7 +1010,7 @@ export function makeProfileChanges({
 			}
 
 			const subject = await loadProfile(actor, change.profileId);
-			await routeDirect(actor, subject);
+			const how = await route(actor, subject);
 
 			let plan: Plan | null;
 			switch (change.kind) {
@@ -857,11 +1034,24 @@ export function makeProfileChanges({
 					break;
 			}
 			if (!plan) return { outcome: "unchanged", profileId: subject.id };
+			if (how === "request") {
+				const req = planRequest(actor, name, subject, change, plan);
+				await commit(actor, name, req.plan);
+				return {
+					outcome: "requested",
+					profileId: subject.id,
+					changeRequestId: req.changeRequestId,
+				};
+			}
 			await commit(actor, name, plan);
 			return { outcome: "applied", profileId: subject.id };
 		},
 
-		/** Owner/admin closes a pending Change Request: approve applies it, reject discards it. */
+		/**
+		 * Owner/admin closes a pending Change Request: approve applies it (blocked while `Stale`),
+		 * reject discards it (always allowed). A guard trip re-reads: closed → `Conflict`, else
+		 * stale → `Stale`, else `Conflict`.
+		 */
 		async review(actor: Actor, changeRequestId: string, decision: ReviewDecision) {
 			assertReviewer(actor);
 			const note = decision.note?.trim() || null;
@@ -869,13 +1059,17 @@ export function makeProfileChanges({
 				throw new AppError("Invalid", "A reason is required to reject");
 			}
 			const req = await loadPendingRequest(actor, changeRequestId);
-			if (req.kind !== CHANGE_REQUEST_KIND.create) {
-				throw new AppError("Invalid", `Reviewing ${req.kind} requests is not supported yet`);
-			}
 			const subject = await loadProfile(actor, req.profileId);
 			const name = await actorName(actor);
 			const approve = decision.decision === "approve";
-			const applied = approve ? planActivateDraft(subject) : await planDelete(actor, subject);
+			const isCreate = req.kind === CHANGE_REQUEST_KIND.create;
+			const applied = isCreate
+				? approve
+					? planActivateDraft(subject)
+					: await planDelete(actor, subject)
+				: approve
+					? await planApprove(actor, subject, req)
+					: emptyPlan();
 			await commit(actor, name, {
 				statements: [
 					...closeRequest(
@@ -898,7 +1092,13 @@ export function makeProfileChanges({
 					...applied.events.map((e) => ({ ...e, changeRequestId: req.id })),
 				],
 				graphChanged: applied.graphChanged,
-				onGuardTrip: "Conflict",
+				onGuardTrip: async () => {
+					const current = await db.query.changeRequest.findFirst({
+						where: (f, o) => o.eq(f.id, req.id),
+					});
+					if (current?.status !== CHANGE_REQUEST_STATUS.pending) return "Conflict";
+					return approve && !isCreate && (await staleOf(actor, current)) ? "Stale" : "Conflict";
+				},
 			});
 			return { kind: req.kind, profileId: subject.id };
 		},
