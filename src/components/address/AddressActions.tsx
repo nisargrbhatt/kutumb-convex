@@ -17,9 +17,12 @@ const succeeded = (p: Promise<unknown>) =>
 export function AddAddressButton({
 	profileId,
 	description,
+	suggest = false,
 }: {
 	profileId: string;
 	description: string;
+	/** Plain member on an active Userless Profile: copy reads as a suggestion. */
+	suggest?: boolean;
 }) {
 	const [open, setOpen] = useState(false);
 	const add = useAddAddress(profileId);
@@ -30,12 +33,12 @@ export function AddAddressButton({
 			trigger={
 				<Button size="sm">
 					<MapPin className="size-4" />
-					Add address
+					{suggest ? "Suggest address" : "Add address"}
 				</Button>
 			}
-			title="Add address"
+			title={suggest ? "Suggest address" : "Add address"}
 			description={description}
-			submitLabel="Add address"
+			submitLabel={suggest ? "Submit for review" : "Add address"}
 			defaultValues={toAddressFormValues()}
 			onSubmit={(address) => succeeded(add.mutateAsync(address))}
 			isPending={add.isPending}
@@ -47,9 +50,12 @@ export function AddAddressButton({
 export function AddressActions({
 	profileId,
 	address,
+	suggest = false,
 }: {
 	profileId: string;
 	address: AddressInput & { id: string; version: number };
+	/** Plain member on an active Userless Profile: edit / delete become Change Requests. */
+	suggest?: boolean;
 }) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -63,13 +69,21 @@ export function AddressActions({
 				open={editOpen}
 				onOpenChange={setEditOpen}
 				trigger={
-					<Button variant="outline" size="icon-sm" aria-label="Edit address">
+					<Button
+						variant="outline"
+						size="icon-sm"
+						aria-label={suggest ? "Suggest address edit" : "Edit address"}
+					>
 						<Pencil className="size-4" />
 					</Button>
 				}
-				title="Edit address"
-				description="Update this address."
-				submitLabel="Save address"
+				title={suggest ? "Suggest address edit" : "Edit address"}
+				description={
+					suggest
+						? "Your changes go to an owner/admin for review; only changed fields are sent."
+						: "Update this address."
+				}
+				submitLabel={suggest ? "Submit for review" : "Save address"}
 				defaultValues={toAddressFormValues(address)}
 				onSubmit={(next) =>
 					succeeded(
@@ -86,13 +100,21 @@ export function AddressActions({
 				open={deleteOpen}
 				onOpenChange={setDeleteOpen}
 				trigger={
-					<Button variant="destructive" size="icon-sm" aria-label="Delete address">
+					<Button
+						variant="destructive"
+						size="icon-sm"
+						aria-label={suggest ? "Suggest address removal" : "Delete address"}
+					>
 						<Trash2 className="size-4" />
 					</Button>
 				}
-				title="Delete address?"
-				description="This will permanently delete this address. This action cannot be undone."
-				confirmLabel="Delete"
+				title={suggest ? "Suggest removing this address?" : "Delete address?"}
+				description={
+					suggest
+						? "An owner/admin reviews the removal. The address stays until then."
+						: "This will permanently delete this address. This action cannot be undone."
+				}
+				confirmLabel={suggest ? "Submit for review" : "Delete"}
 				destructive
 				onConfirm={() => remove.mutate(address.id, { onSuccess: () => setDeleteOpen(false) })}
 				isPending={remove.isPending}

@@ -8,7 +8,9 @@ import { ProfileIdentityHeader } from "@/components/profile/ProfileIdentityHeade
 import { ProfileInfoView } from "@/components/profile/ProfileInfoView";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProfileRequestBanner } from "@/components/changeRequest/ProfileRequestBanner";
 import { fullName } from "@/domain/communityProfile";
+import { profileEditMode } from "@/domain/memberRequests";
 import { isAppError } from "@/domain/errors";
 import { useCan } from "@/hooks/useCan";
 import { safeAsync } from "@/lib/safe";
@@ -16,6 +18,7 @@ import { memberDetailQuery } from "@/queries/communityProfile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MemberActions } from "./-components/MemberActions";
 import { MemberHistory } from "./-components/MemberHistory";
+import { MemberInfoEditButton } from "./-components/MemberInfoEditButton";
 import { MemberRelations } from "./-components/MemberRelations";
 
 export const Route = createFileRoute("/_authed/_community/members/$id/")({
@@ -41,7 +44,9 @@ function RouteComponent() {
 		data: { profile, addresses, customFieldDefs, outgoingRelations, incomingRelations },
 	} = useSuspenseQuery(memberDetailQuery(orgId, id));
 	const canReview = useCan({ changeRequest: ["review"] });
-	const canEditUserless = canReview && profile.userId == null;
+	const editMode = profileEditMode({ canReview }, profile);
+	const canEditUserless = editMode !== "none";
+	const suggest = editMode === "suggest";
 	const canAudit = useCan({ auditEvent: ["read"] });
 	const name = fullName(profile);
 
@@ -54,10 +59,19 @@ function RouteComponent() {
 					profile={profile}
 					headingLevel="h1"
 					actions={
-						canReview ? <MemberActions profile={profile} customFieldDefs={customFieldDefs} /> : null
+						canReview ? (
+							<MemberActions profile={profile} customFieldDefs={customFieldDefs} />
+						) : canEditUserless ? (
+							<MemberInfoEditButton
+								profile={profile}
+								customFieldDefs={customFieldDefs}
+								suggest={suggest}
+							/>
+						) : null
 					}
 				/>
 
+				<ProfileRequestBanner orgId={orgId} profile={profile} canReview={canReview} />
 				{canReview ? <PendingReviewBanner orgId={orgId} profileId={profile.id} /> : null}
 
 				<Tabs defaultValue="overview" className="gap-4">
@@ -82,7 +96,12 @@ function RouteComponent() {
 								{canEditUserless ? (
 									<AddAddressButton
 										profileId={profile.id}
-										description="Add an address for this profile on its behalf."
+										suggest={suggest}
+										description={
+											suggest
+												? "Suggest an address for this profile. An owner/admin reviews it."
+												: "Add an address for this profile on its behalf."
+										}
 									/>
 								) : null}
 							</div>
@@ -102,7 +121,11 @@ function RouteComponent() {
 															{address.type}
 														</Badge>
 														{canEditUserless ? (
-															<AddressActions profileId={profile.id} address={address} />
+															<AddressActions
+																profileId={profile.id}
+																address={address}
+																suggest={suggest}
+															/>
 														) : null}
 													</div>
 												</div>
@@ -156,6 +179,7 @@ function RouteComponent() {
 							profile={profile}
 							outgoingRelations={outgoingRelations}
 							incomingRelations={incomingRelations}
+							editMode={editMode}
 						/>
 					</TabsContent>
 					{canAudit ? (

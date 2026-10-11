@@ -30,6 +30,7 @@ import { Route as AuthedCommunitySettingsRouteImport } from './routes/_authed/_c
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
 import { Route as AuthedCommunityReviewsIndexRouteImport } from './routes/_authed/_community/reviews/index'
+import { Route as AuthedCommunityMyRequestsIndexRouteImport } from './routes/_authed/_community/my-requests/index'
 import { Route as AuthedCommunityMemoriesIndexRouteImport } from './routes/_authed/_community/memories/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
@@ -154,6 +155,12 @@ const AuthedCommunityReviewsIndexRoute =
   AuthedCommunityReviewsIndexRouteImport.update({
     id: '/reviews/',
     path: '/reviews/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
+const AuthedCommunityMyRequestsIndexRoute =
+  AuthedCommunityMyRequestsIndexRouteImport.update({
+    id: '/my-requests/',
+    path: '/my-requests/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
 const AuthedCommunityMemoriesIndexRoute =
@@ -283,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
   '/memories/': typeof AuthedCommunityMemoriesIndexRoute
+  '/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
   '/reviews/': typeof AuthedCommunityReviewsIndexRoute
   '/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
@@ -320,6 +328,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
   '/memories': typeof AuthedCommunityMemoriesIndexRoute
+  '/my-requests': typeof AuthedCommunityMyRequestsIndexRoute
   '/reviews': typeof AuthedCommunityReviewsIndexRoute
   '/onboarding/create': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
@@ -361,6 +370,7 @@ export interface FileRoutesById {
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
   '/_authed/_community/memories/': typeof AuthedCommunityMemoriesIndexRoute
+  '/_authed/_community/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
   '/_authed/_community/reviews/': typeof AuthedCommunityReviewsIndexRoute
   '/_authed/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
@@ -400,6 +410,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/members/'
     | '/memories/'
+    | '/my-requests/'
     | '/reviews/'
     | '/onboarding/create/'
     | '/onboarding/invitations/'
@@ -437,6 +448,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/members'
     | '/memories'
+    | '/my-requests'
     | '/reviews'
     | '/onboarding/create'
     | '/onboarding/invitations'
@@ -477,6 +489,7 @@ export interface FileRouteTypes {
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
     | '/_authed/_community/memories/'
+    | '/_authed/_community/my-requests/'
     | '/_authed/_community/reviews/'
     | '/_authed/onboarding/create/'
     | '/_authed/onboarding/invitations/'
@@ -658,6 +671,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityReviewsIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
+    '/_authed/_community/my-requests/': {
+      id: '/_authed/_community/my-requests/'
+      path: '/my-requests'
+      fullPath: '/my-requests/'
+      preLoaderRoute: typeof AuthedCommunityMyRequestsIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
     '/_authed/_community/memories/': {
       id: '/_authed/_community/memories/'
       path: '/memories'
@@ -826,6 +846,7 @@ interface AuthedCommunityRouteChildren {
   AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
   AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
   AuthedCommunityMemoriesIndexRoute: typeof AuthedCommunityMemoriesIndexRoute
+  AuthedCommunityMyRequestsIndexRoute: typeof AuthedCommunityMyRequestsIndexRoute
   AuthedCommunityReviewsIndexRoute: typeof AuthedCommunityReviewsIndexRoute
   AuthedCommunityMembersIdIndexRoute: typeof AuthedCommunityMembersIdIndexRoute
   AuthedCommunityProfileAddressesIndexRoute: typeof AuthedCommunityProfileAddressesIndexRoute
@@ -842,6 +863,7 @@ const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
   AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
   AuthedCommunityMembersIndexRoute: AuthedCommunityMembersIndexRoute,
   AuthedCommunityMemoriesIndexRoute: AuthedCommunityMemoriesIndexRoute,
+  AuthedCommunityMyRequestsIndexRoute: AuthedCommunityMyRequestsIndexRoute,
   AuthedCommunityReviewsIndexRoute: AuthedCommunityReviewsIndexRoute,
   AuthedCommunityMembersIdIndexRoute: AuthedCommunityMembersIdIndexRoute,
   AuthedCommunityProfileAddressesIndexRoute:
@@ -898,10 +920,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

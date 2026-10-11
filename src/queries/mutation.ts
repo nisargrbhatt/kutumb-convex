@@ -1,5 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
+import type { ChangeRequestKind } from "@/domain/changeRequest";
+import { submitErrorFeedback, submitFeedback } from "@/domain/memberRequests";
+import type { SubmitResult } from "@/domain/profileChanges";
 import {
 	addressKeys,
 	auditKeys,
@@ -59,6 +63,34 @@ export function toastMutationError(title: string, fallback: string, limitCopy?: 
 		}
 		const message = error instanceof Error ? error.message : undefined;
 		toast.error(title, { description: message || fallback });
+	};
+}
+
+/**
+ * Toast + analytics for a seam submit (`applied` / `requested` / `unchanged`). Returns whether
+ * anything was written (caller invalidates only then).
+ */
+export function useNotifySubmit() {
+	const posthog = usePostHog();
+	return (outcome: SubmitResult["outcome"], kind: ChangeRequestKind, appliedTitle: string) => {
+		const f = submitFeedback(outcome, appliedTitle);
+		if (f.type === "info") toast.info(f.title, { description: f.description });
+		else toast.success(f.title, { description: f.description });
+		if (outcome === "requested") posthog.capture("change_request_submitted", { kind });
+		return outcome !== "unchanged";
+	};
+}
+
+/** Submit error toast: `Stale` → "Profile changed, reload" (with Reload), else generic copy. */
+export function toastSubmitError(title: string, fallback: string) {
+	const generic = toastMutationError(title, fallback);
+	return (error: unknown) => {
+		const stale = submitErrorFeedback(error);
+		if (!stale) return generic(error);
+		toast.error(stale.title, {
+			description: stale.description,
+			action: { label: "Reload", onClick: () => window.location.reload() },
+		});
 	};
 }
 

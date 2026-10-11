@@ -21,7 +21,12 @@ import {
 	updateProfileInfo,
 } from "@/server/communityProfile";
 import { changeRequestKeys, profileKeys } from "./keys";
-import { toastMutationError, useInvalidateProfileChange } from "./mutation";
+import {
+	toastMutationError,
+	toastSubmitError,
+	useInvalidateProfileChange,
+	useNotifySubmit,
+} from "./mutation";
 
 export const myProfileQuery = (orgId: string) =>
 	queryOptions({
@@ -111,25 +116,22 @@ export function useSaveMyProfile() {
 	});
 }
 
-/** Owner/admin info edit of a Userless Profile. */
+/** Info edit of a Userless Profile: owner/admin + own draft apply, plain member on active requests. */
 export function useUpdateProfileInfo(profileId: string) {
 	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
+	const notify = useNotifySubmit();
 	return useMutation({
 		mutationFn: (v: { expectedVersion: number; input: CommunityProfileInput }) =>
 			updateProfileInfo({
 				data: { profileId, expectedVersion: v.expectedVersion, profile: v.input },
 			}),
 		onSuccess: async (result) => {
-			if (result.outcome === "unchanged") {
-				toast.info("No changes to save");
-				return;
-			}
-			toast.success("Profile saved");
+			if (!notify(result.outcome, "info", "Profile saved")) return;
 			posthog.capture("profile_saved", { outcome: result.outcome });
 			await invalidate();
 		},
-		onError: toastMutationError("Profile", "Failed to save profile"),
+		onError: toastSubmitError("Profile", "Failed to save profile"),
 	});
 }
 

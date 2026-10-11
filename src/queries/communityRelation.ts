@@ -1,6 +1,6 @@
 import { queryOptions, useMutation } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
-import { toast } from "sonner";
+
 import {
 	addRelation,
 	getMyCommunityRelationships,
@@ -10,7 +10,7 @@ import {
 } from "@/server/communityRelation";
 import type { RelationType } from "@/domain/relation";
 import { relationKeys } from "./keys";
-import { toastMutationError, useInvalidateProfileChange } from "./mutation";
+import { toastSubmitError, useInvalidateProfileChange, useNotifySubmit } from "./mutation";
 
 export type RelationFormValues = {
 	toId: string;
@@ -37,17 +37,22 @@ export const myOutgoingRelationCountQuery = (orgId: string) =>
 		queryFn: () => getMyOutgoingRelationCount(),
 	});
 
-const onRelationError = (fallback: string) => toastMutationError("Relation", fallback);
+const onRelationError = (fallback: string) => toastSubmitError("Relation", fallback);
 
-/** Outgoing relation of `profileId`: own linked profile, or a Userless one for owner/admin. */
+/**
+ * Outgoing relation of `profileId`: own linked profile, or a Userless one (owner/admin + own draft
+ * apply directly; a plain member on an active one sends a Change Request).
+ */
 export function useAddRelation(profileId: string) {
 	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
+	const notify = useNotifySubmit();
 	return useMutation({
 		mutationFn: (values: RelationFormValues) => addRelation({ data: { ...values, profileId } }),
-		onSuccess: async () => {
-			posthog.capture("member_relation_added", { member_id: profileId });
-			toast.success("Relation", { description: "Relation added successfully" });
+		onSuccess: async (result) => {
+			if (!notify(result.outcome, "relation_add", "Relation added successfully")) return;
+			if (result.outcome === "applied")
+				posthog.capture("member_relation_added", { member_id: profileId });
 			await invalidate();
 		},
 		onError: onRelationError("Failed to add relation"),
@@ -57,11 +62,13 @@ export function useAddRelation(profileId: string) {
 export function useRemoveRelation(profileId: string) {
 	const invalidate = useInvalidateProfileChange();
 	const posthog = usePostHog();
+	const notify = useNotifySubmit();
 	return useMutation({
 		mutationFn: (relationId: string) => removeRelation({ data: { profileId, relationId } }),
-		onSuccess: async () => {
-			posthog.capture("member_relation_deleted", { member_id: profileId });
-			toast.success("Relation", { description: "Relation deleted successfully" });
+		onSuccess: async (result) => {
+			if (!notify(result.outcome, "relation_remove", "Relation deleted successfully")) return;
+			if (result.outcome === "applied")
+				posthog.capture("member_relation_deleted", { member_id: profileId });
 			await invalidate();
 		},
 		onError: onRelationError("Failed to delete relation"),

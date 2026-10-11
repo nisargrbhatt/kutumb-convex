@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardCheck, History, LayoutList, LayoutDashboard } from "lucide-react";
+import { ClipboardCheck, History, Inbox, LayoutList, LayoutDashboard } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { pendingCountQuery } from "@/queries/changeRequest";
+import { pendingCountQuery, unseenCountQuery } from "@/queries/changeRequest";
 import { useActor } from "@/hooks/useActor";
 
 import {
@@ -25,6 +25,7 @@ export function CommunityNav() {
 		...pendingCountQuery(orgId),
 		enabled: canReview,
 	});
+	const { data: unseen = 0 } = useQuery({ ...unseenCountQuery(orgId), enabled: orgId !== "" });
 
 	return (
 		<SidebarGroup>
@@ -107,6 +108,28 @@ export function CommunityNav() {
 						<IconPhoto />
 						<span>Memories</span>
 					</SidebarMenuButton>
+				</SidebarMenuItem>
+				<SidebarMenuItem
+					onClick={() => {
+						if (open && isMobile) {
+							toggleSidebar();
+						}
+					}}
+				>
+					<SidebarMenuButton
+						render={<Link to={"/my-requests"} activeProps={{ className: "bg-muted" }} />}
+					>
+						<Inbox />
+						<span>My requests</span>
+					</SidebarMenuButton>
+					{unseen ? (
+						<SidebarMenuBadge
+							className="bg-primary text-primary-foreground peer-hover/menu-button:text-primary-foreground peer-data-active/menu-button:text-primary-foreground"
+							aria-label={`${unseen} new ${unseen === 1 ? "outcome" : "outcomes"}`}
+						>
+							{unseen > 99 ? "99+" : unseen}
+						</SidebarMenuBadge>
+					) : null}
 				</SidebarMenuItem>
 				{canReview ? (
 					<SidebarMenuItem

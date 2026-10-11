@@ -3,20 +3,27 @@ import { Plus } from "lucide-react";
 import { RelationForm } from "@/components/relations/RelationForm";
 import { RelationsTable } from "@/components/relations/RelationsTable";
 import { Button } from "@/components/ui/button";
-import { useCan } from "@/hooks/useCan";
+import type { ProfileEditMode } from "@/domain/memberRequests";
 import { useAddRelation, useRemoveRelation } from "@/queries/communityRelation";
 import type { getCommunityMemberById } from "@/server/communityProfile";
 
 type Member = Awaited<ReturnType<typeof getCommunityMemberById>>;
 
-/** Relations of a member. Owner/admin edit outgoing relations of Userless Profiles directly. */
+/**
+ * Relations of a member. Outgoing relations of Userless Profiles: edited directly (`direct`) or
+ * suggested as Change Requests (`suggest`, plain member on an active profile).
+ */
 export function MemberRelations({
 	profile,
 	outgoingRelations,
 	incomingRelations,
-}: Pick<Member, "profile" | "outgoingRelations" | "incomingRelations">) {
+	editMode,
+}: Pick<Member, "profile" | "outgoingRelations" | "incomingRelations"> & {
+	editMode: ProfileEditMode;
+}) {
 	const [isAddOpen, setIsAddOpen] = useState(false);
-	const canManage = useCan({ changeRequest: ["review"] }) && profile.userId == null;
+	const canManage = editMode !== "none";
+	const suggest = editMode === "suggest";
 	const addRelation = useAddRelation(profile.id);
 	const deleteRelation = useRemoveRelation(profile.id);
 
@@ -43,10 +50,15 @@ export function MemberRelations({
 							trigger={
 								<Button size="sm">
 									<Plus className="size-4" />
-									Add relation
+									{suggest ? "Suggest relation" : "Add relation"}
 								</Button>
 							}
-							description="Record an outgoing relation for this profile on its behalf."
+							suggest={suggest}
+							description={
+								suggest
+									? "Suggest an outgoing relation for this profile. An owner/admin reviews it."
+									: "Record an outgoing relation for this profile on its behalf."
+							}
 							onSubmit={addRelation.mutateAsync}
 							isPending={addRelation.isPending}
 						/>
@@ -54,6 +66,7 @@ export function MemberRelations({
 				}
 				onDelete={canManage ? deleteRelation.mutateAsync : undefined}
 				isDeleting={deleteRelation.isPending}
+				suggest={suggest}
 			/>
 			<RelationsTable
 				title="Listed as relative by"
