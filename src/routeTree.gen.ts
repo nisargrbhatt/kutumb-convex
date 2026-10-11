@@ -33,6 +33,7 @@ import { Route as AuthedCommunityMemoriesIndexRouteImport } from './routes/_auth
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
 import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
+import { Route as AuthedCommunityAuditLogIndexRouteImport } from './routes/_authed/_community/audit-log/index'
 import { Route as publicDocsMcpIndexRouteImport } from './routes/(public)/docs/mcp/index'
 import { Route as DotwellKnownOpenidConfigurationApiAuthRouteImport } from './routes/[.]well-known/openid-configuration/api/auth'
 import { Route as DotwellKnownOauthProtectedResourceApiMcpRouteImport } from './routes/[.]well-known/oauth-protected-resource/api/mcp'
@@ -172,6 +173,12 @@ const AuthedCommunityCommunityTreeIndexRoute =
     path: '/community-tree/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
+const AuthedCommunityAuditLogIndexRoute =
+  AuthedCommunityAuditLogIndexRouteImport.update({
+    id: '/audit-log/',
+    path: '/audit-log/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
 const publicDocsMcpIndexRoute = publicDocsMcpIndexRouteImport.update({
   id: '/docs/mcp/',
   path: '/docs/mcp/',
@@ -264,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
   '/docs/mcp/': typeof publicDocsMcpIndexRoute
+  '/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
@@ -299,6 +307,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
   '/docs/mcp': typeof publicDocsMcpIndexRoute
+  '/audit-log': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
@@ -338,6 +347,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
   '/(public)/docs/mcp/': typeof publicDocsMcpIndexRoute
+  '/_authed/_community/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
@@ -375,6 +385,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
     | '/docs/mcp/'
+    | '/audit-log/'
     | '/community-tree/'
     | '/dashboard/'
     | '/members/'
@@ -410,6 +421,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
     | '/docs/mcp'
+    | '/audit-log'
     | '/community-tree'
     | '/dashboard'
     | '/members'
@@ -448,6 +460,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
     | '/(public)/docs/mcp/'
+    | '/_authed/_community/audit-log/'
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
     | '/_authed/_community/members/'
@@ -653,6 +666,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityCommunityTreeIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
+    '/_authed/_community/audit-log/': {
+      id: '/_authed/_community/audit-log/'
+      path: '/audit-log'
+      fullPath: '/audit-log/'
+      preLoaderRoute: typeof AuthedCommunityAuditLogIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
     '/(public)/docs/mcp/': {
       id: '/(public)/docs/mcp/'
       path: '/docs/mcp'
@@ -781,6 +801,7 @@ const AuthedCommunitySettingsRouteWithChildren =
 
 interface AuthedCommunityRouteChildren {
   AuthedCommunitySettingsRoute: typeof AuthedCommunitySettingsRouteWithChildren
+  AuthedCommunityAuditLogIndexRoute: typeof AuthedCommunityAuditLogIndexRoute
   AuthedCommunityCommunityTreeIndexRoute: typeof AuthedCommunityCommunityTreeIndexRoute
   AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
   AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
@@ -794,6 +815,7 @@ interface AuthedCommunityRouteChildren {
 
 const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
   AuthedCommunitySettingsRoute: AuthedCommunitySettingsRouteWithChildren,
+  AuthedCommunityAuditLogIndexRoute: AuthedCommunityAuditLogIndexRoute,
   AuthedCommunityCommunityTreeIndexRoute:
     AuthedCommunityCommunityTreeIndexRoute,
   AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
