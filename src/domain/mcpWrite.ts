@@ -11,13 +11,13 @@ export const READ_ONLY: WriteAccess = { canWrite: false, reason: "connection_rea
 
 export const WRITE_DENIED_MESSAGE: Record<WriteDeniedReason, string> = {
 	connection_read_only: "This connection is read only.",
-	org_writes_off: "The community owner turned off AI changes.",
+	org_writes_off: "The community owner turned off AI Client writes.",
 };
 
 export const WRITE_DENIED_HINT: Record<WriteDeniedReason, string> = {
 	connection_read_only:
 		"To allow changes, reconnect Kutumb in your AI app (remove and re-add it) and choose 'Read and make changes'.",
-	org_writes_off: "Ask the community owner to turn AI changes back on in Settings → AI.",
+	org_writes_off: "Ask the community owner to turn AI Client writes back on in Settings → AI.",
 };
 
 /**
