@@ -70,7 +70,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 				profileId: "p",
 			});
 			expect(ev!.payload).toEqual({ kind: "info", payload: diff });
-			expect(h.onGraphChanged).not.toHaveBeenCalled();
+			expect(await h.version()).toBe(0);
 		});
 
 		it("approve → applied, approved (note) + profile.updated linked to request, Actor = reviewer", async () => {
@@ -95,7 +95,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 			]);
 			expect(evs[1]!.payload).toEqual({ lastName: ["Patel", "Shah"] });
 			expect(evs[1]!.profileName).toBe("Asha Shah");
-			expect(h.onGraphChanged).toHaveBeenCalledTimes(1);
+			expect(await h.version()).toBe(1);
 		});
 
 		it("two requests patching one field: approving one makes the other Stale; reject still allowed", async () => {
@@ -197,7 +197,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 				["change_request.approved", id],
 				["relation.added", id],
 			]);
-			expect(h.onGraphChanged).toHaveBeenCalledTimes(1);
+			expect(await h.version()).toBe(1);
 		});
 
 		it("relation_add stale: counterpart not active; pair related either direction", async () => {
@@ -275,7 +275,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 				action: "address.added",
 				changeRequestId: id,
 			});
-			expect(h.onGraphChanged).not.toHaveBeenCalled();
+			expect(await h.version()).toBe(1);
 		});
 
 		it("address_edit: diff payload; approve applies onto current; patched field changed or gone → Stale", async () => {
