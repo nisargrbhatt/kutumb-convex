@@ -11,6 +11,7 @@ import type { CommunityProfileInput } from "./communityProfile";
 import { describeField, resolveFieldRef } from "./customFieldRefs";
 import {
 	CUSTOM_FIELD_TEXT_MAX,
+	storedCustomFieldValueSchema,
 	type CustomFieldDefinition,
 	type CustomFieldValues,
 } from "./customFields";
@@ -158,9 +159,18 @@ function applyCustomFields(
 	return Object.keys(next).length > 0 ? next : null;
 }
 
+/**
+ * Domain shape minus the text cap on stored custom values: `applyCustomFields` already validates
+ * every value the caller passes, so a legacy value over the cap in an untouched field must not
+ * fail an unrelated patch.
+ */
+const mergedProfileInput = communityProfileInput.extend({
+	customFieldData: z.record(z.string(), storedCustomFieldValueSchema).nullable(),
+});
+
 /** Final domain validation; surfaces the first issue as `Invalid` with its field path. */
 function validated(candidate: CommunityProfileInput): CommunityProfileInput {
-	const parsed = communityProfileInput.safeParse(candidate);
+	const parsed = mergedProfileInput.safeParse(candidate);
 	if (parsed.success) return parsed.data;
 	const issue = parsed.error.issues[0]!;
 	const path = issue.path.join(".");
