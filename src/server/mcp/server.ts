@@ -3,6 +3,7 @@ import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import { db } from "@/db";
 import { searchProfilesInput } from "@/domain/communityProfile";
 import { searchProfiles } from "@/domain/queries/profiles";
+import { getOrgGraph } from "@/lib/graph";
 import { defineReadTool } from "./tools/define";
 import {
 	getFamilyGraph,
@@ -85,7 +86,7 @@ export function buildMcpServer(): McpServer {
 			inputSchema: getFamilyGraphInput,
 			outputSchema: getFamilyGraphOutput,
 		},
-		(actor, input) => getFamilyGraph(db, actor, input)
+		(actor, input) => getFamilyGraph(db, actor, input, getOrgGraph)
 	);
 
 	return server;

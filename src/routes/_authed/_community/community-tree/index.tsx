@@ -8,7 +8,7 @@ import {
 	focusedCommunityGraphQuery,
 	searchCommunityProfilesLiteQuery,
 } from "@/queries/communityProfile";
-import type { GraphEdge, SubgraphNode } from "@/lib/communityGraphCache";
+import type { GraphEdge, SubgraphNode } from "@/domain/queries/graph";
 import {
 	ReactFlow,
 	ReactFlowProvider,
