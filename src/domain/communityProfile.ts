@@ -165,14 +165,96 @@ export function memberStatusFilterOptions(actor: Actor): z.infer<typeof profileS
 		: Object.values(COMMUNITY_PROFILE_STATUS);
 }
 
-/** AI Client search tool input. `limit` is clamped again server-side. */
-export const searchProfilesInput = z.object({
+export const MAX_CUSTOM_FIELD_FILTERS = 5;
+
+export const CUSTOM_FIELD_FILTER_OPS = [
+	"eq",
+	"contains",
+	"gt",
+	"gte",
+	"lt",
+	"lte",
+	"before",
+	"after",
+	"isSet",
+	"isNotSet",
+] as const;
+
+/**
+ * One custom field condition. Allowed ops depend on the field's type, and the value must match it;
+ * both are checked against the live definitions (`Invalid` with a hint), not here.
+ */
+export const customFieldFilterSchema = z.object({
+	field: z.string().min(1).describe("Custom field id or exact label (see list_custom_fields)."),
+	op: z
+		.enum(CUSTOM_FIELD_FILTER_OPS)
+		.describe(
+			"text: eq (case-insensitive), contains. number: eq, gt, gte, lt, lte. date: eq, before, after (calendar day). boolean: eq. Any type: isSet, isNotSet."
+		),
+	value: z
+		.union([z.string(), z.number(), z.boolean()])
+		.optional()
+		.describe(
+			"Comparison value: text string, JSON number, true/false, or YYYY-MM-DD for date. Omit for isSet/isNotSet."
+		),
+});
+export type CustomFieldFilter = z.infer<typeof customFieldFilterSchema>;
+
+/**
+ * Profile filter for AI Clients, shared by `search_profiles` and `count_profiles`. Every key is
+ * optional and all given keys are ANDed. Days are `YYYY-MM-DD`; the predicate builder checks them
+ * and raises `Invalid` with a hint. Validated shape only: SQL lives in
+ * `domain/queries/profileFilters.ts`.
+ */
+export const profileFilterSchema = z.object({
 	query: z
 		.string()
 		.trim()
 		.optional()
 		.describe("Name text; every word must match part of a first/middle/last/nick name."),
 	gender: genderSchema.optional().describe("Only profiles with this gender."),
+	bloodGroup: z
+		.array(bloodGroupSchema)
+		.optional()
+		.describe("Only profiles whose blood group is any of these."),
+	bornOnOrAfter: z.string().optional().describe("Date of birth on or after this day, YYYY-MM-DD."),
+	bornOnOrBefore: z
+		.string()
+		.optional()
+		.describe("Date of birth on or before this day, YYYY-MM-DD."),
+	city: z
+		.string()
+		.trim()
+		.min(1)
+		.optional()
+		.describe("Has an address in this city (case-insensitive, exact)."),
+	state: z
+		.string()
+		.trim()
+		.min(1)
+		.optional()
+		.describe("Has an address in this state (case-insensitive, exact)."),
+	country: z
+		.string()
+		.trim()
+		.min(1)
+		.optional()
+		.describe("Has an address in this country (case-insensitive, exact)."),
+	living: z
+		.boolean()
+		.optional()
+		.describe(
+			"true: only living people (no date of death). false: only deceased. Omit to include both. Pass true for questions about who is alive or about today."
+		),
+	customFieldFilters: z
+		.array(customFieldFilterSchema)
+		.optional()
+		.describe(`Custom field conditions, all must hold. At most ${MAX_CUSTOM_FIELD_FILTERS}.`),
+});
+export type ProfileFilter = z.infer<typeof profileFilterSchema>;
+
+/** AI Client search tool input: the shared filter plus paging. `limit` is clamped again server-side. */
+export const searchProfilesInput = profileFilterSchema.extend({
 	limit: z.number().int().min(1).max(100).default(25).describe("Page size, 1-100. Default 25."),
 	cursor: z.string().optional().describe("`nextCursor` from the previous page."),
 });

@@ -346,3 +346,95 @@ describe("search_profiles", () => {
 		expect(res.error ?? res.result?.isError).toBeTruthy();
 	});
 });
+
+describe("search_profiles filters", () => {
+	const search = async (args: unknown) => (await call("search_profiles", args)).result;
+	const idsOf = (result: { structuredContent: { items: { id: string }[] } }) =>
+		result.structuredContent.items.map((i) => i.id).sort();
+
+	it("core + custom filters narrow the result; items echo only what was filtered", async () => {
+		h.fresh.sqlite.exec(`
+			UPDATE communityProfile SET bloodGroup = 'A+' WHERE id IN ('jared', 'anna');
+			UPDATE communityProfile SET dateOfDeath = '2020-01-01T00:00:00.000Z' WHERE id = 'anna';
+		`);
+		const result = await search({
+			bloodGroup: ["A+"],
+			living: true,
+			customFieldFilters: [{ field: "gotra", op: "eq", value: "kashyap" }],
+		});
+		expect(result.isError).toBeUndefined();
+		expect(result.structuredContent.items).toEqual([
+			{
+				id: "jared",
+				fullName: "Jared Shah",
+				nickName: null,
+				gender: "male",
+				status: "active",
+				bloodGroup: "A+",
+				dateOfDeath: null,
+				customFields: [{ id: "f1", label: "Gotra", type: "text", value: "Kashyap" }],
+			},
+		]);
+		expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
+	});
+
+	it("city filter matches any address and echoes the matching one", async () => {
+		const result = await search({ city: " pune " });
+		expect(result.structuredContent.items).toMatchObject([
+			{ id: "jared", addresses: [{ city: "Pune" }] },
+		]);
+	});
+
+	it("bad filters → isError Invalid message with the hint, not Internal error", async () => {
+		const op = await search({
+			customFieldFilters: [{ field: "Height", op: "contains", value: "1" }],
+		});
+		expect(op.isError).toBe(true);
+		expect(op.content[0].text).toMatch(/does not apply to number.*Use one of: eq, gt/);
+
+		const unknown = await search({ customFieldFilters: [{ field: "Nope", op: "isSet" }] });
+		expect(unknown.content[0].text).toMatch(/Unknown custom field "Nope".*Valid fields: .*Gotra/);
+
+		const many = await search({
+			customFieldFilters: Array.from({ length: 6 }, () => ({ field: "f1", op: "isSet" })),
+		});
+		expect(many.content[0].text).toMatch(/At most 5/);
+
+		const day = await search({ bornOnOrAfter: "yesterday" });
+		expect(day.content[0].text).toMatch(/YYYY-MM-DD/);
+	});
+
+	it("only active profiles of the caller's org, every role", async () => {
+		for (const role of ["member", "admin", "owner"] as const) {
+			const res = (await call("search_profiles", { living: true }, { ...ACTOR, role })).result;
+			expect(idsOf(res)).toEqual(["anna", "jared", "mia"]);
+		}
+	});
+
+	it("tool description tells the model to pass living: true for alive/today", async () => {
+		const res = await createKutumbMcpHandler().fetch(
+			new Request("https://kutumb.example.org/api/mcp", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					accept: "application/json, text/event-stream",
+				},
+				body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+			}),
+			{ authInfo: authInfo(ACTOR) }
+		);
+		const text = await res.text();
+		const json = JSON.parse(
+			text.startsWith("event:")
+				? text
+						.split("\n")
+						.find((l) => l.startsWith("data:"))!
+						.slice(5)
+				: text
+		);
+		const tool = json.result.tools.find((t: { name: string }) => t.name === "search_profiles");
+		expect(tool.description).toContain("living: true");
+		expect(tool.inputSchema.properties).toHaveProperty("customFieldFilters");
+		expect(tool.inputSchema.properties).toHaveProperty("bloodGroup");
+	});
+});
