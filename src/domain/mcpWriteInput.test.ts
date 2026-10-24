@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { CustomFieldDefinition } from "./customFields";
 import { AppError } from "./errors";
-import { createProfileToInput, patchProfileToInput, type ProfileFields } from "./mcpWriteInput";
+import {
+	addressKey,
+	addressToInput,
+	createProfileToInput,
+	patchAddressToInput,
+	patchProfileToInput,
+	type ProfileFields,
+} from "./mcpWriteInput";
 
 const DEFS: CustomFieldDefinition[] = [
 	{ id: "f1", label: "Gotra", type: "text" },
@@ -190,5 +197,50 @@ describe("patchProfileToInput", () => {
 				patchProfileToInput(CURRENT, { customFields: [{ field: "Nope", value: 1 }] }, DEFS)
 			)
 		).toContain("Valid fields");
+	});
+});
+
+const ADDRESS = {
+	line1: " 12 Park Street ",
+	city: "Surat",
+	state: "Gujarat",
+	country: "India",
+	postalCode: "395001",
+};
+
+describe("addressToInput / patchAddressToInput / addressKey", () => {
+	it("trims, nulls unset or blank optionals", () => {
+		expect(addressToInput({ ...ADDRESS, line2: "  ", note: "n" })).toEqual({
+			line1: "12 Park Street",
+			line2: null,
+			city: "Surat",
+			state: "Gujarat",
+			country: "India",
+			postalCode: "395001",
+			type: null,
+			note: "n",
+			digipin: null,
+		});
+	});
+
+	it("a blank required field is Invalid naming it", () => {
+		expect(invalid(() => addressToInput({ ...ADDRESS, city: " " }))).toContain("City");
+	});
+
+	it("patch keeps absent, clears null, replaces given; required stay required", () => {
+		const current = addressToInput({ ...ADDRESS, line2: "Flat 4", note: "old", type: "home" });
+		expect(patchAddressToInput(current, { city: "Vadodara", line2: null })).toEqual({
+			...current,
+			city: "Vadodara",
+			line2: null,
+		});
+		expect(invalid(() => patchAddressToInput(current, { postalCode: "" }))).toContain("Postal");
+	});
+
+	it("key ignores case and spacing of line1, city, postal code only", () => {
+		const a = addressToInput(ADDRESS);
+		const b = addressToInput({ ...ADDRESS, line1: "12  park STREET", city: " surat", note: "x" });
+		expect(addressKey(a)).toBe(addressKey(b));
+		expect(addressKey(a)).not.toBe(addressKey({ ...a, postalCode: "395002" }));
 	});
 });
