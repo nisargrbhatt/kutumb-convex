@@ -84,8 +84,9 @@ inline. `db` (`src/db/index.ts`) is the Drizzle client bound to the `D1` Cloudfl
   `arrow-body-style: as-needed`. Run `npm run format:fix && npm run lint:fix` before committing.
 - **UI:** shadcn/ui ("new-york" style) in `src/components/ui`, Tailwind v4, lucide icons. Forms use
   react-hook-form + zod resolvers.
-- **Limits:** `ORG_LIMIT`/`MEMBER_LIMIT` hardcoded in `src/lib/limits.ts` (pure, client-safe);
-  counters in `src/lib/limits-db.ts`. Enforced in better-auth org hooks + profile insert sites. See
+- **Limits:** constants (`ORG_LIMIT`/`MEMBER_LIMIT`, write quotas, ...) hardcoded in
+  `src/domain/limits.ts` (pure, client-safe); wiring in `src/lib/limits.ts`, counters in
+  `src/lib/limits-db.ts`. Enforced in better-auth org hooks + profile insert sites. See
   ADR 0003.
 
 ## Github
