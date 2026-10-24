@@ -12,6 +12,14 @@ describe("toolErrorResult", () => {
 		});
 	});
 
+	it("Invalid → isError with its message, which carries the hint", () => {
+		const message = 'Operator "gt" does not apply to text field "Gotra". Use one of: eq, contains.';
+		expect(toolErrorResult(new AppError("Invalid", message))).toEqual({
+			isError: true,
+			content: [{ type: "text", text: message }],
+		});
+	});
+
 	it.each([
 		["connection_read_only", "reconnect", "Read and make changes"],
 		["org_writes_off", "owner", "Settings → AI"],
