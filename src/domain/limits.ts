@@ -7,6 +7,13 @@ export const PROFILE_LIMIT = MEMBER_LIMIT;
 export const PENDING_REQUEST_LIMIT = 50;
 export const CUSTOM_FIELD_LIMIT = 50;
 
+/** Burst: write-tool calls per minute per Connection. Mirrors the CF RL binding in wrangler.jsonc. */
+export const WRITE_BURST_LIMIT = 10;
+/** Applied + requested changes per rolling 24h per Connection, all kinds pooled. */
+export const WRITE_DAILY_LIMIT = 200;
+/** `create_profile` sub-cap inside the daily pool. */
+export const CREATE_DAILY_LIMIT = 50;
+
 export const canJoinOrganization = (membershipCount: number) => membershipCount < ORG_LIMIT;
 export const canInviteMember = (membersPlusPending: number) => membersPlusPending < MEMBER_LIMIT;
 export const canCreateProfile = (profileCount: number) => profileCount < PROFILE_LIMIT;

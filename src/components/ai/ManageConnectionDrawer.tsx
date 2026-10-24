@@ -14,6 +14,9 @@ import { Spinner } from "@/components/ui/spinner";
 import type { ConnectionRow } from "@/domain/queries/connections";
 import { ACCESS_OPTIONS } from "./AccessLevelCards";
 
+const revokeCopy = (c: Pick<ConnectionRow, "clientName" | "orgName">) =>
+	`${c.clientName} loses access to ${c.orgName} immediately. Reconnect from the client.`;
+
 /**
  * Right drawer for one Connection. Write: "Make read only" (drops `community:write`, tokens stay).
  * Read: how to reconnect for write. Revoke lives here, behind a confirm dialog.
@@ -74,16 +77,13 @@ export function ManageConnectionDrawer({
 										<span className="font-medium">Allow changes</span>
 										<span className="text-xs text-muted-foreground">
 											Reconnect from {connection.clientName}: remove and re-add Kutumb, then pick{" "}
-											<b>Read and make changes</b>. This connection is replaced.
+											<b>Read and make changes</b>. The new connection takes over this one.
 										</span>
 									</div>
 								)}
 								<div className="flex flex-col gap-2 rounded-lg border border-destructive/30 p-3">
 									<span className="font-medium">Revoke</span>
-									<span className="text-xs text-muted-foreground">
-										{connection.clientName} loses access to {connection.orgName} immediately.
-										Reconnect from the client.
-									</span>
+									<span className="text-xs text-muted-foreground">{revokeCopy(connection)}</span>
 									<ConfirmDialog
 										open={confirmRevoke}
 										onOpenChange={setConfirmRevoke}
@@ -93,7 +93,7 @@ export function ManageConnectionDrawer({
 											</Button>
 										}
 										title="Revoke connection?"
-										description={`${connection.clientName} loses access to ${connection.orgName} immediately. Reconnect from the client.`}
+										description={revokeCopy(connection)}
 										confirmLabel="Revoke"
 										destructive
 										isPending={isRevoking}

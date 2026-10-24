@@ -1,7 +1,10 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangle, BadgeCheck, Eye, RefreshCw, UserRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { AccessLevelCards, type AccessLevel } from "@/components/ai/AccessLevelCards";
 import { AuthCardShell } from "@/components/auth/AuthCardShell";
 import { OauthRequestError } from "@/components/oauth/OauthRequestError";
@@ -21,6 +24,10 @@ import {
 	type OauthClientInfo,
 	type OauthOrg,
 } from "@/server/oauth";
+
+/** The member's one choice. Write is never preselected and only counts when the client asked. */
+const consentFormSchema = z.object({ level: z.enum(["read", "write"]) });
+type ConsentForm = z.infer<typeof consentFormSchema>;
 
 export const Route = createFileRoute("/oauth/consent")({
 	beforeLoad: oauthBeforeLoad,
@@ -77,10 +84,13 @@ function Consent({
 	const { pending, setPending, run } = useOauthStep();
 	const verified = client.registration === "cimd";
 	const asksWrite = requestsWrite(requestedScope);
-	// Read only unless the member opts in; never preselected.
-	const [level, setLevel] = useState<AccessLevel>("read");
+	const { control, handleSubmit } = useForm<ConsentForm>({
+		resolver: zodResolver(consentFormSchema),
+		// Read only unless the member opts in; never preselected.
+		defaultValues: { level: "read" },
+	});
 
-	const allow = async () => {
+	const allow = async ({ level }: ConsentForm) => {
 		setPending(true);
 		const check = await safeAsync(assertConsentOrgFn({ data: { organizationId: org.id } }));
 		if (!check.success || !check.data.same) {
@@ -119,7 +129,7 @@ function Consent({
 			}
 			footer="Revoke any time in Profile → AI."
 		>
-			<div className="flex flex-col gap-4">
+			<form className="flex flex-col gap-4" onSubmit={handleSubmit(allow)} noValidate>
 				{verified ? null : (
 					<Alert variant="destructive">
 						<AlertTriangle />
@@ -150,21 +160,29 @@ function Consent({
 				{asksWrite ? (
 					<>
 						<span className="text-sm font-medium">What can {client.name} do?</span>
-						<AccessLevelCards
-							aria-label={`What ${client.name} can do`}
-							value={level}
-							onChange={setLevel}
-							options={[
-								{
-									value: "read",
-									body: "See profiles, addresses, custom fields and relations you can see. Can't change anything.",
-								},
-								{
-									value: "write",
-									body: `Also add and edit profiles, addresses and relations. No deleting. ${roleEffect(org.role)}`,
-								},
-							]}
-							disabledNotes={writesEnabled ? undefined : { write: "Turned off by your community." }}
+						<Controller
+							control={control}
+							name="level"
+							render={({ field }) => (
+								<AccessLevelCards
+									aria-label={`What ${client.name} can do`}
+									value={field.value as AccessLevel}
+									onChange={field.onChange}
+									options={[
+										{
+											value: "read",
+											body: "See profiles, addresses, custom fields and relations you can see. Can't change anything.",
+										},
+										{
+											value: "write",
+											body: `Also add, edit and remove addresses and relations, and add and edit profiles. Can't delete profiles. ${roleEffect(org.role)}`,
+										},
+									]}
+									disabledNotes={
+										writesEnabled ? undefined : { write: "Turned off by your community owner." }
+									}
+								/>
+							)}
 						/>
 						<p className="flex gap-2 text-xs text-muted-foreground">
 							<RefreshCw className="mt-0.5 size-3.5 shrink-0" aria-hidden />
@@ -191,14 +209,20 @@ function Consent({
 					</ul>
 				)}
 				<div className="flex gap-2">
-					<Button variant="outline" className="flex-1" disabled={pending} onClick={deny}>
+					<Button
+						type="button"
+						variant="outline"
+						className="flex-1"
+						disabled={pending}
+						onClick={deny}
+					>
 						Deny
 					</Button>
-					<Button className="flex-1" disabled={pending} onClick={allow}>
+					<Button type="submit" className="flex-1" disabled={pending}>
 						Allow
 					</Button>
 				</div>
-			</div>
+			</form>
 		</AuthCardShell>
 	);
 }

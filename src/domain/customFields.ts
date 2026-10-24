@@ -1,7 +1,7 @@
 import { format, isValid } from "date-fns";
 import { z } from "zod";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
-import { CUSTOM_FIELD_LIMIT } from "./limits";
+import { CUSTOM_FIELD_LIMIT, LIMIT_COPY } from "./limits";
 
 export const customFieldTypeSchema = z.enum(CUSTOM_FIELD_TYPE);
 export type CustomFieldType = z.infer<typeof customFieldTypeSchema>;
@@ -105,7 +105,7 @@ export const addFieldFormSchema = (existing: Array<Pick<CustomFieldDefinition, "
 				} else if (existing.length >= CUSTOM_FIELD_LIMIT) {
 					ctx.addIssue({
 						code: "custom",
-						message: `Limit of ${CUSTOM_FIELD_LIMIT} custom fields reached. Delete one to add another.`,
+						message: LIMIT_COPY.customField.description,
 					});
 				}
 			}),

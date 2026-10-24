@@ -1,5 +1,6 @@
 import type { CallToolResult, McpServer, ServerContext } from "@modelcontextprotocol/server";
 import type { z } from "zod";
+import type { WriteOutcome } from "@/domain/mcpWrite";
 import { captureMcpToolCalled } from "@/lib/posthog-server";
 import { getActor, type ConnectionActor } from "../actor";
 import { toolErrorResult } from "../errors";
@@ -44,12 +45,12 @@ function wrapTool<Out extends z.ZodObject, In extends z.ZodObject | undefined>(
 		const actor = getActor(ctx);
 		const clientId = ctx.http?.authInfo?.clientId ?? "unknown";
 		let result: CallToolResult;
-		let outcome: string | undefined;
+		let outcome: WriteOutcome | undefined;
 		try {
 			if (write) requireWrite(actor);
 			const input = (hasInput ? cbArgs[0] : undefined) as never;
 			const output = (await run(actor, input, { clientId })) as Record<string, unknown>;
-			if (write && typeof output.outcome === "string") outcome = output.outcome;
+			if (write) outcome = output.outcome as WriteOutcome;
 			result = toolResult(output);
 		} catch (error) {
 			result = toolErrorResult(error);

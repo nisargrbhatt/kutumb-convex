@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { CustomFieldDefinition } from "./customFields";
+import type { CommunityProfileInput } from "./communityProfile";
+import { CUSTOM_FIELD_TEXT_MAX, type CustomFieldDefinition } from "./customFields";
 import { AppError } from "./errors";
 import {
 	addressKey,
@@ -7,7 +8,6 @@ import {
 	createProfileToInput,
 	patchAddressToInput,
 	patchProfileToInput,
-	type ProfileFields,
 } from "./mcpWriteInput";
 
 const DEFS: CustomFieldDefinition[] = [
@@ -17,7 +17,7 @@ const DEFS: CustomFieldDefinition[] = [
 	{ id: "f4", label: "Anniversary", type: "date" },
 ];
 
-const CURRENT: ProfileFields = {
+const CURRENT: CommunityProfileInput = {
 	firstName: "Asha",
 	middleName: "K",
 	lastName: "Patel",
@@ -189,6 +189,28 @@ describe("patchProfileToInput", () => {
 			DEFS
 		);
 		expect(out.customFieldData).toEqual({ f2: 180, gone: "orphan" });
+	});
+
+	it("a legacy custom value over the text cap, untouched by the patch, is kept (not re-validated)", () => {
+		const legacy = "x".repeat(CUSTOM_FIELD_TEXT_MAX + 1);
+		const current = { ...CURRENT, customFieldData: { f1: legacy } };
+		const out = patchProfileToInput(current, { nickName: "Ashu" }, DEFS);
+		expect(out.customFieldData).toEqual({ f1: legacy });
+		const other = patchProfileToInput(
+			current,
+			{ customFields: [{ field: "Height", value: 1 }] },
+			DEFS
+		);
+		expect(other.customFieldData).toEqual({ f1: legacy, f2: 1 });
+	});
+
+	it("a patched text value over the cap is still Invalid", () => {
+		const long = "x".repeat(CUSTOM_FIELD_TEXT_MAX + 1);
+		expect(
+			invalid(() =>
+				patchProfileToInput(CURRENT, { customFields: [{ field: "Gotra", value: long }] }, DEFS)
+			)
+		).toContain("at most");
 	});
 
 	it("an unknown custom field is Invalid even in a patch", () => {

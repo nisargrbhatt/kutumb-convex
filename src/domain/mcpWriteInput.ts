@@ -8,9 +8,10 @@ import { addressInput, addressTypeSchema } from "./address";
 import { dayToStoredIso } from "./calendarDay";
 import { bloodGroupSchema, communityProfileInput, genderSchema } from "./communityProfile";
 import type { CommunityProfileInput } from "./communityProfile";
-import { resolveFieldRef } from "./customFieldRefs";
+import { describeField, resolveFieldRef } from "./customFieldRefs";
 import {
 	CUSTOM_FIELD_TEXT_MAX,
+	storedCustomFieldValueSchema,
 	type CustomFieldDefinition,
 	type CustomFieldValues,
 } from "./customFields";
@@ -19,9 +20,6 @@ import { CUSTOM_FIELD_LIMIT } from "./limits";
 import type { AddressInput } from "./profileChanges";
 import { relationTypeSchema } from "./relation";
 
-/** Persisted profile columns a patch merges onto (stored ISO dates, id-keyed custom values). */
-export type ProfileFields = CommunityProfileInput;
-
 const customFieldPatch = z
 	.array(
 		z.object({
@@ -29,7 +27,7 @@ const customFieldPatch = z
 			value: z
 				.union([z.string(), z.number(), z.boolean(), z.null()])
 				.describe(
-					"text: string (max 500 chars). number: a number. boolean: true/false. date: 'YYYY-MM-DD'. null clears the value."
+					`text: string (max ${CUSTOM_FIELD_TEXT_MAX} chars). number: a number. boolean: true/false. date: 'YYYY-MM-DD'. null clears the value.`
 				),
 		})
 	)
@@ -102,8 +100,6 @@ export type ProfilePatch = Partial<
 
 const invalid = (message: string) => new AppError("Invalid", message);
 
-const describeField = (d: CustomFieldDefinition) => `${d.label} (id ${d.id}, ${d.type})`;
-
 const blankToNull = (v: string | null | undefined): string | null => v?.trim() || null;
 
 function dayToIso(field: string, day: string | null | undefined): string | null | undefined {
@@ -163,9 +159,18 @@ function applyCustomFields(
 	return Object.keys(next).length > 0 ? next : null;
 }
 
+/**
+ * Domain shape minus the text cap on stored custom values: `applyCustomFields` already validates
+ * every value the caller passes, so a legacy value over the cap in an untouched field must not
+ * fail an unrelated patch.
+ */
+const mergedProfileInput = communityProfileInput.extend({
+	customFieldData: z.record(z.string(), storedCustomFieldValueSchema).nullable(),
+});
+
 /** Final domain validation; surfaces the first issue as `Invalid` with its field path. */
 function validated(candidate: CommunityProfileInput): CommunityProfileInput {
-	const parsed = communityProfileInput.safeParse(candidate);
+	const parsed = mergedProfileInput.safeParse(candidate);
 	if (parsed.success) return parsed.data;
 	const issue = parsed.error.issues[0]!;
 	const path = issue.path.join(".");
@@ -194,7 +199,7 @@ export function createProfileToInput(
 
 /** Merge a partial patch onto the current row → full domain input for `submit({kind:"info"})`. */
 export function patchProfileToInput(
-	current: ProfileFields,
+	current: CommunityProfileInput,
 	patch: ProfilePatch,
 	defs: CustomFieldDefinition[]
 ): CommunityProfileInput {

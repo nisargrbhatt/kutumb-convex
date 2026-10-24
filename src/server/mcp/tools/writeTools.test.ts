@@ -12,6 +12,8 @@ vi.mock("@/lib/posthog-server", () => ({ captureMcpToolCalled: vi.fn() }));
 vi.mock("cloudflare:workers", () => ({ env: { KV: {} } }));
 
 const { createKutumbMcpHandler } = await import("../server");
+const { WRITE_TOOL_NAMES, denyStaleWriteCalls } = await import("./writeTools");
+const { McpServer } = await import("@modelcontextprotocol/server");
 const { makeProfileChanges } = await import("@/domain/profileChanges");
 const { captureMcpToolCalled } = await import("@/lib/posthog-server");
 
@@ -106,6 +108,43 @@ beforeEach(() => {
 		INSERT INTO communityProfile (id, firstName, lastName, status, organizationId, version, userId) VALUES
 			('mine', 'Mira', 'Member', 'active', 'o1', 0, 'u-member');
 	`);
+});
+
+describe("write tool registry vs the stale-call hook", () => {
+	const READ_ONLY_ACTOR: ConnectionActor = {
+		...actorOf("u-owner", "owner"),
+		write: { canWrite: false, reason: "connection_read_only" },
+	};
+
+	it("registered write tools are exactly the names the stale-call hook knows", async () => {
+		const { result } = await rpc("tools/list", {});
+		const registered = result.tools
+			.map((t: { name: string }) => t.name)
+			.filter((n: string) => WRITE_TOOL_NAMES.has(n))
+			.sort();
+		expect(registered).toEqual([...WRITE_TOOL_NAMES].sort());
+		const writable = result.tools.filter((t: any) => t.annotations?.readOnlyHint === false);
+		expect(writable.map((t: { name: string }) => t.name).sort()).toEqual(
+			[...WRITE_TOOL_NAMES].sort()
+		);
+	});
+
+	it.each([...WRITE_TOOL_NAMES])(
+		"%s on a read-only Connection → WriteNotAllowed, not Tool not found",
+		async (name) => {
+			const res = await rpc("tools/call", { name, arguments: {} }, READ_ONLY_ACTOR);
+			expect(res.error).toBeUndefined();
+			expect(res.result.isError).toBe(true);
+			expect(textOf(res.result)).toContain("WriteNotAllowed");
+		}
+	);
+
+	it("fails loudly (not silently) when the SDK's tools/call handler cannot be wrapped", () => {
+		const bare = new McpServer({ name: "t", version: "1" });
+		expect(() => denyStaleWriteCalls(bare)).toThrow(/register the read tools first/);
+		// The SDK internals the hook relies on: a rename on upgrade must break this test.
+		expect(typeof (bare.server as any)._getRequestHandler).toBe("function");
+	});
 });
 
 describe("tools/list for a writable Connection", () => {
@@ -480,6 +519,51 @@ describe("write quotas", () => {
 		const admin = await call("create_profile", { firstName: "Other", lastName: "Q" }, ADMIN);
 		expect(admin.structuredContent.outcome).toBe("applied");
 	});
+});
+
+describe("repeating a requested write", () => {
+	beforeEach(() => {
+		sql(`
+			INSERT INTO communityAddress (id, line1, country, state, city, postalCode, communityProfileId, version) VALUES
+				('a1', '12 Park Street', 'India', 'Gujarat', 'Surat', '395001', 'p2', 2);
+		`);
+	});
+
+	const ADDR = {
+		profileId: "p2",
+		line1: "9 Lake Road",
+		city: "Vapi",
+		state: "Gujarat",
+		country: "India",
+		postalCode: "396191",
+	};
+	const cases: [string, Record<string, unknown>][] = [
+		["update_profile", { profileId: "p2", expectedVersion: 3, nickName: "Ravu" }],
+		["add_relation", { profileId: "p2", toId: "p1", type: "father" }],
+		["add_address", ADDR],
+		["update_address", { profileId: "p2", addressId: "a1", expectedVersion: 2, city: "Vapi" }],
+	];
+
+	it.each(cases)(
+		"%s: an exact repeat → unchanged + the pending request id, nothing counted or written",
+		async (tool, args) => {
+			const first = await call(tool, args, MEMBER);
+			expect(first.structuredContent).toMatchObject({ outcome: "requested" });
+			const id = first.structuredContent.changeRequestId;
+			const events = rows(`SELECT id FROM auditEvent`).length;
+
+			const again = await call(tool, args, MEMBER);
+
+			expect(again.isError).toBeUndefined();
+			expect(again.structuredContent).toMatchObject({
+				outcome: "unchanged",
+				changeRequestId: id,
+			});
+			expect(again.structuredContent.message).toContain("awaiting review");
+			expect(rows(`SELECT id FROM changeRequest`)).toHaveLength(1);
+			expect(rows(`SELECT id FROM auditEvent`)).toHaveLength(events);
+		}
+	);
 });
 
 describe("PENDING_REQUEST_LIMIT through the tool", () => {

@@ -1,12 +1,7 @@
 import { and, asc, count, eq, gt, or, sql } from "drizzle-orm";
 import { auditEvent } from "@/db/app-schema";
-import {
-	CREATE_DAILY_LIMIT,
-	QUOTA_WINDOW_MS,
-	WRITE_DAILY_LIMIT,
-	minutesUntil,
-	writeQuotaError,
-} from "@/domain/mcpQuota";
+import { CREATE_DAILY_LIMIT, WRITE_DAILY_LIMIT } from "@/domain/limits";
+import { QUOTA_WINDOW_MS, minutesUntil, writeQuotaError } from "@/domain/mcpQuota";
 import type { QueryDb } from "./db";
 
 export type ConnectionWriteKey = { organizationId: string; userId: string; clientId: string };

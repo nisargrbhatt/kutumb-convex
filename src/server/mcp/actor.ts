@@ -67,8 +67,15 @@ export async function loadConnectionActor(
 }
 
 /** The Actor verified for this request, handed over via `authInfo.extra.actor`. */
+const actorOf = (authInfo: { extra?: Record<string, unknown> } | undefined) =>
+	authInfo?.extra?.actor as (Actor & { write?: WriteAccess }) | undefined;
+
+/** Effective write of the Actor verified for this request (default-deny when absent). */
+export const writeAccessOf = (authInfo: { extra?: Record<string, unknown> } | undefined) =>
+	actorOf(authInfo)?.write ?? READ_ONLY;
+
 export function getActor(ctx: Pick<ServerContext, "http">): ConnectionActor {
-	const actor = ctx.http?.authInfo?.extra?.actor as (Actor & { write?: WriteAccess }) | undefined;
+	const actor = actorOf(ctx.http?.authInfo);
 	if (!actor) throw new Error("MCP request reached a tool without a verified Actor");
 	// Default-deny: an Actor that never went through `loadConnectionActor` can't write.
 	return { ...actor, write: actor.write ?? READ_ONLY };

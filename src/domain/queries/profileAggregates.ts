@@ -8,7 +8,7 @@ import { resolveFieldRef } from "@/domain/customFieldRefs";
 import { AppError } from "@/domain/errors";
 import type { Actor } from "@/domain/permission";
 import type { QueryDb } from "./db";
-import { resolveProfileFilter, type PlaceKey } from "./profileFilters";
+import { customJson, resolveProfileFilter, type PlaceKey } from "./profileFilters";
 
 /** At most this many groups are returned (the `null` bucket included); the rest are folded. */
 export const COUNT_MAX_GROUPS = 50;
@@ -31,7 +31,6 @@ export type CountProfilesResult = {
 type Buckets = { groups: CountGroup[]; nullCount: number; overlapping?: boolean };
 
 const dobDay = sql`substr(${communityProfile.dateOfBirth}, 1, 10)`;
-const customJson = sql`CAST(${communityProfile.customFieldData} AS TEXT)`;
 
 /** Ordering for equal counts and for picking among equally common spellings. */
 const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);

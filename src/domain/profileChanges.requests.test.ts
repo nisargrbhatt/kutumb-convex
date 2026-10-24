@@ -236,14 +236,14 @@ describe("member Change Requests on an active Userless Profile", () => {
 		it("relation_remove: outgoing only; snapshot payload; approve removes; gone → Stale", async () => {
 			await addRel("q", ADMIN);
 			const [rel] = await h.db.query.communityRelation.findMany();
-			const remove = () =>
-				h.changes.submit(MEMBER, { kind: "relation_remove", profileId: "p", relationId: rel!.id });
+			const remove = (who = MEMBER) =>
+				h.changes.submit(who, { kind: "relation_remove", profileId: "p", relationId: rel!.id });
 			await expectError(
 				h.changes.submit(MEMBER, { kind: "relation_remove", profileId: "q", relationId: rel!.id }),
 				"NotFound"
 			);
 			const a = requested(await remove());
-			const b = requested(await remove());
+			const b = requested(await remove(OTHER));
 			expect(await h.request(a)).toMatchObject({
 				targetId: rel!.id,
 				payload: { id: rel!.id, fromId: "p", toId: "q", toName: "Q Doe", type: "father" },
@@ -323,10 +323,10 @@ describe("member Change Requests on an active Userless Profile", () => {
 		it("address_remove: snapshot; approve removes; second remove → Stale (gone)", async () => {
 			await h.changes.submit(ADMIN, { kind: "address_add", profileId: "p", address });
 			const row = await addressRow();
-			const remove = () =>
-				h.changes.submit(MEMBER, { kind: "address_remove", profileId: "p", addressId: row.id });
+			const remove = (who = MEMBER) =>
+				h.changes.submit(who, { kind: "address_remove", profileId: "p", addressId: row.id });
 			const a = requested(await remove());
-			const b = requested(await remove());
+			const b = requested(await remove(OTHER));
 			expect(await h.request(a)).toMatchObject({
 				targetId: row.id,
 				payload: { id: row.id, city: "Surat" },
@@ -373,7 +373,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 
 		it("many pending per profile allowed; inactive → NotFound for member; own linked stays direct", async () => {
 			requested(await info({ lastName: "Shah" }));
-			requested(await info({ lastName: "Shah" }));
+			requested(await info({ lastName: "Mehta" }));
 			await h.seed({ id: "mine", userId: "u-member" }, { id: "gone", status: "inactive" });
 			expect(
 				(await h.changes.submit(MEMBER, { kind: "address_add", profileId: "mine", address }))

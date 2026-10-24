@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CUSTOM_FIELD_LIMIT } from "./limits";
+import { LIMIT_COPY, CUSTOM_FIELD_LIMIT } from "./limits";
 import {
 	EMPTY_VALUE,
 	customFieldTypeSchema,
@@ -139,7 +139,7 @@ describe("addFieldFormSchema", () => {
 	it("rejects when the org is at the field limit", () => {
 		const full = Array.from({ length: CUSTOM_FIELD_LIMIT }, (_, i) => ({ label: `F${i}` }));
 		expect(messages({ label: "New", type: "text" }, full)).toEqual([
-			`label: Limit of ${CUSTOM_FIELD_LIMIT} custom fields reached. Delete one to add another.`,
+			`label: ${LIMIT_COPY.customField.description}`,
 		]);
 	});
 });

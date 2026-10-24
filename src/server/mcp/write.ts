@@ -1,6 +1,12 @@
 import { AppError } from "@/domain/errors";
-import { WRITE_DENIED_MESSAGE } from "@/domain/mcpWrite";
+import { READ_ONLY, WRITE_DENIED_MESSAGE, type WriteAccess } from "@/domain/mcpWrite";
 import type { ConnectionActor } from "./actor";
+
+/** `WriteNotAllowed` carrying the reason in `code`; an allowed `write` reads as read only. */
+export const writeDenied = (write: WriteAccess) => {
+	const { reason } = write.canWrite ? READ_ONLY : write;
+	return new AppError("WriteNotAllowed", WRITE_DENIED_MESSAGE[reason], reason);
+};
 
 /**
  * Shared guard for every write tool: effective write (token ∩ consent ∩ org toggle, ADR 0006)
@@ -8,10 +14,5 @@ import type { ConnectionActor } from "./actor";
  * denied; this covers a call racing a downgrade or the owner turning writes off.
  */
 export function requireWrite(actor: ConnectionActor): void {
-	if (actor.write.canWrite) return;
-	throw new AppError(
-		"WriteNotAllowed",
-		WRITE_DENIED_MESSAGE[actor.write.reason],
-		actor.write.reason
-	);
+	if (!actor.write.canWrite) throw writeDenied(actor.write);
 }

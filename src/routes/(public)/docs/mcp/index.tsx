@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { mcpClients } from "@/domain/mcpClients";
 import { PENDING_REQUEST_LIMIT } from "@/domain/limits";
-import { CREATE_DAILY_LIMIT, WRITE_BURST_LIMIT, WRITE_DAILY_LIMIT } from "@/domain/mcpQuota";
+import { CREATE_DAILY_LIMIT, WRITE_BURST_LIMIT, WRITE_DAILY_LIMIT } from "@/domain/limits";
 import { mcpUrlQuery } from "@/queries/mcpInfo";
 
 const TITLE = "Connect an AI client — Kutumb";

@@ -23,7 +23,7 @@ export const whoamiOutput = z.object({
 		.enum(["connection_read_only", "org_writes_off"])
 		.nullable()
 		.describe(
-			"Why canWrite is false: this connection is read only, or the owner turned AI changes off."
+			"Why canWrite is false: this connection is read only, or the owner turned AI Client writes off."
 		),
 	hint: z.string().nullable().describe("What the member can do about it."),
 });
