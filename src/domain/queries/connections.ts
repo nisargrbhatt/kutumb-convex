@@ -10,7 +10,9 @@ import { connectionActivity, type ConnectionStatus } from "@/domain/connections"
 import {
 	clientDisplayName,
 	clientHost,
+	consentScopeFor,
 	registrationKind,
+	requestsWrite,
 	type RegistrationKind,
 } from "@/domain/mcpOauth";
 import type { QueryDb } from "./db";
@@ -29,6 +31,8 @@ export type ConnectionRow = {
 	/** ms epoch; `null` = Never */
 	lastUsedAt: number | null;
 	status: ConnectionStatus;
+	/** From the live `oauthConsent.scopes` only (never token claims). */
+	access: "read" | "write";
 };
 
 export type EndedConnection = { clientId: string; orgId: string };
@@ -48,6 +52,7 @@ export async function listConnections(
 			orgId: oauthConsent.referenceId,
 			orgName: organization.name,
 			connectedAt: oauthConsent.createdAt,
+			scopes: oauthConsent.scopes,
 		})
 		.from(oauthConsent)
 		.innerJoin(oauthClient, eq(oauthClient.clientId, oauthConsent.clientId))
@@ -90,6 +95,7 @@ export async function listConnections(
 			orgId: c.orgId,
 			orgName: c.orgName,
 			connectedAt,
+			access: requestsWrite(c.scopes) ? ("write" as const) : ("read" as const),
 			...connectionActivity(
 				{
 					connectedAt,
@@ -147,6 +153,36 @@ export async function revokeConnection(
 		.limit(1);
 	if (!consent?.orgId) return null;
 	await endConnections(db, { userId, orgId: consent.orgId, clientId: consent.clientId }, now);
+	return { clientId: consent.clientId, orgId: consent.orgId };
+}
+
+/**
+ * Shrink-only: drop `community:write` from the caller's own consent row. Succeeds when already
+ * read only; `null` when it isn't theirs / doesn't exist. Tokens are left alone: write needs the
+ * live consent scope too, so the stale token claim does nothing (ADR 0006).
+ */
+export async function downgradeConnection(
+	db: QueryDb,
+	userId: string,
+	consentId: string,
+	now: number = Date.now()
+): Promise<EndedConnection | null> {
+	const [consent] = await db
+		.select({
+			clientId: oauthConsent.clientId,
+			orgId: oauthConsent.referenceId,
+			scopes: oauthConsent.scopes,
+		})
+		.from(oauthConsent)
+		.where(and(eq(oauthConsent.id, consentId), eq(oauthConsent.userId, userId)))
+		.limit(1);
+	if (!consent?.orgId) return null;
+	if (requestsWrite(consent.scopes)) {
+		await db
+			.update(oauthConsent)
+			.set({ scopes: consentScopeFor(consent.scopes, false), updatedAt: new Date(now) })
+			.where(and(eq(oauthConsent.id, consentId), eq(oauthConsent.userId, userId)));
+	}
 	return { clientId: consent.clientId, orgId: consent.orgId };
 }
 

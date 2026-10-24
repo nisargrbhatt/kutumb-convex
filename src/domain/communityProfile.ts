@@ -260,6 +260,36 @@ export const searchProfilesInput = profileFilterSchema.extend({
 });
 export type SearchProfilesInput = z.infer<typeof searchProfilesInput>;
 
+/** Core dimensions `count_profiles` can group by. */
+export const COUNT_CORE_DIMENSIONS = [
+	"gender",
+	"bloodGroup",
+	"living",
+	"city",
+	"state",
+	"country",
+	"birthDecade",
+] as const;
+
+/** `count_profiles` input: the shared filter plus one optional dimension to group by. */
+export const countProfilesInput = profileFilterSchema.extend({
+	groupBy: z
+		.union([
+			z.object({ core: z.enum(COUNT_CORE_DIMENSIONS).describe("A built-in dimension.") }),
+			z.object({
+				field: z
+					.string()
+					.min(1)
+					.describe("Custom field id or exact label; text and boolean fields only."),
+			}),
+		])
+		.optional()
+		.describe(
+			"Split the count by one dimension: {core: ...} or {field: ...}. Omit for a plain total."
+		),
+});
+export type CountProfilesInput = z.infer<typeof countProfilesInput>;
+
 type NameParts = Pick<CommunityProfileRow, "firstName" | "lastName"> & {
 	middleName?: string | null;
 };

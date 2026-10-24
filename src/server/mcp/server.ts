@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import { db } from "@/db";
-import { searchProfilesInput } from "@/domain/communityProfile";
+import { countProfilesInput, searchProfilesInput } from "@/domain/communityProfile";
+import { countProfiles } from "@/domain/queries/profileAggregates";
 import { searchProfiles } from "@/domain/queries/profiles";
 import { getOrgGraph } from "@/lib/graph";
 import { profileChangesVia } from "@/lib/profileChanges";
@@ -12,6 +13,7 @@ import {
 	getFamilyGraphInput,
 	getFamilyGraphOutput,
 } from "./tools/getFamilyGraph";
+import { countProfilesDescription, countProfilesOutput } from "./tools/countProfiles";
 import { getProfile, getProfileDescription, getProfileOutput } from "./tools/getProfile";
 import {
 	listCustomFields,
@@ -73,6 +75,18 @@ export function buildMcpServer(
 			outputSchema: searchProfilesOutput,
 		},
 		(actor, input) => searchProfiles(db, actor, input)
+	);
+
+	defineReadTool(
+		server,
+		"count_profiles",
+		{
+			title: "Count profiles",
+			description: countProfilesDescription,
+			inputSchema: countProfilesInput,
+			outputSchema: countProfilesOutput,
+		},
+		(actor, input) => countProfiles(db, actor, input)
 	);
 
 	defineReadTool(

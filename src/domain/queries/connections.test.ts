@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { freshDb } from "@/test/sqliteDb";
-import { listConnections, removeMemberConnections, revokeConnection } from "./connections";
+import {
+	downgradeConnection,
+	listConnections,
+	removeMemberConnections,
+	revokeConnection,
+} from "./connections";
+import { loadConnectionActor } from "@/server/mcp/actor";
 
 const NOW = 1_800_000_000_000;
 const DAY = 24 * 60 * 60 * 1000;
@@ -97,6 +103,93 @@ describe("connection queries", () => {
 			const [row] = await listConnections(db, "u1", NOW);
 			expect(row.status).toBe("expired");
 			expect(row.lastUsedAt).toBe(NOW - 31 * DAY);
+		});
+	});
+
+	describe("access level (from live consent scopes only)", () => {
+		it("write when consent has community:write, else read", async () => {
+			consent("k1", "dcr-abc", "u1", "o1", NOW - 2 * DAY);
+			consent("k2", "dcr-nouri", "u1", "o1", NOW - DAY);
+			sqlite.exec(
+				"UPDATE oauth_consent SET scopes = 'community:read community:write offline_access' WHERE id = 'k2'"
+			);
+			const rows = await listConnections(db, "u1", NOW);
+			expect(Object.fromEntries(rows.map((r) => [r.id, r.access]))).toEqual({
+				k1: "read",
+				k2: "write",
+			});
+		});
+	});
+
+	describe("downgradeConnection", () => {
+		const scopes = (id: string) =>
+			(
+				sqlite.prepare("SELECT scopes FROM oauth_consent WHERE id = ?").get(id) as {
+					scopes: string;
+				}
+			).scopes;
+
+		beforeEach(() => {
+			consent("k1", "dcr-abc", "u1", "o1", NOW - DAY);
+			consent("k2", "dcr-abc", "u2", "o1", NOW - DAY);
+			sqlite.exec(
+				"UPDATE oauth_consent SET scopes = 'community:read community:write offline_access'"
+			);
+			refresh("r1", "dcr-abc", "u1", "o1", NOW - DAY);
+			sqlite.exec(
+				`INSERT INTO oauth_access_token (id, token, client_id, user_id, reference_id, expires_at, created_at, scopes) VALUES ('a1', 'at1', 'dcr-abc', 'u1', 'o1', ${NOW + DAY}, ${NOW}, 'community:read community:write')`
+			);
+		});
+
+		it("removes only community:write from the caller's own consent", async () => {
+			const res = await downgradeConnection(db, "u1", "k1", NOW);
+			expect(res).toEqual({ clientId: "dcr-abc", orgId: "o1" });
+			expect(scopes("k1")).toBe("community:read offline_access");
+			expect(scopes("k2")).toBe("community:read community:write offline_access");
+		});
+
+		it("keeps createdAt (same Connection) and leaves tokens untouched", async () => {
+			await downgradeConnection(db, "u1", "k1", NOW);
+			const row = sqlite.prepare("SELECT created_at FROM oauth_consent WHERE id = 'k1'").get();
+			expect(row).toEqual({ created_at: NOW - DAY });
+			expect(live("oauth_refresh_token")).toEqual(["r1"]);
+			expect(live("oauth_access_token")).toEqual(["a1"]);
+			const tok = sqlite.prepare("SELECT scopes FROM oauth_access_token WHERE id = 'a1'").get();
+			expect(tok).toEqual({ scopes: "community:read community:write" });
+		});
+
+		it("idempotent: already read only still succeeds, scopes unchanged", async () => {
+			await downgradeConnection(db, "u1", "k1", NOW);
+			await expect(downgradeConnection(db, "u1", "k1", NOW)).resolves.toEqual({
+				clientId: "dcr-abc",
+				orgId: "o1",
+			});
+			expect(scopes("k1")).toBe("community:read offline_access");
+		});
+
+		it("someone else's / unknown Connection → null, nothing changes", async () => {
+			await expect(downgradeConnection(db, "u1", "k2", NOW)).resolves.toBeNull();
+			await expect(downgradeConnection(db, "u1", "nope", NOW)).resolves.toBeNull();
+			expect(scopes("k2")).toBe("community:read community:write offline_access");
+		});
+
+		it("next MCP call: stale write token claim is not enough → connection_read_only", async () => {
+			sqlite.exec(
+				"INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ('m1', 'o1', 'u1', 'owner', 0)"
+			);
+			const key = {
+				userId: "u1",
+				clientId: "dcr-abc",
+				orgId: "o1",
+				tokenScopes: ["community:read", "community:write"],
+			};
+			await expect(loadConnectionActor(db, key)).resolves.toMatchObject({
+				write: { canWrite: true },
+			});
+			await downgradeConnection(db, "u1", "k1", NOW);
+			await expect(loadConnectionActor(db, key)).resolves.toMatchObject({
+				write: { canWrite: false, reason: "connection_read_only" },
+			});
 		});
 	});
 

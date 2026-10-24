@@ -102,6 +102,7 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 			"whoami",
 			"list_custom_fields",
 			"search_profiles",
+			"count_profiles",
 			"get_profile",
 			"get_family_graph",
 		]);
