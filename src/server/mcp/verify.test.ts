@@ -85,7 +85,7 @@ function setup(opts: { actor?: ConnectionActor | null; keys?: JSONWebKeySet } = 
 }
 
 const challenge = (error?: string) =>
-	`Bearer ${error ? `error="${error}", ` : ""}resource_metadata="${PRM}", scope="community:read"`;
+	`Bearer ${error ? `error="${error}", ` : ""}resource_metadata="${PRM}", scope="community:read community:write"`;
 
 async function expectResponse(result: VerifiedMcpRequest | Response, status: number, www: string) {
 	expect(result).toBeInstanceOf(Response);

@@ -34,12 +34,12 @@ describe("parseScopes", () => {
 describe("bearerChallenge", () => {
 	it("points at the PRM and asks for the scope", () => {
 		expect(bearerChallenge(OWN)).toBe(
-			`Bearer resource_metadata="${OWN}/.well-known/oauth-protected-resource/api/mcp", scope="community:read"`
+			`Bearer resource_metadata="${OWN}/.well-known/oauth-protected-resource/api/mcp", scope="community:read community:write"`
 		);
 	});
 	it("adds the error code when a token was presented", () => {
 		expect(bearerChallenge(`${OWN}/`, "invalid_token")).toBe(
-			`Bearer error="invalid_token", resource_metadata="${protectedResourceMetadataUrl(OWN)}", scope="community:read"`
+			`Bearer error="invalid_token", resource_metadata="${protectedResourceMetadataUrl(OWN)}", scope="community:read community:write"`
 		);
 	});
 });
