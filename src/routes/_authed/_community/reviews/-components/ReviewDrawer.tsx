@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import z from "zod";
 import { KindBadge, RequestDiff, StaleBadge } from "@/components/changeRequest/RequestDiff";
 import { RejectRequestDialog } from "@/components/changeRequest/RejectRequestDialog";
+import { ViaClient } from "@/components/ai/ViaClient";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,11 +75,14 @@ function RequestCard({
 					<KindBadge kind={request.kind} />
 					{request.stale ? <StaleBadge /> : null}
 				</h3>
-				<span className="text-xs text-muted-foreground">
-					{request.submitterName} ·{" "}
-					<time dateTime={new Date(request.createdAt).toISOString()}>
-						{formatDistanceToNow(request.createdAt, { addSuffix: true })}
-					</time>
+				<span className="flex min-w-0 flex-col text-xs text-muted-foreground sm:items-end">
+					<span>
+						{request.submitterName} ·{" "}
+						<time dateTime={new Date(request.createdAt).toISOString()}>
+							{formatDistanceToNow(request.createdAt, { addSuffix: true })}
+						</time>
+					</span>
+					<ViaClient name={request.viaClientName} />
 				</span>
 			</div>
 

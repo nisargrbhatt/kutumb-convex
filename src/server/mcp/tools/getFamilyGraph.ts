@@ -4,7 +4,7 @@ import { fullName, genderSchema, profileStatusSchema } from "@/domain/communityP
 import { AppError } from "@/domain/errors";
 import type { Actor } from "@/domain/permission";
 import { relationTypeSchema } from "@/domain/relation";
-import { extractSubgraph, getOrgGraphBlob } from "@/lib/communityGraphCache";
+import { extractSubgraph, type OrgGraphBlob } from "@/domain/queries/graph";
 
 export const MAX_GRAPH_NODES = 200;
 const DEFAULT_DEPTH = 2;
@@ -60,7 +60,8 @@ type View = z.input<typeof getFamilyGraphOutput>;
 export async function getFamilyGraph(
 	db: QueryDb,
 	actor: Actor,
-	input: z.output<typeof getFamilyGraphInput>
+	input: z.output<typeof getFamilyGraphInput>,
+	getGraph: (organizationId: string) => Promise<OrgGraphBlob>
 ): Promise<View> {
 	const depth = Math.min(MAX_DEPTH, Math.max(1, input.depth ?? DEFAULT_DEPTH));
 
@@ -80,7 +81,7 @@ export async function getFamilyGraph(
 		focusId = own.id;
 	}
 
-	const blob = await getOrgGraphBlob(actor.organizationId);
+	const blob = await getGraph(actor.organizationId);
 	const sub = extractSubgraph(blob, focusId, depth);
 	if (!sub.anchorId) {
 		throw new AppError("NotFound", "Community Profile not found or not active");

@@ -4,6 +4,7 @@ import type { ConnectionActor } from "./actor";
 const mocks = vi.hoisted(() => ({
 	org: vi.fn(),
 	profile: vi.fn(),
+	fields: vi.fn(),
 	capture: vi.fn(),
 }));
 
@@ -12,6 +13,7 @@ vi.mock("@/db", () => ({
 		query: {
 			organization: { findFirst: mocks.org },
 			communityProfile: { findFirst: mocks.profile },
+			communityProfileCustomField: { findMany: mocks.fields },
 		},
 	},
 }));
@@ -88,6 +90,7 @@ beforeEach(() => {
 	authInfo = { ...authInfo, extra: { actor: ACTOR } };
 	mocks.org.mockResolvedValue({ id: "o1", name: "Patel Parivar" });
 	mocks.profile.mockResolvedValue({ id: "p1" });
+	mocks.fields.mockResolvedValue([{ id: "f1", label: "Gotra", type: "text" }]);
 });
 
 describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
@@ -95,6 +98,7 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 		const { result } = await rpc("tools/list");
 		expect(result.tools.map((t: { name: string }) => t.name)).toEqual([
 			"whoami",
+			"list_custom_fields",
 			"search_profiles",
 			"get_profile",
 			"get_family_graph",
@@ -114,6 +118,7 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 			organization: { id: "o1", name: "Patel Parivar" },
 			role: "admin",
 			profileId: "p1",
+			customFields: [{ id: "f1", label: "Gotra", type: "text" }],
 			canWrite: false,
 			reason: "connection_read_only",
 			hint: expect.stringContaining("reconnect"),
@@ -149,12 +154,8 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 				idempotentHint: false,
 			},
 		});
-		expect(result.tools.slice(0, 4).map((t: { name: string }) => t.name)).toEqual([
-			"whoami",
-			"search_profiles",
-			"get_profile",
-			"get_family_graph",
-		]);
+		// Read tools stay; the write tool is added after them.
+		expect(result.tools.at(-1).name).toBe("probe_write");
 	});
 
 	it("a write call runs only with effective write, and reports its outcome", async () => {
@@ -184,6 +185,15 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 			reason: "org_writes_off",
 			hint: expect.stringContaining("owner"),
 		});
+	});
+
+	it("initialize instructions tell the model to list custom fields first", async () => {
+		const { result } = await rpc("initialize", {
+			protocolVersion: "2025-06-18",
+			capabilities: {},
+			clientInfo: { name: "t", version: "1" },
+		});
+		expect(result.instructions).toContain("whoami or list_custom_fields");
 	});
 
 	it("profileId is null when the member has no profile", async () => {

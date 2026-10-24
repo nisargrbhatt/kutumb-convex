@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "eee0b809-25a7-41e0-8ad8-bbec8e0e4018",
+  "id": "4244c0c7-358e-4b77-b71b-fa00d92f05ea",
   "prevId": "f93625cb-a6d0-4e80-9f64-34f8e94be711",
   "tables": {
     "account": {
@@ -1473,8 +1473,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "orgSetting": {
-      "name": "orgSetting",
+    "orgDataVersion": {
+      "name": "orgDataVersion",
       "columns": {
         "organizationId": {
           "name": "organizationId",
@@ -1483,20 +1483,20 @@
           "notNull": true,
           "autoincrement": false
         },
-        "aiClientWrites": {
-          "name": "aiClientWrites",
+        "version": {
+          "name": "version",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": true
+          "default": 0
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "orgSetting_organizationId_organization_id_fk": {
-          "name": "orgSetting_organizationId_organization_id_fk",
-          "tableFrom": "orgSetting",
+        "orgDataVersion_organizationId_organization_id_fk": {
+          "name": "orgDataVersion_organizationId_organization_id_fk",
+          "tableFrom": "orgDataVersion",
           "tableTo": "organization",
           "columnsFrom": [
             "organizationId"
