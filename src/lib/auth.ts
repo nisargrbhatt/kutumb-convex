@@ -79,6 +79,9 @@ const createAuth = () =>
 			}),
 		],
 		hooks: mcpHooks,
+		// ADR 0006: the plugin's update-consent adds scopes (incl. community:write) with no consent
+		// screen. Write is gained only by reconnecting through the consent screen.
+		disabledPaths: ["/oauth2/update-consent"],
 		// 🔒 account.accountLinking.requireLocalEmailVerified defaults to true — left unset,
 		// never set to false. It's the only thing blocking pre-registration takeover now that
 		// requireEmailVerification is off (attacker registers unverified password account on
