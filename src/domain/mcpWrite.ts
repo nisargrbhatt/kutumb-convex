@@ -1,6 +1,5 @@
 /** Pure write-gating rules for AI Clients (ADR 0006). No I/O. */
-import { parseScopes } from "./mcpEndpoint";
-import { MCP_WRITE_SCOPE } from "./mcpOauth";
+import { MCP_WRITE_SCOPE, parseStoredScopes } from "./mcpOauth";
 
 /** What a write tool call did (`mcp_tool_called.outcome`, write tool results). */
 export const WRITE_OUTCOMES = ["applied", "requested", "unchanged", "possible_duplicate"] as const;
@@ -39,7 +38,7 @@ export function resolveWriteAccess(input: {
 	if (!input.orgWritesOn) return { canWrite: false, reason: "org_writes_off" };
 	if (
 		input.tokenScopes.includes(MCP_WRITE_SCOPE) &&
-		parseScopes(input.consentScopes).includes(MCP_WRITE_SCOPE)
+		parseStoredScopes(input.consentScopes).includes(MCP_WRITE_SCOPE)
 	) {
 		return { canWrite: true };
 	}

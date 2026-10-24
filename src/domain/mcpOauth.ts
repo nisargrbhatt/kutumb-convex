@@ -1,4 +1,5 @@
 /** Pure MCP-OAuth constants + helpers (no I/O). See ADR 0004. */
+import { safeSync } from "@/lib/safe";
 
 export const MCP_SCOPE = "community:read";
 export const OFFLINE_SCOPE = "offline_access";
@@ -8,6 +9,21 @@ export const MCP_SCOPES = [MCP_SCOPE, MCP_WRITE_SCOPE, OFFLINE_SCOPE] as const;
 
 const splitScope = (scope: string | null | undefined): string[] =>
 	scope?.split(/\s+/).filter(Boolean) ?? [];
+
+/**
+ * `scopes` column of an oauth row as better-auth stores it: a JSON array (`string[]` on SQLite).
+ * Space-separated text is tolerated for older or hand-written rows.
+ */
+export function parseStoredScopes(stored: string | null | undefined): string[] {
+	if (!stored?.trimStart().startsWith("[")) return splitScope(stored);
+	const parsed = safeSync<unknown>(() => JSON.parse(stored));
+	return parsed.success && Array.isArray(parsed.data)
+		? parsed.data.filter((scope): scope is string => typeof scope === "string")
+		: [];
+}
+
+/** Back into better-auth's stored form (JSON array), or its own reads break. */
+export const storeScopes = (scopes: readonly string[]): string => JSON.stringify(scopes);
 
 /** Did the client ask for `community:write` (space-separated `scope` of the authorize request)? */
 export const requestsWrite = (requested: string | null | undefined): boolean =>

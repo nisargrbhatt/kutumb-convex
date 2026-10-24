@@ -111,7 +111,7 @@ describe("connection queries", () => {
 			consent("k1", "dcr-abc", "u1", "o1", NOW - 2 * DAY);
 			consent("k2", "dcr-nouri", "u1", "o1", NOW - DAY);
 			sqlite.exec(
-				"UPDATE oauth_consent SET scopes = 'community:read community:write offline_access' WHERE id = 'k2'"
+				`UPDATE oauth_consent SET scopes = '["community:read","community:write","offline_access"]' WHERE id = 'k2'`
 			);
 			const rows = await listConnections(db, "u1", NOW);
 			expect(Object.fromEntries(rows.map((r) => [r.id, r.access]))).toEqual({
@@ -133,7 +133,7 @@ describe("connection queries", () => {
 			consent("k1", "dcr-abc", "u1", "o1", NOW - DAY);
 			consent("k2", "dcr-abc", "u2", "o1", NOW - DAY);
 			sqlite.exec(
-				"UPDATE oauth_consent SET scopes = 'community:read community:write offline_access'"
+				`UPDATE oauth_consent SET scopes = '["community:read","community:write","offline_access"]'`
 			);
 			refresh("r1", "dcr-abc", "u1", "o1", NOW - DAY);
 			sqlite.exec(
@@ -144,8 +144,8 @@ describe("connection queries", () => {
 		it("removes only community:write from the caller's own consent", async () => {
 			const res = await downgradeConnection(db, "u1", "k1", NOW);
 			expect(res).toEqual({ clientId: "dcr-abc", orgId: "o1" });
-			expect(scopes("k1")).toBe("community:read offline_access");
-			expect(scopes("k2")).toBe("community:read community:write offline_access");
+			expect(scopes("k1")).toBe('["community:read","offline_access"]');
+			expect(scopes("k2")).toBe('["community:read","community:write","offline_access"]');
 		});
 
 		it("keeps createdAt (same Connection) and leaves tokens untouched", async () => {
@@ -164,13 +164,13 @@ describe("connection queries", () => {
 				clientId: "dcr-abc",
 				orgId: "o1",
 			});
-			expect(scopes("k1")).toBe("community:read offline_access");
+			expect(scopes("k1")).toBe('["community:read","offline_access"]');
 		});
 
 		it("someone else's / unknown Connection → null, nothing changes", async () => {
 			await expect(downgradeConnection(db, "u1", "k2", NOW)).resolves.toBeNull();
 			await expect(downgradeConnection(db, "u1", "nope", NOW)).resolves.toBeNull();
-			expect(scopes("k2")).toBe("community:read community:write offline_access");
+			expect(scopes("k2")).toBe('["community:read","community:write","offline_access"]');
 		});
 
 		it("next MCP call: stale write token claim is not enough → connection_read_only", async () => {

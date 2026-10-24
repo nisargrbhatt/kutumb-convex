@@ -67,16 +67,17 @@ describe("loadConnectionActor", () => {
 });
 
 describe("loadConnectionActor: effective write (ADR 0006)", () => {
-	const READ = "community:read offline_access";
-	const WRITE = "community:read community:write offline_access";
-	const setup = (consent: string, toggle: boolean | null) => {
+	const READ = ["community:read", "offline_access"];
+	const WRITE = ["community:read", "community:write", "offline_access"];
+	// Consent stored as better-auth does: JSON array text.
+	const setup = (consent: readonly string[], toggle: boolean | null) => {
 		const { sqlite, db } = freshDb();
 		sqlite.exec(`
 			INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('u1', 'U1', 'u1@x.test', 1, 0, 0);
 			INSERT INTO organization (id, name, slug, created_at) VALUES ('o1', 'Org 1', 'o1', 0);
 			INSERT INTO oauth_client (id, client_id, redirect_uris) VALUES ('oc1', 'c1', '[]');
 			INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ('m1', 'o1', 'u1', 'member', 0);
-			INSERT INTO oauth_consent (id, client_id, user_id, reference_id, scopes) VALUES ('k1', 'c1', 'u1', 'o1', '${consent}');
+			INSERT INTO oauth_consent (id, client_id, user_id, reference_id, scopes) VALUES ('k1', 'c1', 'u1', 'o1', '${JSON.stringify(consent)}');
 		`);
 		if (toggle !== null) {
 			sqlite.exec(
@@ -104,7 +105,7 @@ describe("loadConnectionActor: effective write (ADR 0006)", () => {
 		"token %s / consent %s / toggle %s → canWrite %s (%s)",
 		async (token, consent, toggle, canWrite, reason) => {
 			const db = setup(consent, toggle);
-			const actor = await loadConnectionActor(db, { ...KEY, tokenScopes: token.split(" ") });
+			const actor = await loadConnectionActor(db, { ...KEY, tokenScopes: token });
 			expect(actor?.write).toEqual(canWrite ? { canWrite: true } : { canWrite: false, reason });
 		}
 	);
@@ -116,7 +117,7 @@ describe("loadConnectionActor: effective write (ADR 0006)", () => {
 
 	it("toggling the org off / consent downgrade takes effect on the very next call", async () => {
 		const db = setup(WRITE, null);
-		const key = { ...KEY, tokenScopes: WRITE.split(" ") };
+		const key = { ...KEY, tokenScopes: WRITE };
 		expect((await loadConnectionActor(db, key))?.write.canWrite).toBe(true);
 		await db.run(sql`INSERT INTO orgSetting (organizationId, aiClientWrites) VALUES ('o1', 0)`);
 		expect((await loadConnectionActor(db, key))?.write).toEqual({
@@ -124,7 +125,7 @@ describe("loadConnectionActor: effective write (ADR 0006)", () => {
 			reason: "org_writes_off",
 		});
 		await db.run(sql`UPDATE orgSetting SET aiClientWrites = 1`);
-		await db.run(sql`UPDATE oauth_consent SET scopes = 'community:read'`);
+		await db.run(sql`UPDATE oauth_consent SET scopes = '["community:read"]'`);
 		expect((await loadConnectionActor(db, key))?.write).toEqual({
 			canWrite: false,
 			reason: "connection_read_only",
