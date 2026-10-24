@@ -4,6 +4,7 @@
  * (`makeProfileChanges`) stays unchanged. Failures are `Invalid` with a message the model can act on.
  */
 import { z } from "zod";
+import { addressInput, addressTypeSchema } from "./address";
 import { dayToStoredIso } from "./calendarDay";
 import { bloodGroupSchema, communityProfileInput, genderSchema } from "./communityProfile";
 import type { CommunityProfileInput } from "./communityProfile";
@@ -15,6 +16,8 @@ import {
 } from "./customFields";
 import { AppError } from "./errors";
 import { CUSTOM_FIELD_LIMIT } from "./limits";
+import type { AddressInput } from "./profileChanges";
+import { relationTypeSchema } from "./relation";
 
 /** Persisted profile columns a patch merges onto (stored ISO dates, id-keyed custom values). */
 export type ProfileFields = CommunityProfileInput;
@@ -213,5 +216,124 @@ export function patchProfileToInput(
 		dateOfBirth: day("dateOfBirth", current.dateOfBirth),
 		dateOfDeath: day("dateOfDeath", current.dateOfDeath),
 		customFieldData: applyCustomFields(defs, current.customFieldData, patch.customFields),
+	});
+}
+
+// --- relations + addresses -------------------------------------------------------------------
+
+const profileIdField = z.string().min(1).describe("Community Profile id (the subject)");
+
+export const addRelationInput = z.object({
+	profileId: profileIdField,
+	toId: z.string().min(1).describe("Community Profile id of the other person"),
+	type: relationTypeSchema.describe(
+		"What toId IS to profileId: 'toId is profileId's <type>'. Never inverted."
+	),
+	bloodRelation: z.boolean().optional().describe("true if related by blood. Default false."),
+	note: optionalText("Free-text note"),
+});
+export type AddRelationInput = z.infer<typeof addRelationInput>;
+
+export const removeRelationInput = z.object({
+	profileId: profileIdField,
+	relationId: z
+		.string()
+		.min(1)
+		.describe("Id of one of the profile's OUTGOING relations (get_profile: outgoing[].id)"),
+});
+
+const addressIdField = z.string().min(1).describe("Address id (get_profile: addresses[].id)");
+
+export const addAddressInput = z.object({
+	profileId: profileIdField,
+	line1: z.string().describe("Street / house line"),
+	city: z.string().describe("City"),
+	state: z.string().describe("State"),
+	country: z.string().describe("Country"),
+	postalCode: z.string().describe("Postal code"),
+	line2: optionalText("Second address line"),
+	type: addressTypeSchema.nullable().optional().describe("home, work or other"),
+	note: optionalText("Free-text note"),
+	digipin: optionalText("DIGIPIN"),
+});
+export type AddAddressInput = z.infer<typeof addAddressInput>;
+
+export const updateAddressInput = z.object({
+	profileId: profileIdField,
+	addressId: addressIdField,
+	expectedVersion: z
+		.number()
+		.int()
+		.min(0)
+		.describe("The address's `version` from get_profile. A mismatch fails with Stale."),
+	line1: z.string().optional().describe("Street / house line (cannot be cleared)"),
+	city: z.string().optional().describe("City (cannot be cleared)"),
+	state: z.string().optional().describe("State (cannot be cleared)"),
+	country: z.string().optional().describe("Country (cannot be cleared)"),
+	postalCode: z.string().optional().describe("Postal code (cannot be cleared)"),
+	line2: optionalText("Second address line"),
+	type: addressTypeSchema.nullable().optional().describe("home, work or other"),
+	note: optionalText("Free-text note"),
+	digipin: optionalText("DIGIPIN"),
+});
+export type UpdateAddressInput = z.infer<typeof updateAddressInput>;
+
+export const removeAddressInput = z.object({
+	profileId: profileIdField,
+	addressId: addressIdField,
+});
+
+/** Fields an address patch may touch; `undefined` = leave as is, `null` = clear (optional ones). */
+export type AddressPatch = Partial<
+	Omit<UpdateAddressInput, "profileId" | "addressId" | "expectedVersion">
+>;
+
+const normText = (s: string | null | undefined) =>
+	(s ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+
+/** Idempotency key of an address: normalised line1 + city + postalCode. */
+export const addressKey = (a: Pick<AddressInput, "line1" | "city" | "postalCode">) =>
+	[a.line1, a.city, a.postalCode].map(normText).join("|");
+
+function validatedAddress(candidate: AddressInput): AddressInput {
+	const parsed = addressInput.safeParse(candidate);
+	if (parsed.success) return parsed.data;
+	const issue = parsed.error.issues[0]!;
+	const path = issue.path.join(".");
+	throw invalid(path ? `${path}: ${issue.message}` : issue.message);
+}
+
+/** `add_address` input → full domain input (unset optional columns are `null`). */
+export function addressToInput(
+	input: Pick<AddAddressInput, "line1" | "city" | "state" | "country" | "postalCode"> &
+		Partial<Pick<AddAddressInput, "line2" | "type" | "note" | "digipin">>
+): AddressInput {
+	return validatedAddress({
+		line1: input.line1,
+		line2: blankToNull(input.line2),
+		country: input.country,
+		state: input.state,
+		city: input.city,
+		postalCode: input.postalCode,
+		type: input.type ?? null,
+		note: blankToNull(input.note),
+		digipin: blankToNull(input.digipin),
+	});
+}
+
+/** Merge a partial patch onto the current address → full domain input for `address_edit`. */
+export function patchAddressToInput(current: AddressInput, patch: AddressPatch): AddressInput {
+	const text = <K extends "line2" | "note" | "digipin">(k: K) =>
+		patch[k] === undefined ? current[k] : blankToNull(patch[k]);
+	return validatedAddress({
+		line1: patch.line1 ?? current.line1,
+		line2: text("line2"),
+		country: patch.country ?? current.country,
+		state: patch.state ?? current.state,
+		city: patch.city ?? current.city,
+		postalCode: patch.postalCode ?? current.postalCode,
+		type: patch.type === undefined ? current.type : patch.type,
+		note: text("note"),
+		digipin: text("digipin"),
 	});
 }

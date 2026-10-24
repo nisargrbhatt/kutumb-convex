@@ -501,3 +501,530 @@ describe("PENDING_REQUEST_LIMIT through the tool", () => {
 		expect(textOf(result).toLowerCase()).toContain("tell the user");
 	});
 });
+
+describe("relation and address tools in tools/list", () => {
+	it("are offered with the spec annotations", async () => {
+		const { result } = await rpc("tools/list", {});
+		const byName = Object.fromEntries(result.tools.map((t: any) => [t.name, t]));
+		const flags = (destructive: boolean, idempotent: boolean) => ({
+			readOnlyHint: false,
+			openWorldHint: false,
+			destructiveHint: destructive,
+			idempotentHint: idempotent,
+		});
+		expect(byName.add_relation.annotations).toEqual(flags(false, false));
+		expect(byName.remove_relation.annotations).toEqual(flags(true, true));
+		expect(byName.add_address.annotations).toEqual(flags(false, false));
+		expect(byName.update_address.annotations).toEqual(flags(true, true));
+		expect(byName.remove_address.annotations).toEqual(flags(true, true));
+		expect(byName.add_relation.description).toContain("outgoing");
+		expect(byName.add_relation.description).toContain("Worked example");
+	});
+});
+
+describe("add_relation", () => {
+	beforeEach(() => {
+		sql(`
+			INSERT INTO communityProfile (id, firstName, lastName, status, organizationId, version) VALUES
+				('p3', 'Zoya', 'Khan', 'active', 'o1', 0), ('dr', 'Dina', 'Draft', 'draft', 'o1', 0);
+		`);
+	});
+
+	it("owner → applied: 'toId is profileId's <type>' stored outgoing, with the relation id", async () => {
+		const result = await call("add_relation", {
+			profileId: "p1",
+			toId: "p2",
+			type: "father",
+			bloodRelation: true,
+			note: "step",
+		});
+		expect(result.isError).toBeUndefined();
+		expect(result.structuredContent).toMatchObject({
+			outcome: "applied",
+			profileId: "p1",
+			relationId: expect.any(String),
+		});
+		expect(
+			rows(`SELECT id, fromId, toId, type, bloodRelation, note FROM communityRelation`)
+		).toEqual([
+			{
+				id: result.structuredContent.relationId,
+				fromId: "p1",
+				toId: "p2",
+				type: "father",
+				bloodRelation: 1,
+				note: "step",
+			},
+		]);
+		expect(rows(`SELECT action, viaClientId FROM auditEvent`)).toEqual([
+			{ action: "relation.added", viaClientId: "c1" },
+		]);
+		const got = (await call("get_profile", { id: "p1" })).structuredContent;
+		expect(got.outgoing).toMatchObject([
+			{ id: result.structuredContent.relationId, type: "father", counterpart: { id: "p2" } },
+		]);
+	});
+
+	it("member on a userless profile → requested, nothing written, listed in myPendingRequests", async () => {
+		const result = await call(
+			"add_relation",
+			{ profileId: "p1", toId: "p2", type: "uncle" },
+			MEMBER
+		);
+		expect(result.isError).toBeUndefined();
+		expect(result.structuredContent).toMatchObject({
+			outcome: "requested",
+			changeRequestId: expect.any(String),
+		});
+		expect(result.structuredContent).not.toHaveProperty("relationId");
+		expect(rows(`SELECT id FROM communityRelation`)).toEqual([]);
+		const got = (await call("get_profile", { id: "p1" }, MEMBER)).structuredContent;
+		expect(got.myPendingRequests).toMatchObject([
+			{ id: result.structuredContent.changeRequestId, kind: "relation_add" },
+		]);
+		expect(rows(`SELECT viaClientName FROM changeRequest`)).toEqual([{ viaClientName: "Claude" }]);
+	});
+
+	it("member on their own linked profile → applied", async () => {
+		const result = await call(
+			"add_relation",
+			{ profileId: "mine", toId: "p1", type: "mother" },
+			MEMBER
+		);
+		expect(result.structuredContent).toMatchObject({ outcome: "applied", profileId: "mine" });
+	});
+
+	it("exact repeat (same toId + type) → unchanged with the existing id, nothing written", async () => {
+		const first = await call("add_relation", { profileId: "p1", toId: "p2", type: "father" });
+		const again = await call("add_relation", {
+			profileId: "p1",
+			toId: "p2",
+			type: "father",
+			bloodRelation: true,
+			note: "different note",
+		});
+		expect(again.isError).toBeUndefined();
+		expect(again.structuredContent).toMatchObject({
+			outcome: "unchanged",
+			profileId: "p1",
+			relationId: first.structuredContent.relationId,
+		});
+		expect(rows(`SELECT id FROM communityRelation`)).toHaveLength(1);
+		expect(rows(`SELECT id FROM auditEvent`)).toHaveLength(1);
+		// Same for a role that would otherwise only be able to request.
+		const asMember = await call(
+			"add_relation",
+			{ profileId: "p1", toId: "p2", type: "father" },
+			MEMBER
+		);
+		expect(asMember.structuredContent).toMatchObject({
+			outcome: "unchanged",
+			relationId: first.structuredContent.relationId,
+		});
+		expect(rows(`SELECT id FROM changeRequest`)).toEqual([]);
+	});
+
+	it("other type for the same pair → Invalid naming the existing relation", async () => {
+		const first = await call("add_relation", { profileId: "p1", toId: "p2", type: "father" });
+		const other = await call("add_relation", { profileId: "p1", toId: "p2", type: "uncle" });
+		expect(other.isError).toBe(true);
+		expect(textOf(other)).toContain("father");
+		expect(textOf(other)).toContain(first.structuredContent.relationId);
+		expect(textOf(other)).toContain("remove_relation");
+		expect(rows(`SELECT id FROM communityRelation`)).toHaveLength(1);
+	});
+
+	it("the reverse direction of an existing pair → Invalid (seam rule), nothing written", async () => {
+		await call("add_relation", { profileId: "p1", toId: "p2", type: "father" });
+		const reverse = await call("add_relation", { profileId: "p2", toId: "p1", type: "child" });
+		expect(reverse.isError).toBe(true);
+		expect(textOf(reverse)).toContain("already exists");
+		expect(rows(`SELECT id FROM communityRelation`)).toHaveLength(1);
+	});
+
+	it("self, unknown, draft target and unknown type are errors the model can act on", async () => {
+		const self = await call("add_relation", { profileId: "p1", toId: "p1", type: "brother" });
+		expect(self.isError).toBe(true);
+		expect(textOf(self)).toContain("itself");
+		const unknown = await call("add_relation", { profileId: "p1", toId: "nope", type: "brother" });
+		expect(textOf(unknown)).toContain("not found");
+		const draft = await call("add_relation", { profileId: "p1", toId: "dr", type: "brother" });
+		expect(textOf(draft)).toContain("not found");
+		const badType = await rpc("tools/call", {
+			name: "add_relation",
+			arguments: { profileId: "p1", toId: "p2", type: "cousin" },
+		});
+		expect(badType.result?.isError ?? !!badType.error).toBe(true);
+		expect(rows(`SELECT id FROM communityRelation`)).toEqual([]);
+	});
+
+	it("a profile the client cannot read is not found", async () => {
+		const result = await call("add_relation", { profileId: "dr", toId: "p1", type: "brother" });
+		expect(result.isError).toBe(true);
+		expect(textOf(result)).toContain("not found");
+	});
+});
+
+describe("remove_relation", () => {
+	beforeEach(() => {
+		sql(`
+			INSERT INTO communityRelation (id, fromId, toId, organizationId, type, bloodRelation) VALUES
+				('r1', 'p1', 'p2', 'o1', 'father', 0);
+		`);
+	});
+
+	it("owner removes an outgoing relation → applied with its id", async () => {
+		const result = await call("remove_relation", { profileId: "p1", relationId: "r1" });
+		expect(result.isError).toBeUndefined();
+		expect(result.structuredContent).toMatchObject({
+			outcome: "applied",
+			profileId: "p1",
+			relationId: "r1",
+		});
+		expect(rows(`SELECT id FROM communityRelation`)).toEqual([]);
+		expect(rows(`SELECT action, viaClientId FROM auditEvent`)).toEqual([
+			{ action: "relation.removed", viaClientId: "c1" },
+		]);
+	});
+
+	it("member on a userless profile → requested, relation stays", async () => {
+		const result = await call("remove_relation", { profileId: "p1", relationId: "r1" }, MEMBER);
+		expect(result.structuredContent).toMatchObject({
+			outcome: "requested",
+			changeRequestId: expect.any(String),
+		});
+		expect(rows(`SELECT id FROM communityRelation`)).toHaveLength(1);
+		const got = (await call("get_profile", { id: "p1" }, MEMBER)).structuredContent;
+		expect(got.myPendingRequests).toMatchObject([{ kind: "relation_remove" }]);
+	});
+
+	it("an incoming relation id → Invalid hint pointing at the other profile", async () => {
+		const result = await call("remove_relation", { profileId: "p2", relationId: "r1" });
+		expect(result.isError).toBe(true);
+		expect(textOf(result)).toContain("incoming");
+		expect(textOf(result)).toContain("outgoing");
+		expect(textOf(result)).toContain("p1");
+		expect(rows(`SELECT id FROM communityRelation`)).toHaveLength(1);
+		expect(rows(`SELECT id FROM auditEvent`)).toEqual([]);
+	});
+
+	it("unknown relation, or one of another profile → not found", async () => {
+		const unknown = await call("remove_relation", { profileId: "p1", relationId: "zzz" });
+		expect(unknown.isError).toBe(true);
+		expect(textOf(unknown)).toContain("not found");
+		sql(
+			`INSERT INTO communityProfile (id, firstName, lastName, status, organizationId, version) VALUES ('p3', 'Zoya', 'Khan', 'active', 'o1', 0)`
+		);
+		const other = await call("remove_relation", { profileId: "p3", relationId: "r1" });
+		expect(textOf(other)).toContain("not found");
+	});
+});
+
+describe("add_address", () => {
+	const ADDRESS = {
+		profileId: "p2",
+		line1: "12 Park Street",
+		city: "Surat",
+		state: "Gujarat",
+		country: "India",
+		postalCode: "395001",
+	};
+
+	it("owner → applied with addressId and version 0; optional fields stored", async () => {
+		const result = await call("add_address", {
+			...ADDRESS,
+			line2: "Flat 4",
+			type: "work",
+			note: "office",
+			digipin: "39J-49L-L8T4",
+		});
+		expect(result.isError).toBeUndefined();
+		expect(result.structuredContent).toMatchObject({
+			outcome: "applied",
+			profileId: "p2",
+			addressId: expect.any(String),
+			version: 0,
+		});
+		expect(
+			rows(
+				`SELECT id, line1, line2, city, state, country, postalCode, type, note, digipin, communityProfileId FROM communityAddress`
+			)
+		).toEqual([
+			{
+				id: result.structuredContent.addressId,
+				line1: "12 Park Street",
+				line2: "Flat 4",
+				city: "Surat",
+				state: "Gujarat",
+				country: "India",
+				postalCode: "395001",
+				type: "work",
+				note: "office",
+				digipin: "39J-49L-L8T4",
+				communityProfileId: "p2",
+			},
+		]);
+		expect(rows(`SELECT action, viaClientId FROM auditEvent`)).toEqual([
+			{ action: "address.added", viaClientId: "c1" },
+		]);
+		const got = (await call("get_profile", { id: "p2" })).structuredContent;
+		expect(got.addresses).toMatchObject([
+			{ id: result.structuredContent.addressId, version: 0, line1: "12 Park Street" },
+		]);
+	});
+
+	it("member on a userless profile → requested; on their own profile → applied", async () => {
+		const requested = await call("add_address", ADDRESS, MEMBER);
+		expect(requested.structuredContent).toMatchObject({
+			outcome: "requested",
+			changeRequestId: expect.any(String),
+		});
+		expect(requested.structuredContent).not.toHaveProperty("addressId");
+		expect(rows(`SELECT id FROM communityAddress`)).toEqual([]);
+		const got = (await call("get_profile", { id: "p2" }, MEMBER)).structuredContent;
+		expect(got.myPendingRequests).toMatchObject([{ kind: "address_add" }]);
+
+		const own = await call("add_address", { ...ADDRESS, profileId: "mine" }, MEMBER);
+		expect(own.structuredContent).toMatchObject({ outcome: "applied", profileId: "mine" });
+	});
+
+	it("repeat on normalised line1+city+postalCode → unchanged with the existing id + version", async () => {
+		const first = await call("add_address", ADDRESS);
+		const again = await call("add_address", {
+			...ADDRESS,
+			line1: "  12   PARK street ",
+			city: "surat",
+			postalCode: " 395001 ",
+			note: "other note",
+		});
+		expect(again.isError).toBeUndefined();
+		expect(again.structuredContent).toMatchObject({
+			outcome: "unchanged",
+			profileId: "p2",
+			addressId: first.structuredContent.addressId,
+			version: 0,
+		});
+		expect(rows(`SELECT id FROM communityAddress`)).toHaveLength(1);
+		expect(rows(`SELECT id FROM auditEvent`)).toHaveLength(1);
+		// A different postal code is a different address.
+		const other = await call("add_address", { ...ADDRESS, postalCode: "395002" });
+		expect(other.structuredContent.outcome).toBe("applied");
+		expect(rows(`SELECT id FROM communityAddress`)).toHaveLength(2);
+	});
+
+	it("same address on another profile is not a repeat", async () => {
+		await call("add_address", ADDRESS);
+		const other = await call("add_address", { ...ADDRESS, profileId: "p1" });
+		expect(other.structuredContent.outcome).toBe("applied");
+	});
+
+	it("blank required fields are Invalid naming the field; unknown profile is not found", async () => {
+		const blank = await call("add_address", { ...ADDRESS, city: "   " });
+		expect(blank.isError).toBe(true);
+		expect(textOf(blank)).toContain("City");
+		const missing = await call("add_address", { ...ADDRESS, profileId: "nope" });
+		expect(textOf(missing)).toContain("not found");
+		expect(rows(`SELECT id FROM communityAddress`)).toEqual([]);
+	});
+});
+
+describe("update_address", () => {
+	beforeEach(() => {
+		sql(`
+			INSERT INTO communityAddress (id, line1, line2, country, state, city, postalCode, type, note, communityProfileId, version) VALUES
+				('a1', '12 Park Street', 'Flat 4', 'India', 'Gujarat', 'Surat', '395001', 'home', 'old', 'p2', 2);
+		`);
+	});
+
+	it("owner patch → applied with the new version; absent keeps, null clears", async () => {
+		const result = await call("update_address", {
+			profileId: "p2",
+			addressId: "a1",
+			expectedVersion: 2,
+			city: "Vadodara",
+			line2: null,
+		});
+		expect(result.isError).toBeUndefined();
+		expect(result.structuredContent).toMatchObject({
+			outcome: "applied",
+			profileId: "p2",
+			addressId: "a1",
+			version: 3,
+		});
+		expect(rows(`SELECT line1, line2, city, note, type, version FROM communityAddress`)).toEqual([
+			{
+				line1: "12 Park Street",
+				line2: null,
+				city: "Vadodara",
+				note: "old",
+				type: "home",
+				version: 3,
+			},
+		]);
+		expect(rows(`SELECT action, viaClientId FROM auditEvent`)).toEqual([
+			{ action: "address.updated", viaClientId: "c1" },
+		]);
+	});
+
+	it("member on a userless profile → requested, row untouched", async () => {
+		const result = await call(
+			"update_address",
+			{ profileId: "p2", addressId: "a1", expectedVersion: 2, city: "Vadodara" },
+			MEMBER
+		);
+		expect(result.structuredContent).toMatchObject({
+			outcome: "requested",
+			changeRequestId: expect.any(String),
+		});
+		expect(rows(`SELECT city, version FROM communityAddress`)).toEqual([
+			{ city: "Surat", version: 2 },
+		]);
+		const got = (await call("get_profile", { id: "p2" }, MEMBER)).structuredContent;
+		expect(got.myPendingRequests).toMatchObject([{ kind: "address_edit" }]);
+	});
+
+	it("member on their own linked profile → applied", async () => {
+		sql(`
+			INSERT INTO communityAddress (id, line1, country, state, city, postalCode, communityProfileId, version)
+			VALUES ('a2', '1 Lane', 'India', 'Gujarat', 'Surat', '395001', 'mine', 0);
+		`);
+		const result = await call(
+			"update_address",
+			{ profileId: "mine", addressId: "a2", expectedVersion: 0, note: "hi" },
+			MEMBER
+		);
+		expect(result.structuredContent).toMatchObject({ outcome: "applied", version: 1 });
+	});
+
+	it("repeating the same patch → unchanged (idempotent), not counted", async () => {
+		const patch = { profileId: "p2", addressId: "a1", expectedVersion: 2, city: "Vadodara" };
+		await call("update_address", patch);
+		const again = await call("update_address", { ...patch, expectedVersion: 3 });
+		expect(again.isError).toBeUndefined();
+		expect(again.structuredContent).toMatchObject({
+			outcome: "unchanged",
+			profileId: "p2",
+			addressId: "a1",
+			version: 3,
+		});
+		expect(rows(`SELECT id FROM auditEvent`)).toHaveLength(1);
+	});
+
+	it("stale expectedVersion → Stale with a re-read hint, nothing written", async () => {
+		const result = await call("update_address", {
+			profileId: "p2",
+			addressId: "a1",
+			expectedVersion: 1,
+			city: "Vadodara",
+		});
+		expect(result.isError).toBe(true);
+		expect(textOf(result)).toContain("Stale");
+		expect(textOf(result)).toContain("get_profile");
+		expect(rows(`SELECT city FROM communityAddress`)).toEqual([{ city: "Surat" }]);
+	});
+
+	it("a required field cannot be cleared or blanked (Invalid); unknown / foreign address is not found", async () => {
+		const cleared = await rpc("tools/call", {
+			name: "update_address",
+			arguments: { profileId: "p2", addressId: "a1", expectedVersion: 2, city: null },
+		});
+		expect(cleared.result?.isError ?? !!cleared.error).toBe(true);
+		const blank = await call("update_address", {
+			profileId: "p2",
+			addressId: "a1",
+			expectedVersion: 2,
+			city: "  ",
+		});
+		expect(blank.isError).toBe(true);
+		expect(textOf(blank)).toContain("City");
+		const unknown = await call("update_address", {
+			profileId: "p2",
+			addressId: "nope",
+			expectedVersion: 2,
+			city: "X",
+		});
+		expect(textOf(unknown)).toContain("not found");
+		const foreign = await call("update_address", {
+			profileId: "p1",
+			addressId: "a1",
+			expectedVersion: 2,
+			city: "X",
+		});
+		expect(textOf(foreign)).toContain("not found");
+		expect(rows(`SELECT city FROM communityAddress`)).toEqual([{ city: "Surat" }]);
+	});
+});
+
+describe("remove_address", () => {
+	beforeEach(() => {
+		sql(`
+			INSERT INTO communityAddress (id, line1, country, state, city, postalCode, communityProfileId, version)
+			VALUES ('a1', '12 Park Street', 'India', 'Gujarat', 'Surat', '395001', 'p2', 2);
+		`);
+	});
+
+	it("owner → applied with the address id", async () => {
+		const result = await call("remove_address", { profileId: "p2", addressId: "a1" });
+		expect(result.isError).toBeUndefined();
+		expect(result.structuredContent).toMatchObject({
+			outcome: "applied",
+			profileId: "p2",
+			addressId: "a1",
+		});
+		expect(rows(`SELECT id FROM communityAddress`)).toEqual([]);
+		expect(rows(`SELECT action, viaClientId FROM auditEvent`)).toEqual([
+			{ action: "address.removed", viaClientId: "c1" },
+		]);
+	});
+
+	it("member on a userless profile → requested, address stays", async () => {
+		const result = await call("remove_address", { profileId: "p2", addressId: "a1" }, MEMBER);
+		expect(result.structuredContent).toMatchObject({
+			outcome: "requested",
+			changeRequestId: expect.any(String),
+		});
+		expect(rows(`SELECT id FROM communityAddress`)).toHaveLength(1);
+	});
+
+	it("unknown address or one of another profile → not found", async () => {
+		const unknown = await call("remove_address", { profileId: "p2", addressId: "nope" });
+		expect(unknown.isError).toBe(true);
+		expect(textOf(unknown)).toContain("not found");
+		const foreign = await call("remove_address", { profileId: "p1", addressId: "a1" });
+		expect(textOf(foreign)).toContain("not found");
+		expect(rows(`SELECT id FROM communityAddress`)).toHaveLength(1);
+	});
+});
+
+describe("write quotas for relation and address tools", () => {
+	it("applied adds eat the daily pool; unchanged repeats and errors do not", async () => {
+		const addr = {
+			profileId: "p2",
+			line1: "1 A",
+			city: "C",
+			state: "S",
+			country: "IN",
+			postalCode: "1",
+		};
+		await call("add_address", addr);
+		for (let i = 0; i < 10; i++) {
+			await call("add_address", addr); // unchanged
+			await call("remove_relation", { profileId: "p1", relationId: "nope" }); // NotFound
+			now += 1000;
+		}
+		for (let i = 0; i < 5; i++) {
+			const r = await call("add_address", { ...addr, postalCode: `9${i}` });
+			expect(r.structuredContent.outcome, `call ${i}`).toBe("applied");
+			now += 1000;
+		}
+		const blocked = await call("add_address", { ...addr, postalCode: "77" });
+		expect(blocked.isError).toBe(true);
+		expect(textOf(blocked)).toContain("Write quota reached");
+	});
+
+	it("burst counts every call", async () => {
+		await call("remove_address", { profileId: "p2", addressId: "nope" });
+		await call("add_relation", { profileId: "p1", toId: "p1", type: "brother" });
+		expect(burst.limit).toHaveBeenCalledTimes(2);
+	});
+});
