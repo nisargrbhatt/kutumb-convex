@@ -482,6 +482,51 @@ describe("write quotas", () => {
 	});
 });
 
+describe("repeating a requested write", () => {
+	beforeEach(() => {
+		sql(`
+			INSERT INTO communityAddress (id, line1, country, state, city, postalCode, communityProfileId, version) VALUES
+				('a1', '12 Park Street', 'India', 'Gujarat', 'Surat', '395001', 'p2', 2);
+		`);
+	});
+
+	const ADDR = {
+		profileId: "p2",
+		line1: "9 Lake Road",
+		city: "Vapi",
+		state: "Gujarat",
+		country: "India",
+		postalCode: "396191",
+	};
+	const cases: [string, Record<string, unknown>][] = [
+		["update_profile", { profileId: "p2", expectedVersion: 3, nickName: "Ravu" }],
+		["add_relation", { profileId: "p2", toId: "p1", type: "father" }],
+		["add_address", ADDR],
+		["update_address", { profileId: "p2", addressId: "a1", expectedVersion: 2, city: "Vapi" }],
+	];
+
+	it.each(cases)(
+		"%s: an exact repeat → unchanged + the pending request id, nothing counted or written",
+		async (tool, args) => {
+			const first = await call(tool, args, MEMBER);
+			expect(first.structuredContent).toMatchObject({ outcome: "requested" });
+			const id = first.structuredContent.changeRequestId;
+			const events = rows(`SELECT id FROM auditEvent`).length;
+
+			const again = await call(tool, args, MEMBER);
+
+			expect(again.isError).toBeUndefined();
+			expect(again.structuredContent).toMatchObject({
+				outcome: "unchanged",
+				changeRequestId: id,
+			});
+			expect(again.structuredContent.message).toContain("awaiting review");
+			expect(rows(`SELECT id FROM changeRequest`)).toHaveLength(1);
+			expect(rows(`SELECT id FROM auditEvent`)).toHaveLength(events);
+		}
+	);
+});
+
 describe("PENDING_REQUEST_LIMIT through the tool", () => {
 	it("LimitReached → isError with a tell-the-user hint", async () => {
 		const values = Array.from(

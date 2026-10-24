@@ -1,5 +1,5 @@
 import type { BatchItem, BatchResponse } from "drizzle-orm/batch";
-import { and, count, eq, or, sql } from "drizzle-orm";
+import { and, count, eq, isNull, or, sql } from "drizzle-orm";
 import {
 	auditEvent,
 	changeRequest,
@@ -94,7 +94,8 @@ export type AppliedDetail = { version?: number; addressId?: string; relationId?:
 export type SubmitResult =
 	| ({ outcome: "applied"; profileId: string } & AppliedDetail)
 	| { outcome: "requested"; profileId: string; changeRequestId: string }
-	| { outcome: "unchanged"; profileId: string };
+	/** `changeRequestId`: an identical request of the submitter's is already pending. */
+	| { outcome: "unchanged"; profileId: string; changeRequestId?: string };
 
 export type ReviewDecision =
 	| { decision: "approve"; note?: string | null }
@@ -175,6 +176,14 @@ const isGuardTrip = (e: unknown) => {
 	const text = `${String(e)} ${String((e as { cause?: unknown } | null)?.cause ?? "")}`;
 	return text.includes(STALE_GUARD_MESSAGE);
 };
+
+/** JSON with sorted keys, so equal payloads compare equal whatever their key order. */
+const stableJson = (v: unknown): string =>
+	JSON.stringify(v, (_k, x) =>
+		x && typeof x === "object" && !Array.isArray(x)
+			? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : 1)))
+			: x
+	);
 
 export function makeProfileChanges({
 	db,
@@ -300,17 +309,8 @@ export function makeProfileChanges({
 		}
 	}
 
-	/**
-	 * Turns a validated direct `plan` into a pending Change Request instead: its main event is the
-	 * would-be change, so payload / target / counterpart come from it (statements are dropped).
-	 */
-	function planRequest(
-		actor: Actor,
-		name: string,
-		subject: ProfileRow,
-		change: Exclude<ProfileChange, { kind: "create" }>,
-		applied: Plan
-	) {
+	/** What a pending request for this change stores: payload + target (from its would-be event). */
+	function requestShape(change: Exclude<ProfileChange, { kind: "create" }>, applied: Plan) {
 		const main = applied.events[0]!;
 		let payload: unknown = main.payload;
 		let targetId: string | null = null;
@@ -343,6 +343,47 @@ export function makeProfileChanges({
 				targetId = change.addressId;
 				break;
 		}
+		return { main, payload, targetId };
+	}
+
+	/** The submitter's own pending request for exactly this change, if any (idempotent repeat). */
+	async function findPendingRepeat(
+		actor: Actor,
+		profileId: string,
+		kind: ProfileChange["kind"],
+		shape: { payload: unknown; targetId: string | null }
+	) {
+		const rows = await db
+			.select({ id: changeRequest.id, payload: changeRequest.payload })
+			.from(changeRequest)
+			.where(
+				and(
+					eq(changeRequest.organizationId, actor.organizationId),
+					eq(changeRequest.submitterUserId, actor.userId),
+					eq(changeRequest.status, CHANGE_REQUEST_STATUS.pending),
+					eq(changeRequest.profileId, profileId),
+					eq(changeRequest.kind, kind),
+					shape.targetId === null
+						? isNull(changeRequest.targetId)
+						: eq(changeRequest.targetId, shape.targetId)
+				)
+			);
+		const wanted = stableJson(shape.payload);
+		return rows.find((r) => stableJson(r.payload) === wanted);
+	}
+
+	/**
+	 * Turns a validated direct `plan` into a pending Change Request instead: its main event is the
+	 * would-be change, so payload / target / counterpart come from it (statements are dropped).
+	 */
+	function planRequest(
+		actor: Actor,
+		name: string,
+		subject: ProfileRow,
+		change: Exclude<ProfileChange, { kind: "create" }>,
+		applied: Plan
+	) {
+		const { main, payload, targetId } = requestShape(change, applied);
 		const changeRequestId = newId();
 		const plan: Plan = {
 			statements: [
@@ -1085,6 +1126,15 @@ export function makeProfileChanges({
 			}
 			if (!plan) return { outcome: "unchanged", profileId: subject.id };
 			if (how === "request") {
+				const repeat = await findPendingRepeat(
+					actor,
+					subject.id,
+					change.kind,
+					requestShape(change, plan)
+				);
+				if (repeat) {
+					return { outcome: "unchanged", profileId: subject.id, changeRequestId: repeat.id };
+				}
 				await assertPendingRequestSlot(actor);
 				const req = planRequest(actor, name, subject, change, plan);
 				await commit(actor, name, req.plan, via);

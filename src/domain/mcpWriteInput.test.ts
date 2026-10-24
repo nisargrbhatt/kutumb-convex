@@ -196,7 +196,11 @@ describe("patchProfileToInput", () => {
 		const current = { ...CURRENT, customFieldData: { f1: legacy } };
 		const out = patchProfileToInput(current, { nickName: "Ashu" }, DEFS);
 		expect(out.customFieldData).toEqual({ f1: legacy });
-		const other = patchProfileToInput(current, { customFields: [{ field: "Height", value: 1 }] }, DEFS);
+		const other = patchProfileToInput(
+			current,
+			{ customFields: [{ field: "Height", value: 1 }] },
+			DEFS
+		);
 		expect(other.customFieldData).toEqual({ f1: legacy, f2: 1 });
 	});
 

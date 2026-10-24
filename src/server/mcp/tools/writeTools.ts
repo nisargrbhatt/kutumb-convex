@@ -61,7 +61,7 @@ expectedVersion is required: pass the profile's current \`version\` from get_pro
 
 Outcome "applied" = live now (returns the new version). Outcome "requested" = submitted for owner/admin review and NOT live until approved (members changing someone else's profile); tell the user that. A profile linked to another member can only be changed by that member.`;
 
-const requestedNote = `Outcome "applied" = live now. Outcome "requested" = submitted for owner/admin review and NOT live until approved (members changing a profile that is not their own); tell the user that. A profile linked to another member can only be changed by that member.`;
+const requestedNote = `Outcome "applied" = live now. Outcome "requested" = submitted for owner/admin review and NOT live until approved (members changing a profile that is not their own); tell the user that. A profile linked to another member can only be changed by that member. Repeating a request that is already pending returns outcome "unchanged" with its changeRequestId.`;
 
 export const addRelationDescription = `Adds a relation between two existing Community Profiles. It reads "toId is profileId's <type>" and is stored as an OUTGOING relation of profileId; it is never inverted and no reverse relation is created.
 
@@ -329,7 +329,9 @@ export function registerWriteTools(server: McpServer, deps: WriteDeps): void {
 				applied: "Address updated.",
 				unchanged: "No change: the address already has these values.",
 			});
-			return out.outcome === "unchanged" ? { ...out, addressId, version: expectedVersion } : out;
+			return out.outcome === "unchanged" && !out.changeRequestId
+				? { ...out, addressId, version: expectedVersion }
+				: out;
 		}
 	);
 

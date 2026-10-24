@@ -11,7 +11,12 @@ export const writeResultOutput = z.object({
 			"applied: live now. requested: submitted for owner/admin review, NOT live until approved. unchanged: nothing to do (already so). possible_duplicate: nothing written; see candidates."
 		),
 	profileId: z.string().optional().describe("The profile affected (absent on possible_duplicate)."),
-	changeRequestId: z.string().optional().describe("Present when outcome is requested."),
+	changeRequestId: z
+		.string()
+		.optional()
+		.describe(
+			"Present when outcome is requested, or unchanged because an identical request is already pending."
+		),
 	version: z
 		.number()
 		.optional()
@@ -35,6 +40,10 @@ export const writeResultOutput = z.object({
 });
 export type WriteResult = z.infer<typeof writeResultOutput>;
 
+/** An identical request of the caller's is already pending: nothing new was filed. */
+export const PENDING_REPEAT_MESSAGE =
+	"No change: this exact change is already awaiting review (changeRequestId). Do not repeat it; tell the user it is waiting for an owner/admin.";
+
 export const REQUESTED_MESSAGE = "Submitted for owner/admin review; not live until approved.";
 
 /**
@@ -53,6 +62,9 @@ export function toWriteResult(
 		case "requested":
 			return { ...res, message: REQUESTED_MESSAGE };
 		case "unchanged":
-			return { ...res, message: messages.unchanged };
+			return {
+				...res,
+				message: res.changeRequestId ? PENDING_REPEAT_MESSAGE : messages.unchanged,
+			};
 	}
 }
