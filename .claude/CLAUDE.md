@@ -86,8 +86,7 @@ inline. `db` (`src/db/index.ts`) is the Drizzle client bound to the `D1` Cloudfl
   react-hook-form + zod resolvers.
 - **Limits:** constants (`ORG_LIMIT`/`MEMBER_LIMIT`, write quotas, ...) hardcoded in
   `src/domain/limits.ts` (pure, client-safe); wiring in `src/lib/limits.ts`, counters in
-  `src/lib/limits-db.ts`. Enforced in better-auth org hooks + profile insert sites. See
-  ADR 0003.
+  `src/lib/limits-db.ts`. Enforced in better-auth org hooks + profile insert sites. See ADR 0003.
 
 ## Github
 

@@ -53,8 +53,9 @@ does not; a reason is required).
 
 A permanent record of one change to a Community Profile: who, what, when, which Change Request or
 Review it came from, and which AI Client made it, if any (a change or Change Request made through a
-Connection is **attributed** to that AI Client; the Actor is still the member). Recorded for every profile change, linked or userless, and outlives the
-profile. Visible to owner/admin only. _Avoid_: "log", "history entry".
+Connection is **attributed** to that AI Client; the Actor is still the member). Recorded for every
+profile change, linked or userless, and outlives the profile. Visible to owner/admin only. _Avoid_:
+"log", "history entry".
 
 ## Relation
 
@@ -94,8 +95,8 @@ way the role is the Org Member's current role, not one captured earlier. _Avoid_
 
 An organization-level declaration of an extra attribute every Community Profile in that community
 may carry: a label and a type (`text | number | date | boolean`). Identified by a stable id — the
-label is display text, unique within the community, and may change. _Avoid_: "custom field" alone when the definition (not the
-value) is meant.
+label is display text, unique within the community, and may change. _Avoid_: "custom field" alone
+when the definition (not the value) is meant.
 
 ## Custom Field Value
 
@@ -105,8 +106,9 @@ profile is simply absent.
 
 ## AI Client
 
-An external LLM application (e.g. Claude, ChatGPT, an IDE assistant) that reads, and may change, community data on an
-Org Member's behalf through a Connection. _Avoid_: "LLM provider", "integration".
+An external LLM application (e.g. Claude, ChatGPT, an IDE assistant) that reads, and may change,
+community data on an Org Member's behalf through a Connection. _Avoid_: "LLM provider",
+"integration".
 
 ## Connection
 
@@ -115,5 +117,6 @@ time. The AI Client acts as that member's Actor with their current role. A Conne
 by its member and ends when their membership in that organization ends. Connecting a second
 organization means a second Connection. A Connection reads only, unless its member also granted
 **write** at consent; the member can later make it **read only** without revoking it (getting write
-back means reconnecting). An owner can turn off **AI Client writes** for the whole organization, making
-every Connection there read-only. Each Connection has its own **write quota**. _Avoid_: "API token", "grant", "integration".
+back means reconnecting). An owner can turn off **AI Client writes** for the whole organization,
+making every Connection there read-only. Each Connection has its own **write quota**. _Avoid_: "API
+token", "grant", "integration".
