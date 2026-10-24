@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { communityProfileCustomField } from "@/db/app-schema";
+import { captureLimitReached } from "@/lib/posthog-server";
 import { orgMiddleware } from "@/middleware/org";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
@@ -7,23 +8,23 @@ import * as z from "zod";
 import { generatePrimaryKey } from "@/lib/generate";
 import { assertCan } from "@/domain/permission";
 import { customFieldTypeSchema, type CustomFieldDefinition } from "@/domain/customFields";
+import {
+	addCustomFieldDefinition,
+	listCustomFieldDefinitions,
+} from "@/domain/customFieldDefinitions";
 
 export const getOrganizationCustomFields = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
 	.handler(
 		async ({ context }): Promise<CustomFieldDefinition[]> =>
-			db.query.communityProfileCustomField.findMany({
-				where: (fields, operators) =>
-					operators.eq(fields.organizationId, context.actor.organizationId),
-				columns: { id: true, label: true, type: true },
-			})
+			listCustomFieldDefinitions(db, context.actor.organizationId)
 	);
 
 export const addOrganizationCustomField = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
 	.validator(
 		z.object({
-			label: z.string().min(1, "Label is required"),
+			label: z.string().trim().min(1, "Label is required"),
 			type: customFieldTypeSchema,
 		})
 	)
@@ -32,11 +33,9 @@ export const addOrganizationCustomField = createServerFn({ method: "POST" })
 
 		const { organizationId } = context.actor;
 
-		await db.insert(communityProfileCustomField).values({
-			organizationId: organizationId,
-			label: data.label,
-			type: data.type,
-			id: generatePrimaryKey(),
+		await addCustomFieldDefinition(db, organizationId, data, {
+			newId: generatePrimaryKey,
+			onLimitReached: (e) => captureLimitReached({ ...e, userId: context.actor.userId }),
 		});
 
 		return {
