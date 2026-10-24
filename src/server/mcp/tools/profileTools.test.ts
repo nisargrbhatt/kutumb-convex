@@ -69,8 +69,9 @@ beforeEach(() => {
 		INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('u1', 'U1', 'u1@x.test', 1, 0, 0);
 		INSERT INTO organization (id, name, slug, created_at) VALUES ('o1', 'Org 1', 'o1', 0), ('o2', 'Org 2', 'o2', 0);
 		INSERT INTO communityProfileCustomField (id, label, type, organizationId) VALUES
-			('f1', 'Gotra', 'text', 'o1'), ('f2', 'Height', 'number', 'o1'), ('f3', 'Unset', 'text', 'o1');
-		${profile("jared", "Jared", { gender: "male", email: "jared@x.test", cfd: '{"f1":"Kashyap","f2":180,"gone":"x"}' })}
+			('f1', 'Gotra', 'text', 'o1'), ('f2', 'Height', 'number', 'o1'), ('f3', 'Unset', 'text', 'o1'),
+			('f4', 'Anniversary', 'date', 'o1'), ('x1', 'Other org field', 'text', 'o2');
+		${profile("jared", "Jared", { gender: "male", email: "jared@x.test", cfd: '{"f1":"Kashyap","f2":180,"f4":"2010-06-15T00:00:00.000Z","gone":"x"}' })}
 		${profile("anna", "Anna", { gender: "female" })}
 		${profile("mia", "Mia", { gender: "female" })}
 		${profile("ivy", "Ivy", { gender: "female", status: "inactive" })}
@@ -129,7 +130,7 @@ describe("get_profile", () => {
 			status: "active",
 			bloodGroup: null,
 			mobileNumber: "+91 99",
-			dateOfBirth: "1990-01-02T00:00:00.000Z",
+			dateOfBirth: "1990-01-02",
 			dateOfDeath: null,
 			comment: "a comment",
 			userId: null,
@@ -151,11 +152,81 @@ describe("get_profile", () => {
 				digipin: null,
 			},
 		]);
-		// labelled; unset definition and orphan value are absent
-		expect(p.customFields).toEqual([
-			{ id: "f1", label: "Gotra", type: "text", value: "Kashyap" },
-			{ id: "f2", label: "Height", type: "number", value: 180 },
-		]);
+	});
+
+	describe("custom fields", () => {
+		it("lists every definition in order; unset → null, orphan value hidden, dates as YYYY-MM-DD", async () => {
+			const p = (await call("get_profile", { id: "jared" })).result.structuredContent;
+			expect(p.customFields).toEqual([
+				{ id: "f1", label: "Gotra", type: "text", value: "Kashyap" },
+				{ id: "f2", label: "Height", type: "number", value: 180 },
+				{ id: "f3", label: "Unset", type: "text", value: null },
+				{ id: "f4", label: "Anniversary", type: "date", value: "2010-06-15" },
+			]);
+		});
+
+		it("a profile with no values still lists every definition as null", async () => {
+			const p = (await call("get_profile", { id: "anna" })).result.structuredContent;
+			expect(p.customFields).toEqual([
+				{ id: "f1", label: "Gotra", type: "text", value: null },
+				{ id: "f2", label: "Height", type: "number", value: null },
+				{ id: "f3", label: "Unset", type: "text", value: null },
+				{ id: "f4", label: "Anniversary", type: "date", value: null },
+			]);
+		});
+
+		it("a deleted definition's value disappears even though it stays stored", async () => {
+			h.fresh.sqlite.exec("DELETE FROM communityProfileCustomField WHERE id = 'f1'");
+			const p = (await call("get_profile", { id: "jared" })).result.structuredContent;
+			expect(p.customFields.map((f: { id: string }) => f.id)).toEqual(["f2", "f3", "f4"]);
+		});
+
+		it("dateOfDeath is YYYY-MM-DD too", async () => {
+			h.fresh.sqlite.exec(
+				"UPDATE communityProfile SET dateOfDeath = '2020-12-31T00:00:00.000Z' WHERE id = 'jared'"
+			);
+			const p = (await call("get_profile", { id: "jared" })).result.structuredContent;
+			expect(p.dateOfDeath).toBe("2020-12-31");
+		});
+
+		it("a legacy over-500-char text value still reads back", async () => {
+			const long = "y".repeat(600);
+			h.fresh.sqlite.exec(
+				`UPDATE communityProfile SET customFieldData = '{"f1":"${long}"}' WHERE id = 'jared'`
+			);
+			const { result } = await call("get_profile", { id: "jared" });
+			expect(result.isError).toBeUndefined();
+			expect(result.structuredContent.customFields[0].value).toBe(long);
+		});
+	});
+
+	describe("whoami + list_custom_fields", () => {
+		const EXPECTED = [
+			{ id: "f1", label: "Gotra", type: "text" },
+			{ id: "f2", label: "Height", type: "number" },
+			{ id: "f3", label: "Unset", type: "text" },
+			{ id: "f4", label: "Anniversary", type: "date" },
+		];
+
+		it("whoami carries this org's definitions in order", async () => {
+			const { result } = await call("whoami", {});
+			expect(result.structuredContent.customFields).toEqual(EXPECTED);
+		});
+
+		it("list_custom_fields returns the same list", async () => {
+			const who = (await call("whoami", {})).result.structuredContent;
+			const { result } = await call("list_custom_fields", {});
+			expect(result.structuredContent).toEqual({ customFields: who.customFields });
+			expect(result.structuredContent.customFields).toEqual(EXPECTED);
+			expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
+		});
+
+		it("other orgs' fields never leak", async () => {
+			const { result } = await call("list_custom_fields", {}, { ...ACTOR, organizationId: "o2" });
+			expect(result.structuredContent.customFields).toEqual([
+				{ id: "x1", label: "Other org field", type: "text" },
+			]);
+		});
 	});
 
 	describe("active only, every role", () => {
