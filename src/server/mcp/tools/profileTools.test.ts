@@ -438,3 +438,70 @@ describe("search_profiles filters", () => {
 		expect(tool.inputSchema.properties).toHaveProperty("bloodGroup");
 	});
 });
+
+describe("count_profiles", () => {
+	it("counts active profiles of the org, every role; text fallback mirrors structuredContent", async () => {
+		for (const role of ["member", "admin", "owner"] as const) {
+			const { result } = await call("count_profiles", {}, { ...ACTOR, role });
+			expect(result.structuredContent).toMatchObject({ total: 3, otherGroups: 0, otherCount: 0 });
+			expect(result.structuredContent.asOf).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+			expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
+		}
+	});
+
+	it("groupBy core + filters; places overlap", async () => {
+		h.fresh.sqlite.exec(`
+			INSERT INTO communityAddress (id, line1, country, state, city, postalCode, communityProfileId)
+				VALUES ('ad2', '2 Main St', 'IN', 'GJ', ' pune ', '1', 'jared'), ('ad3', 'x', 'IN', 'GJ', 'Surat', '1', 'jared');
+		`);
+		const byGender = (await call("count_profiles", { groupBy: { core: "gender" } })).result;
+		expect(byGender.structuredContent.groups).toEqual([
+			{ value: "female", count: 2 },
+			{ value: "male", count: 1 },
+		]);
+		const byCity = (await call("count_profiles", { groupBy: { core: "city" }, gender: "male" }))
+			.result;
+		expect(byCity.structuredContent).toMatchObject({
+			total: 1,
+			overlapping: true,
+			groups: [
+				{ value: "Pune", count: 1 },
+				{ value: "Surat", count: 1 },
+			],
+		});
+	});
+
+	it("groupBy a number field → isError Invalid with a range-filter hint", async () => {
+		const { result } = await call("count_profiles", { groupBy: { field: "Height" } });
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toMatch(/customFieldFilters/);
+	});
+
+	it("description explains asOf and overlap; input exposes groupBy + shared filters", async () => {
+		const res = await createKutumbMcpHandler().fetch(
+			new Request("https://kutumb.example.org/api/mcp", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					accept: "application/json, text/event-stream",
+				},
+				body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+			}),
+			{ authInfo: authInfo(ACTOR) }
+		);
+		const text = await res.text();
+		const json = JSON.parse(
+			text.startsWith("event:")
+				? text
+						.split("\n")
+						.find((l) => l.startsWith("data:"))!
+						.slice(5)
+				: text
+		);
+		const tool = json.result.tools.find((t: { name: string }) => t.name === "count_profiles");
+		expect(tool.description).toContain("asOf");
+		expect(tool.description).toContain("more than total");
+		expect(tool.inputSchema.properties).toHaveProperty("groupBy");
+		expect(tool.inputSchema.properties).toHaveProperty("customFieldFilters");
+	});
+});
