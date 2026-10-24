@@ -11,6 +11,7 @@ const customStatements = {
 	customFields: ["create", "read", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
+	orgSetting: ["update"],
 } as const;
 
 const expected: Record<Role, Record<string, readonly string[]>> = {
@@ -30,6 +31,7 @@ const expected: Record<Role, Record<string, readonly string[]>> = {
 		customFields: ["read", "create", "delete"],
 		changeRequest: ["create", "review"],
 		auditEvent: ["read"],
+		orgSetting: ["update"],
 	},
 };
 

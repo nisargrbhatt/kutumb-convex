@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { orgSetting } from "@/db/schema";
-import { AppError } from "@/domain/errors";
-import type { Actor } from "@/domain/permission";
+import { assertCan, type Actor } from "@/domain/permission";
 import type { QueryDb } from "./db";
 
 /** Whether AI Clients may write in this community. Missing row = on (ADR 0006). */
@@ -20,9 +19,7 @@ export async function setAiClientWrites(
 	actor: Actor,
 	enabled: boolean
 ): Promise<void> {
-	if (actor.role !== "owner") {
-		throw new AppError("Forbidden", "Only the owner can change this");
-	}
+	assertCan(actor, { orgSetting: ["update"] });
 	await db
 		.insert(orgSetting)
 		.values({ organizationId: actor.organizationId, aiClientWrites: enabled })
