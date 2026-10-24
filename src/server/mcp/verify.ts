@@ -8,8 +8,7 @@ import {
 	type ChallengeError,
 } from "@/domain/mcpEndpoint";
 import { MCP_SCOPE, ORG_CLAIM, mcpResourceUrl } from "@/domain/mcpOauth";
-import type { Actor } from "@/domain/permission";
-import type { ConnectionKey } from "./actor";
+import type { ConnectionActor, ConnectionKey } from "./actor";
 
 export const JWKS_TTL_MS = 10 * 60 * 1000;
 /** Floor between reloads triggered by unknown `kid`s, so junk tokens can't hammer D1. */
@@ -17,7 +16,7 @@ export const JWKS_UNKNOWN_KID_COOLDOWN_MS = 10 * 1000;
 
 export type VerifiedMcpRequest = {
 	token: string;
-	actor: Actor;
+	actor: ConnectionActor;
 	clientId: string;
 	scopes: string[];
 	expiresAt?: number;
@@ -27,7 +26,7 @@ export type VerifyDeps = {
 	/** Our origin (`BETTER_AUTH_URL`); drives `iss`, `aud` and the challenge. */
 	ownOrigin: string;
 	loadKeys: () => Promise<JSONWebKeySet>;
-	loadActor: (key: ConnectionKey) => Promise<Actor | null>;
+	loadActor: (key: ConnectionKey) => Promise<ConnectionActor | null>;
 	now?: () => number;
 };
 
@@ -115,7 +114,7 @@ export function createMcpVerifier(deps: VerifyDeps) {
 		const scopes = parseScopes(payload.scope);
 		if (!scopes.includes(MCP_SCOPE)) return insufficientScope(ownOrigin);
 
-		const actor = await loadActor({ userId, clientId, orgId });
+		const actor = await loadActor({ userId, clientId, orgId, tokenScopes: scopes });
 		if (!actor) return unauthorized(ownOrigin, "invalid_token");
 
 		return { token, actor, clientId, scopes, expiresAt: payload.exp };

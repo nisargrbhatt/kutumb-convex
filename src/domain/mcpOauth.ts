@@ -2,7 +2,31 @@
 
 export const MCP_SCOPE = "community:read";
 export const OFFLINE_SCOPE = "offline_access";
-export const MCP_SCOPES = [MCP_SCOPE, OFFLINE_SCOPE] as const;
+/** Opt-in: add/edit via single-item write tools. Needs live consent + the org toggle too (ADR 0006). */
+export const MCP_WRITE_SCOPE = "community:write";
+export const MCP_SCOPES = [MCP_SCOPE, MCP_WRITE_SCOPE, OFFLINE_SCOPE] as const;
+
+const splitScope = (scope: string | null | undefined): string[] =>
+	scope?.split(/\s+/).filter(Boolean) ?? [];
+
+/** Did the client ask for `community:write` (space-separated `scope` of the authorize request)? */
+export const requestsWrite = (requested: string | null | undefined): boolean =>
+	splitScope(requested).includes(MCP_WRITE_SCOPE);
+
+/**
+ * The `scope` to send with `consent({accept:true, scope})`: always a subset of what was
+ * requested. Read only drops `community:write`; write never adds scopes the client didn't ask for.
+ */
+export const consentScopeFor = (requested: string | null | undefined, write: boolean): string =>
+	splitScope(requested)
+		.filter((scope) => write || scope !== MCP_WRITE_SCOPE)
+		.join(" ");
+
+/** Did this accepted consent grant write? `accepted` = body `scope` subset, else the original request. */
+export const grantedWrite = (
+	accepted: string | null | undefined,
+	requested: string | null | undefined
+): boolean => requestsWrite(accepted ?? requested);
 
 /** Access-token claim carrying the org picked at consent (consent `referenceId`). */
 export const ORG_CLAIM = "org_id";

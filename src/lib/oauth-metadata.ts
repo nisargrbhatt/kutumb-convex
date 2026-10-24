@@ -1,7 +1,7 @@
 import { oauthProviderAuthServerMetadata } from "@better-auth/oauth-provider";
 import { oauthProviderResourceClient } from "@better-auth/oauth-provider/resource-client";
 import { env } from "cloudflare:workers";
-import { MCP_SCOPE, mcpResourceUrl } from "@/domain/mcpOauth";
+import { MCP_SCOPE, MCP_WRITE_SCOPE, mcpResourceUrl } from "@/domain/mcpOauth";
 import { auth } from "./auth";
 
 /** Discovery documents are public + credential-less, so any origin (incl. browser clients) may read. */
@@ -21,7 +21,7 @@ export async function protectedResourceMetadataResponse(): Promise<Response> {
 			resource: mcpResourceUrl(env.BETTER_AUTH_URL),
 			// `baseURL` carries the `/api/auth` base path; the client helper would use the bare origin.
 			authorization_servers: [baseURL],
-			scopes_supported: [MCP_SCOPE],
+			scopes_supported: [MCP_SCOPE, MCP_WRITE_SCOPE],
 			bearer_methods_supported: ["header"],
 		});
 	return Response.json(metadata, {

@@ -59,6 +59,7 @@ export const orgKeys = {
 	all: (orgId: string) => ["organization", orgId] as const,
 	usage: (orgId: string) => [...orgKeys.all(orgId), "usage"] as const,
 	invitations: (orgId: string) => [...orgKeys.all(orgId), "invitations"] as const,
+	aiSettings: (orgId: string) => [...orgKeys.all(orgId), "aiSettings"] as const,
 };
 
 /** User-scoped (not tenant-scoped): survives org switch. */
