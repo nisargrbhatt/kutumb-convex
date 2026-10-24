@@ -9,6 +9,7 @@ import {
 	LIMIT_COPY,
 	LIMIT_ERROR_CODES,
 	LimitError,
+	limitMessage,
 	makeLimits,
 	type Counters,
 } from "./limits";
@@ -141,5 +142,9 @@ describe("makeLimits", () => {
 		expect(err).toBeInstanceOf(LimitError);
 		expect(err.kind).toBe("LimitReached");
 		expect(err.code).toBe(LIMIT_ERROR_CODES.member);
+	});
+
+	it("pending request limit code maps to its toast copy", () => {
+		expect(limitMessage(new LimitError("pendingRequest"))).toBe(LIMIT_COPY.pendingRequest);
 	});
 });

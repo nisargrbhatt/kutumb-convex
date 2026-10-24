@@ -3,6 +3,8 @@ import { AppError } from "./errors";
 export const ORG_LIMIT = 5;
 export const MEMBER_LIMIT = 1000;
 export const PROFILE_LIMIT = MEMBER_LIMIT;
+/** Pending Change Requests per submitter per org. */
+export const PENDING_REQUEST_LIMIT = 50;
 
 export const canJoinOrganization = (membershipCount: number) => membershipCount < ORG_LIMIT;
 export const canInviteMember = (membersPlusPending: number) => membersPlusPending < MEMBER_LIMIT;
@@ -12,6 +14,7 @@ export const LIMIT_ERROR_CODES = {
 	org: "YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS",
 	member: "ORGANIZATION_MEMBERSHIP_LIMIT_REACHED",
 	profile: "COMMUNITY_PROFILE_LIMIT_REACHED",
+	pendingRequest: "PENDING_REQUEST_LIMIT_REACHED",
 } as const;
 
 export const LIMIT_COPY = {
@@ -34,6 +37,10 @@ export const LIMIT_COPY = {
 	profileSelf: {
 		title: "Profile limit reached",
 		description: `This organization already has ${MEMBER_LIMIT} community profiles, so your profile can't be created yet. Ask an admin to free a slot.`,
+	},
+	pendingRequest: {
+		title: "Too many pending requests",
+		description: `You already have ${PENDING_REQUEST_LIMIT} requests waiting for review. Withdraw one or wait for a review before sending another.`,
 	},
 } as const;
 
@@ -92,6 +99,8 @@ export const limitMessage = (codeOrError: string | AppError | null | undefined) 
 			return LIMIT_COPY.memberInvite;
 		case LIMIT_ERROR_CODES.profile:
 			return LIMIT_COPY.profileAdmin;
+		case LIMIT_ERROR_CODES.pendingRequest:
+			return LIMIT_COPY.pendingRequest;
 		default:
 			return undefined;
 	}

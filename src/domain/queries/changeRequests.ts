@@ -144,6 +144,7 @@ const requestColumns = {
 	submitterUserId: changeRequest.submitterUserId,
 	submitterName: changeRequest.submitterName,
 	createdAt: changeRequest.createdAt,
+	viaClientName: changeRequest.viaClientName,
 };
 
 /**
@@ -188,6 +189,7 @@ export async function listPendingByProfile(db: QueryDb, actor: Actor) {
 				payload: r.payload,
 				submitterUserId: r.submitterUserId,
 				submitterName: r.submitterName,
+				viaClientName: r.viaClientName,
 				createdAt: r.createdAt,
 				stale: stale.get(r.id) ?? null,
 				overlapsWith: reqs
