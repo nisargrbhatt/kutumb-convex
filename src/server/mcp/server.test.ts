@@ -4,6 +4,7 @@ import type { Actor } from "@/domain/permission";
 const mocks = vi.hoisted(() => ({
 	org: vi.fn(),
 	profile: vi.fn(),
+	fields: vi.fn(),
 	capture: vi.fn(),
 }));
 
@@ -12,6 +13,7 @@ vi.mock("@/db", () => ({
 		query: {
 			organization: { findFirst: mocks.org },
 			communityProfile: { findFirst: mocks.profile },
+			communityProfileCustomField: { findMany: mocks.fields },
 		},
 	},
 }));
@@ -57,6 +59,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mocks.org.mockResolvedValue({ id: "o1", name: "Patel Parivar" });
 	mocks.profile.mockResolvedValue({ id: "p1" });
+	mocks.fields.mockResolvedValue([{ id: "f1", label: "Gotra", type: "text" }]);
 });
 
 describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
@@ -64,6 +67,7 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 		const { result } = await rpc("tools/list");
 		expect(result.tools.map((t: { name: string }) => t.name)).toEqual([
 			"whoami",
+			"list_custom_fields",
 			"search_profiles",
 			"get_profile",
 			"get_family_graph",
@@ -83,6 +87,7 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 			organization: { id: "o1", name: "Patel Parivar" },
 			role: "admin",
 			profileId: "p1",
+			customFields: [{ id: "f1", label: "Gotra", type: "text" }],
 		});
 		expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
 		expect(mocks.capture).toHaveBeenCalledWith(
@@ -94,6 +99,15 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 				isError: false,
 			})
 		);
+	});
+
+	it("initialize instructions tell the model to list custom fields first", async () => {
+		const { result } = await rpc("initialize", {
+			protocolVersion: "2025-06-18",
+			capabilities: {},
+			clientInfo: { name: "t", version: "1" },
+		});
+		expect(result.instructions).toContain("whoami or list_custom_fields");
 	});
 
 	it("profileId is null when the member has no profile", async () => {

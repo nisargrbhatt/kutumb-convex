@@ -21,13 +21,15 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { CUSTOM_FIELD_TYPE } from "@/db/constants";
+import { addFieldFormSchema } from "@/domain/customFields";
+import { CUSTOM_FIELD_LIMIT } from "@/domain/limits";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import type { z } from "zod";
 
 export const Route = createFileRoute("/_authed/_community/settings/fields/")({
 	component: RouteComponent,
@@ -36,21 +38,16 @@ export const Route = createFileRoute("/_authed/_community/settings/fields/")({
 	},
 });
 
-const addFieldSchema = z.object({
-	label: z.string().min(1, "Label is required"),
-	type: z.enum([
-		CUSTOM_FIELD_TYPE.text,
-		CUSTOM_FIELD_TYPE.number,
-		CUSTOM_FIELD_TYPE.date,
-		CUSTOM_FIELD_TYPE.boolean,
-	]),
-});
+type AddFieldValues = z.infer<ReturnType<typeof addFieldFormSchema>>;
 
 function AddFieldDrawer() {
+	const { organizationId: orgId } = Route.useRouteContext();
+	const { data: fields } = useSuspenseQuery(customFieldsQuery(orgId));
 	const [open, setOpen] = useState(false);
 
-	const form = useForm<z.infer<typeof addFieldSchema>>({
-		resolver: zodResolver(addFieldSchema),
+	const schema = useMemo(() => addFieldFormSchema(fields), [fields]);
+	const form = useForm<AddFieldValues>({
+		resolver: zodResolver(schema),
 		defaultValues: {
 			label: "",
 			type: CUSTOM_FIELD_TYPE.text,
@@ -59,7 +56,7 @@ function AddFieldDrawer() {
 
 	const addField = useCreateCustomField();
 
-	const onSubmit = (values: z.infer<typeof addFieldSchema>) =>
+	const onSubmit = (values: AddFieldValues) =>
 		addField.mutate(values, {
 			onSuccess: () => {
 				form.reset();
@@ -78,7 +75,7 @@ function AddFieldDrawer() {
 				</Button>
 			}
 			title="Add New Field"
-			description="Add an extra field captured on every community profile."
+			description={`Add an extra field captured on every community profile. ${fields.length} of ${CUSTOM_FIELD_LIMIT} fields used.`}
 			form={form}
 			onSubmit={onSubmit}
 			submitLabel="Add Field"

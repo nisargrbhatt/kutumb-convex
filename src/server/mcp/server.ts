@@ -11,12 +11,23 @@ import {
 	getFamilyGraphOutput,
 } from "./tools/getFamilyGraph";
 import { getProfile, getProfileDescription, getProfileOutput } from "./tools/getProfile";
+import {
+	listCustomFields,
+	listCustomFieldsDescription,
+	listCustomFieldsOutput,
+} from "./tools/listCustomFields";
 import { searchProfilesDescription, searchProfilesOutput } from "./tools/searchProfiles";
 import { whoami, whoamiOutput } from "./tools/whoami";
 
+/** Sent on `initialize`; the model reads it before any tool call. */
+export const MCP_INSTRUCTIONS = `Kutumb community directory. Before using custom fields, call whoami or list_custom_fields once: they list this community's custom fields as {id, label, type}. Refer to a field by id or exact label. Dates are YYYY-MM-DD.`;
+
 /** Fresh per request (stateless): no sessions, no Durable Object. */
 export function buildMcpServer(): McpServer {
-	const server = new McpServer({ name: "kutumb", version: "1.0.0" });
+	const server = new McpServer(
+		{ name: "kutumb", version: "1.0.0" },
+		{ instructions: MCP_INSTRUCTIONS }
+	);
 
 	defineReadTool(
 		server,
@@ -28,6 +39,17 @@ export function buildMcpServer(): McpServer {
 			outputSchema: whoamiOutput,
 		},
 		(actor) => whoami(actor)
+	);
+
+	defineReadTool(
+		server,
+		"list_custom_fields",
+		{
+			title: "List custom fields",
+			description: listCustomFieldsDescription,
+			outputSchema: listCustomFieldsOutput,
+		},
+		(actor) => listCustomFields(db, actor)
 	);
 
 	defineReadTool(

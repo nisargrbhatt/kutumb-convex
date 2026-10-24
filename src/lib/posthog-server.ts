@@ -1,5 +1,6 @@
 import { PostHog } from "posthog-node";
 import { env, waitUntil } from "cloudflare:workers";
+import type { LimitKind } from "@/domain/limits";
 import type { RegistrationKind } from "@/domain/mcpOauth";
 
 let posthogClient: PostHog | null = null;
@@ -16,7 +17,7 @@ export function getPostHogClient() {
 }
 
 export function captureLimitReached(props: {
-	limit: "org" | "member" | "profile";
+	limit: LimitKind;
 	organizationId?: string;
 	userId?: string;
 }) {
