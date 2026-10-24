@@ -370,6 +370,8 @@ type CallHandler = (
  * Spec: answer a known write tool name with an `isError` `WriteNotAllowed` carrying the reason +
  * hint instead. Wraps the SDK's `tools/call` handler (read it back through the protected
  * accessor; the SDK has no public hook), so call this after the read tools are registered.
+ * `@modelcontextprotocol/server` is pinned to an exact version for this reason; the registry tests
+ * (writeTools.test.ts) fail if an upgrade breaks the hook.
  */
 export function denyStaleWriteCalls(server: McpServer): void {
 	const low = server.server as unknown as {

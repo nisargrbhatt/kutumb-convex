@@ -38,7 +38,12 @@ export function buildMcpServer(
 ): McpServer {
 	const server = new McpServer(
 		{ name: "kutumb", version: "1.0.0" },
-		{ instructions: MCP_INSTRUCTIONS }
+		{
+			instructions: MCP_INSTRUCTIONS,
+			// The tool list differs per Connection (write tools only with effective write): never
+			// share it. Explicit, not the SDK default.
+			cacheHints: { "tools/list": { ttlMs: 0, cacheScope: "private" } },
+		}
 	);
 
 	defineReadTool(

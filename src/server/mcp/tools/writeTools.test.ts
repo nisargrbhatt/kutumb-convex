@@ -12,6 +12,8 @@ vi.mock("@/lib/posthog-server", () => ({ captureMcpToolCalled: vi.fn() }));
 vi.mock("cloudflare:workers", () => ({ env: { KV: {} } }));
 
 const { createKutumbMcpHandler } = await import("../server");
+const { WRITE_TOOL_NAMES, denyStaleWriteCalls } = await import("./writeTools");
+const { McpServer } = await import("@modelcontextprotocol/server");
 const { makeProfileChanges } = await import("@/domain/profileChanges");
 const { captureMcpToolCalled } = await import("@/lib/posthog-server");
 
@@ -106,6 +108,43 @@ beforeEach(() => {
 		INSERT INTO communityProfile (id, firstName, lastName, status, organizationId, version, userId) VALUES
 			('mine', 'Mira', 'Member', 'active', 'o1', 0, 'u-member');
 	`);
+});
+
+describe("write tool registry vs the stale-call hook", () => {
+	const READ_ONLY_ACTOR: ConnectionActor = {
+		...actorOf("u-owner", "owner"),
+		write: { canWrite: false, reason: "connection_read_only" },
+	};
+
+	it("registered write tools are exactly the names the stale-call hook knows", async () => {
+		const { result } = await rpc("tools/list", {});
+		const registered = result.tools
+			.map((t: { name: string }) => t.name)
+			.filter((n: string) => WRITE_TOOL_NAMES.has(n))
+			.sort();
+		expect(registered).toEqual([...WRITE_TOOL_NAMES].sort());
+		const writable = result.tools.filter((t: any) => t.annotations?.readOnlyHint === false);
+		expect(writable.map((t: { name: string }) => t.name).sort()).toEqual(
+			[...WRITE_TOOL_NAMES].sort()
+		);
+	});
+
+	it.each([...WRITE_TOOL_NAMES])(
+		"%s on a read-only Connection → WriteNotAllowed, not Tool not found",
+		async (name) => {
+			const res = await rpc("tools/call", { name, arguments: {} }, READ_ONLY_ACTOR);
+			expect(res.error).toBeUndefined();
+			expect(res.result.isError).toBe(true);
+			expect(textOf(res.result)).toContain("WriteNotAllowed");
+		}
+	);
+
+	it("fails loudly (not silently) when the SDK's tools/call handler cannot be wrapped", () => {
+		const bare = new McpServer({ name: "t", version: "1" });
+		expect(() => denyStaleWriteCalls(bare)).toThrow(/register the read tools first/);
+		// The SDK internals the hook relies on: a rename on upgrade must break this test.
+		expect(typeof (bare.server as any)._getRequestHandler).toBe("function");
+	});
 });
 
 describe("tools/list for a writable Connection", () => {
