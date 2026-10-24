@@ -24,8 +24,7 @@ import { searchProfilesDescription, searchProfilesOutput } from "./tools/searchP
 import type { WriteDeps } from "./tools/writeSupport";
 import { denyStaleWriteCalls, registerWriteTools } from "./tools/writeTools";
 import { whoami, whoamiOutput } from "./tools/whoami";
-import { READ_ONLY } from "@/domain/mcpWrite";
-import type { WriteAccess } from "@/domain/mcpWrite";
+import { writeAccessOf } from "./actor";
 
 /** Sent on `initialize`; the model reads it before any tool call. */
 export const MCP_INSTRUCTIONS = `Kutumb community directory. Before using custom fields, call whoami or list_custom_fields once: they list this community's custom fields as {id, label, type}. Refer to a field by id or exact label. Dates are YYYY-MM-DD.`;
@@ -118,10 +117,6 @@ export function buildMcpServer(
 
 	return server;
 }
-
-/** Effective write of the Actor verified for this request (default-deny when absent). */
-const writeAccessOf = (authInfo: { extra?: Record<string, unknown> } | undefined): WriteAccess =>
-	(authInfo?.extra?.actor as { write?: WriteAccess } | undefined)?.write ?? READ_ONLY;
 
 const defaultWriteDeps = (): WriteDeps => ({ db, changesFor: profileChangesVia });
 

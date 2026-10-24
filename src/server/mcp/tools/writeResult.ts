@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { COMMUNITY_PROFILE_STATUS } from "@/db/constants";
+import { WRITE_OUTCOMES } from "@/domain/mcpWrite";
 import type { SubmitResult } from "@/domain/profileChanges";
 
 /** Result of every write tool (spec § Write tools). `requested` / `possible_duplicate` are not errors. */
 export const writeResultOutput = z.object({
 	outcome: z
-		.enum(["applied", "requested", "unchanged", "possible_duplicate"])
+		.enum(WRITE_OUTCOMES)
 		.describe(
 			"applied: live now. requested: submitted for owner/admin review, NOT live until approved. unchanged: nothing to do (already so). possible_duplicate: nothing written; see candidates."
 		),

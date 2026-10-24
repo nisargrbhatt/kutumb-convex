@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { CommunityProfileInput } from "./communityProfile";
 import type { CustomFieldDefinition } from "./customFields";
 import { AppError } from "./errors";
 import {
@@ -7,7 +8,6 @@ import {
 	createProfileToInput,
 	patchAddressToInput,
 	patchProfileToInput,
-	type ProfileFields,
 } from "./mcpWriteInput";
 
 const DEFS: CustomFieldDefinition[] = [
@@ -17,7 +17,7 @@ const DEFS: CustomFieldDefinition[] = [
 	{ id: "f4", label: "Anniversary", type: "date" },
 ];
 
-const CURRENT: ProfileFields = {
+const CURRENT: CommunityProfileInput = {
 	firstName: "Asha",
 	middleName: "K",
 	lastName: "Patel",

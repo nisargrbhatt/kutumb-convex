@@ -3,7 +3,6 @@ import { and, eq } from "drizzle-orm";
 import { communityProfile } from "@/db/app-schema";
 import { listCustomFieldDefinitions } from "@/domain/customFieldDefinitions";
 import { AppError } from "@/domain/errors";
-import { WRITE_DENIED_MESSAGE } from "@/domain/mcpWrite";
 import {
 	addAddressInput,
 	addRelationInput,
@@ -31,20 +30,22 @@ import type { Actor } from "@/domain/permission";
 import { captureMcpToolCalled } from "@/lib/posthog-server";
 import { getActor } from "../actor";
 import { toolErrorResult } from "../errors";
+import { writeDenied } from "../write";
 import { defineWriteTool } from "./define";
 import { toWriteResult, writeResultOutput, type WriteResult } from "./writeResult";
 import { beginWrite, type WriteDeps } from "./writeSupport";
 
 /** Every write tool, registered or not: a call to one of these never reads as "Tool not found". */
-export const WRITE_TOOL_NAMES: ReadonlySet<string> = new Set([
-	"create_profile",
-	"update_profile",
-	"add_relation",
-	"remove_relation",
-	"add_address",
-	"update_address",
-	"remove_address",
-]);
+const TOOL = {
+	createProfile: "create_profile",
+	updateProfile: "update_profile",
+	addRelation: "add_relation",
+	removeRelation: "remove_relation",
+	addAddress: "add_address",
+	updateAddress: "update_address",
+	removeAddress: "remove_address",
+} as const;
+export const WRITE_TOOL_NAMES: ReadonlySet<string> = new Set(Object.values(TOOL));
 
 export const createProfileDescription = `Creates a Community Profile for a person in this community (use self: true only for the signed-in member's own profile, when whoami.profileId is null).
 
@@ -110,7 +111,7 @@ async function loadReadableProfile(db: QueryDb, actor: Actor, id: string) {
 export function registerWriteTools(server: McpServer, deps: WriteDeps): void {
 	defineWriteTool(
 		server,
-		"create_profile",
+		TOOL.createProfile,
 		{
 			title: "Create profile",
 			description: createProfileDescription,
@@ -148,7 +149,7 @@ export function registerWriteTools(server: McpServer, deps: WriteDeps): void {
 
 	defineWriteTool(
 		server,
-		"update_profile",
+		TOOL.updateProfile,
 		{
 			title: "Update profile",
 			description: updateProfileDescription,
@@ -179,7 +180,7 @@ export function registerWriteTools(server: McpServer, deps: WriteDeps): void {
 
 	defineWriteTool(
 		server,
-		"add_relation",
+		TOOL.addRelation,
 		{
 			title: "Add relation",
 			description: addRelationDescription,
@@ -227,7 +228,7 @@ export function registerWriteTools(server: McpServer, deps: WriteDeps): void {
 
 	defineWriteTool(
 		server,
-		"remove_relation",
+		TOOL.removeRelation,
 		{
 			title: "Remove relation",
 			description: removeRelationDescription,
@@ -263,7 +264,7 @@ export function registerWriteTools(server: McpServer, deps: WriteDeps): void {
 
 	defineWriteTool(
 		server,
-		"add_address",
+		TOOL.addAddress,
 		{
 			title: "Add address",
 			description: addAddressDescription,
@@ -301,7 +302,7 @@ export function registerWriteTools(server: McpServer, deps: WriteDeps): void {
 
 	defineWriteTool(
 		server,
-		"update_address",
+		TOOL.updateAddress,
 		{
 			title: "Update address",
 			description: updateAddressDescription,
@@ -334,7 +335,7 @@ export function registerWriteTools(server: McpServer, deps: WriteDeps): void {
 
 	defineWriteTool(
 		server,
-		"remove_address",
+		TOOL.removeAddress,
 		{
 			title: "Remove address",
 			description: removeAddressDescription,
@@ -378,17 +379,14 @@ export function denyStaleWriteCalls(server: McpServer): void {
 	server.server.removeRequestHandler("tools/call");
 	server.server.setRequestHandler("tools/call", async (request, ctx) => {
 		if (!WRITE_TOOL_NAMES.has(request.params.name)) return inner(request, ctx);
-		const startedAt = Date.now();
 		const actor = getActor(ctx);
-		const reason = actor.write.canWrite ? "connection_read_only" : actor.write.reason;
 		captureMcpToolCalled({
 			tool: request.params.name,
 			userId: actor.userId,
 			organizationId: actor.organizationId,
 			clientId: ctx.http?.authInfo?.clientId ?? "unknown",
 			isError: true,
-			durationMs: Date.now() - startedAt,
 		});
-		return toolErrorResult(new AppError("WriteNotAllowed", WRITE_DENIED_MESSAGE[reason], reason));
+		return toolErrorResult(writeDenied(actor.write));
 	});
 }

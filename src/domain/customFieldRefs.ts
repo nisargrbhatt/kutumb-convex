@@ -1,7 +1,7 @@
 import { normalizeFieldLabel, type CustomFieldDefinition } from "./customFields";
 import { AppError } from "./errors";
 
-const describeField = (d: CustomFieldDefinition) => `${d.label} (id ${d.id}, ${d.type})`;
+export const describeField = (d: CustomFieldDefinition) => `${d.label} (id ${d.id}, ${d.type})`;
 
 /**
  * Field-ref resolver for AI Client input. A `field` is an exact id, else a label (case-insensitive,

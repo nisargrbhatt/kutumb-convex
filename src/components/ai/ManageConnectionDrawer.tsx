@@ -83,9 +83,7 @@ export function ManageConnectionDrawer({
 								)}
 								<div className="flex flex-col gap-2 rounded-lg border border-destructive/30 p-3">
 									<span className="font-medium">Revoke</span>
-									<span className="text-xs text-muted-foreground">
-										{revokeCopy(connection)}
-									</span>
+									<span className="text-xs text-muted-foreground">{revokeCopy(connection)}</span>
 									<ConfirmDialog
 										open={confirmRevoke}
 										onOpenChange={setConfirmRevoke}

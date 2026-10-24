@@ -16,6 +16,9 @@ import { AppError } from "@/domain/errors";
 import type { Actor } from "@/domain/permission";
 import type { QueryDb } from "./db";
 
+/** Custom-field blob as JSON text (the column is a BLOB in prod, TEXT in some seeds). */
+export const customJson = sql`CAST(${communityProfile.customFieldData} AS TEXT)`;
+
 /**
  * D1 predicate builder for the shared AI Client profile filter (`profileFilterSchema`), used by
  * `search_profiles` and `count_profiles`. Scope is always the Actor's org and `active` profiles,
@@ -55,8 +58,6 @@ function requireDay(name: string, value: string): string {
 	return value;
 }
 
-const jsonText = sql`CAST(${communityProfile.customFieldData} AS TEXT)`;
-
 /** SQL for one custom field condition against the stored `customFieldData` JSON. */
 function customFieldCondition(def: CustomFieldDefinition, filter: CustomFieldFilter): SQL {
 	const { op, value } = filter;
@@ -70,8 +71,8 @@ function customFieldCondition(def: CustomFieldDefinition, filter: CustomFieldFil
 	}
 
 	const path = `$."${def.id}"`;
-	const stored = sql`json_extract(${jsonText}, ${path})`;
-	const storedType = sql`json_type(${jsonText}, ${path})`;
+	const stored = sql`json_extract(${customJson}, ${path})`;
+	const storedType = sql`json_type(${customJson}, ${path})`;
 
 	if (op === "isSet" || op === "isNotSet") {
 		// Set = a non-null JSON value that is not a blank string.

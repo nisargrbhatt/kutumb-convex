@@ -164,7 +164,9 @@ function Consent({
 									body: `Also add, edit and remove addresses and relations, and add and edit profiles. Can't delete profiles. ${roleEffect(org.role)}`,
 								},
 							]}
-							disabledNotes={writesEnabled ? undefined : { write: "Turned off by your community owner." }}
+							disabledNotes={
+								writesEnabled ? undefined : { write: "Turned off by your community owner." }
+							}
 						/>
 						<p className="flex gap-2 text-xs text-muted-foreground">
 							<RefreshCw className="mt-0.5 size-3.5 shrink-0" aria-hidden />

@@ -2,12 +2,19 @@
 import { parseScopes } from "./mcpEndpoint";
 import { MCP_WRITE_SCOPE } from "./mcpOauth";
 
+/** What a write tool call did (`mcp_tool_called.outcome`, write tool results). */
+export const WRITE_OUTCOMES = ["applied", "requested", "unchanged", "possible_duplicate"] as const;
+export type WriteOutcome = (typeof WRITE_OUTCOMES)[number];
+
 /** Why this Connection can't write right now. `org_writes_off` wins: reconnecting wouldn't help. */
 export type WriteDeniedReason = "connection_read_only" | "org_writes_off";
 
 export type WriteAccess = { canWrite: true } | { canWrite: false; reason: WriteDeniedReason };
 
-export const READ_ONLY: WriteAccess = { canWrite: false, reason: "connection_read_only" };
+export const READ_ONLY = {
+	canWrite: false,
+	reason: "connection_read_only",
+} as const satisfies WriteAccess;
 
 export const WRITE_DENIED_MESSAGE: Record<WriteDeniedReason, string> = {
 	connection_read_only: "This connection is read only.",
