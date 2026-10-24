@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { format, formatDistanceToNowStrict } from "date-fns";
-import { Bot, Unplug } from "lucide-react";
+import { Bot, Eye, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
 	Table,
 	TableBody,
@@ -15,6 +14,8 @@ import {
 import type { ConnectionStatus } from "@/domain/connections";
 import type { ConnectionRow } from "@/domain/queries/connections";
 import { cn } from "@/lib/utils";
+import { ACCESS_OPTIONS } from "./AccessLevelCards";
+import { ManageConnectionDrawer } from "./ManageConnectionDrawer";
 
 const STATUS_CLASS: Record<ConnectionStatus, string> = {
 	active:
@@ -33,61 +34,31 @@ function StatusBadge({ status }: { status: ConnectionStatus }) {
 
 const fullDate = (ms: number) => new Date(ms).toString();
 
-function RevokeDialog({
-	connection,
-	onRevoke,
-	isPending,
-}: {
-	connection: ConnectionRow;
-	onRevoke: (id: string) => Promise<unknown>;
-	isPending: boolean;
-}) {
-	const [open, setOpen] = useState(false);
-
-	return (
-		<ConfirmDialog
-			open={open}
-			onOpenChange={setOpen}
-			trigger={
-				<Button
-					variant="destructive"
-					size="icon-sm"
-					aria-label={`Revoke ${connection.clientName} in ${connection.orgName}`}
-					title="Revoke"
-				>
-					<Unplug className="size-4" />
-				</Button>
-			}
-			title="Revoke connection?"
-			description={`${connection.clientName} loses access to ${connection.orgName} immediately. Reconnect from the client.`}
-			confirmLabel="Revoke"
-			destructive
-			isPending={isPending}
-			onConfirm={() =>
-				onRevoke(connection.id).then(
-					() => setOpen(false),
-					() => {}
-				)
-			}
-		/>
-	);
-}
-
 /**
  * The caller's Connections. Community is its own column from `sm` up; below that it folds into the
- * client cell. Revoke is confirmed via `ConfirmDialog`.
+ * client cell. Access (Eye + amber Pencil, subline) comes from live consent scopes; Manage opens
+ * the right drawer (Make read only / reconnect info / Revoke).
  */
 export function ConnectionsTable({
 	rows,
 	emptyText,
 	onRevoke,
 	isRevoking,
+	onDowngrade,
+	isDowngrading,
 }: {
 	rows: ConnectionRow[];
 	emptyText: string;
 	onRevoke: (id: string) => Promise<unknown>;
 	isRevoking: boolean;
+	onDowngrade: (id: string) => Promise<unknown>;
+	isDowngrading: boolean;
 }) {
+	const [manageId, setManageId] = useState<string | null>(null);
+	// Derived from rows so the drawer follows refetches (access flips to read) and closes when the
+	// Connection disappears.
+	const managed = rows.find((r) => r.id === manageId) ?? null;
+
 	return (
 		<div className="w-full overflow-x-auto rounded-lg border">
 			<Table>
@@ -98,7 +69,7 @@ export function ConnectionsTable({
 						<TableHead className="hidden md:table-cell">Connected</TableHead>
 						<TableHead>Last used</TableHead>
 						<TableHead>Status</TableHead>
-						<TableHead className="text-right">Revoke</TableHead>
+						<TableHead className="text-right">Manage</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -116,7 +87,21 @@ export function ConnectionsTable({
 							<TableRow key={c.id}>
 								<TableCell>
 									<div className="flex min-w-0 flex-col items-start gap-0.5">
-										<span className="font-medium">{c.clientName}</span>
+										<div className="flex items-center gap-2">
+											<span className="font-medium">{c.clientName}</span>
+											<span className="flex items-center gap-0.5 text-muted-foreground">
+												<Eye className="size-3.5" aria-label="Can read" />
+												{c.access === "write" ? (
+													<Pencil
+														className="size-3.5 text-amber-600 dark:text-amber-400"
+														aria-label="Can make changes"
+													/>
+												) : null}
+											</span>
+										</div>
+										<span className="text-xs text-muted-foreground">
+											{ACCESS_OPTIONS[c.access].title}
+										</span>
 										{c.host ? (
 											<span className="text-xs text-muted-foreground">{c.host}</span>
 										) : null}
@@ -136,13 +121,28 @@ export function ConnectionsTable({
 									<StatusBadge status={c.status} />
 								</TableCell>
 								<TableCell className="text-right">
-									<RevokeDialog connection={c} onRevoke={onRevoke} isPending={isRevoking} />
+									<Button
+										variant="outline"
+										size="sm"
+										aria-label={`Manage ${c.clientName} in ${c.orgName}`}
+										onClick={() => setManageId(c.id)}
+									>
+										Manage
+									</Button>
 								</TableCell>
 							</TableRow>
 						))
 					)}
 				</TableBody>
 			</Table>
+			<ManageConnectionDrawer
+				connection={managed}
+				onClose={() => setManageId(null)}
+				onRevoke={onRevoke}
+				isRevoking={isRevoking}
+				onDowngrade={onDowngrade}
+				isDowngrading={isDowngrading}
+			/>
 		</div>
 	);
 }
