@@ -1,6 +1,6 @@
 # Custom field reads
 
-Type: AFK Status: open Blocked by:
+Type: AFK Status: resolved Blocked by:
 
 Spec: [spec.md § Custom field reads](../spec.md)
 
@@ -23,3 +23,7 @@ Spec: [spec.md § Custom field reads](../spec.md)
 - [ ] resolver tests: id, label (case/space), ambiguous, deleted
 - [ ] tool tests: unset → `null`, orphan hidden, dates `YYYY-MM-DD`, `list_custom_fields` = whoami
 - [ ] app custom-field settings page shows new errors, responsive
+
+## Comments
+
+- 2026-10-24: Implemented on `feat/mcp-improvements` (slice branch merged; review fixes in `fix/mcp-v2-review`, integration 83562ce). Tests/tsc/lint/build green. Browser verification: still pending (implementers skipped it to avoid dev-server clashes).

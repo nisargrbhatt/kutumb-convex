@@ -1,6 +1,6 @@
 # Graph cache: org data version + versioned keys
 
-Type: AFK Status: open Blocked by:
+Type: AFK Status: resolved Blocked by:
 
 Spec: [spec.md § Graph cache](../spec.md), ADR 0008
 
@@ -22,3 +22,7 @@ Spec: [spec.md § Graph cache](../spec.md), ADR 0008
       returns data matching its version
 - [ ] app graph page + quick search and `get_family_graph` show a write on the next read
 - [ ] no `onGraphChanged` / old `tree:graph:*` writes remain
+
+## Comments
+
+- 2026-10-24: Implemented on `feat/mcp-improvements` (slice branch merged; review fixes in `fix/mcp-v2-review`, integration 83562ce). Tests/tsc/lint/build green. Browser verification: n/a.

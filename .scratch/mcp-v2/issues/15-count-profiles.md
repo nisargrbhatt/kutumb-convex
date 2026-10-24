@@ -1,6 +1,6 @@
 # count_profiles aggregate tool
 
-Type: AFK Status: open Blocked by: 14
+Type: AFK Status: resolved Blocked by: 14
 
 Spec: [spec.md § Filters + aggregates](../spec.md)
 
@@ -19,3 +19,7 @@ Spec: [spec.md § Filters + aggregates](../spec.md)
 - [ ] tests: total w/ filters, each core dim, text/boolean custom, number/date rejected
 - [ ] >50 groups folded; null bucket; overlap flag on multi-city profile
 - [ ] `birthDecade` uses calendar day after edge conversion
+
+## Comments
+
+- 2026-10-24: Implemented on `feat/mcp-improvements` (slice branch merged; review fixes in `fix/mcp-v2-review`, integration 83562ce). Tests/tsc/lint/build green. Browser verification: n/a.

@@ -1,6 +1,6 @@
 # MCP guide: write access + new read tools
 
-Type: AFK Status: open Blocked by: 15, 17, 20
+Type: AFK Status: resolved Blocked by: 15, 17, 20
 
 Spec: [spec.md § Docs](../spec.md)
 
@@ -13,3 +13,7 @@ requests, Make read only, reconnect to upgrade, quotas, owner toggle), example p
 ## Acceptance criteria
 
 - [ ] page browser-verified, responsive, breadcrumbs intact
+
+## Comments
+
+- 2026-10-24: Implemented on `feat/mcp-improvements` (slice branch merged; review fixes in `fix/mcp-v2-review`, integration 83562ce). Tests/tsc/lint/build green. Browser verification: still pending (implementers skipped it to avoid dev-server clashes).

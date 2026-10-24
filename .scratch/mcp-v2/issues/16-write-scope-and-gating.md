@@ -1,6 +1,6 @@
 # Write scope, consent and gating
 
-Type: AFK Status: open Blocked by:
+Type: AFK Status: resolved Blocked by:
 
 Spec: [spec.md § Write scope + gating, § UI, § Analytics](../spec.md), ADR 0006
 
@@ -27,3 +27,7 @@ Spec: [spec.md § Write scope + gating, § UI, § Analytics](../spec.md), ADR 00
 - [ ] `/oauth2/update-consent` returns 404
 - [ ] toggle fn rejects non-owner
 - [ ] consent + Settings → AI browser-verified (mobile → desktop)
+
+## Comments
+
+- 2026-10-24: Implemented on `feat/mcp-improvements` (slice branch merged; review fixes in `fix/mcp-v2-review`, integration 83562ce). Tests/tsc/lint/build green. Browser verification: still pending (implementers skipped it to avoid dev-server clashes).

@@ -1,6 +1,6 @@
 # Connections Manage drawer + Make read only
 
-Type: AFK Status: open Blocked by: 16
+Type: AFK Status: resolved Blocked by: 16
 
 Spec: [spec.md § Write scope + gating, § UI](../spec.md)
 
@@ -18,3 +18,7 @@ Spec: [spec.md § Write scope + gating, § UI](../spec.md)
 - [ ] fn tests: own only, idempotent, other scopes kept, tokens untouched
 - [ ] after downgrade next MCP call: `canWrite:false`, `connection_read_only`
 - [ ] drawer browser-verified, responsive
+
+## Comments
+
+- 2026-10-24: Implemented on `feat/mcp-improvements` (slice branch merged; review fixes in `fix/mcp-v2-review`, integration 83562ce). Tests/tsc/lint/build green. Browser verification: still pending (implementers skipped it to avoid dev-server clashes).

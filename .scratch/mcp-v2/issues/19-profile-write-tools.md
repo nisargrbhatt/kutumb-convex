@@ -1,6 +1,6 @@
 # Profile write tools + quotas
 
-Type: AFK Status: open Blocked by: 13, 16, 18
+Type: AFK Status: resolved Blocked by: 13, 16, 18
 
 Spec: [spec.md § Write tools, § Guardrails + attribution](../spec.md)
 
@@ -23,3 +23,7 @@ Spec: [spec.md § Write tools, § Guardrails + attribution](../spec.md)
 - [ ] duplicate match/no-match (DOB differs), `allowDuplicate` forces
 - [ ] quota tests: burst, daily, create sub-cap; unchanged/duplicate/errors not counted
 - [ ] tools absent from `tools/list` without effective write
+
+## Comments
+
+- 2026-10-24: Implemented on `feat/mcp-improvements` (slice branch merged; review fixes in `fix/mcp-v2-review`, integration 83562ce). Tests/tsc/lint/build green. Browser verification: n/a.

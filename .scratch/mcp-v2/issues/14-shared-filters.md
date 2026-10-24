@@ -1,6 +1,6 @@
 # Shared profile filters on search_profiles
 
-Type: AFK Status: open Blocked by: 13
+Type: AFK Status: resolved Blocked by: 13
 
 Spec: [spec.md § Filters + aggregates](../spec.md)
 
@@ -19,3 +19,7 @@ Spec: [spec.md § Filters + aggregates](../spec.md)
 - [ ] multi-address profile matches on any address
 - [ ] wrong op for type / >5 filters → `Invalid` with hint
 - [ ] echo contains only filtered fields
+
+## Comments
+
+- 2026-10-24: Implemented on `feat/mcp-improvements` (slice branch merged; review fixes in `fix/mcp-v2-review`, integration 83562ce). Tests/tsc/lint/build green. Browser verification: n/a.

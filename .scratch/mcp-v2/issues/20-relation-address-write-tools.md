@@ -1,6 +1,6 @@
 # Relation + address write tools
 
-Type: AFK Status: open Blocked by: 19
+Type: AFK Status: resolved Blocked by: 19
 
 Spec: [spec.md § Write tools](../spec.md)
 
@@ -17,3 +17,7 @@ Spec: [spec.md § Write tools](../spec.md)
 - [ ] tool tests per tool × role routing (applied / requested)
 - [ ] idempotent repeats → `unchanged` + existing id
 - [ ] incoming relation id on `remove_relation` → `Invalid` hint
+
+## Comments
+
+- 2026-10-24: Implemented on `feat/mcp-improvements` (slice branch merged; review fixes in `fix/mcp-v2-review`, integration 83562ce). Tests/tsc/lint/build green. Browser verification: n/a.
