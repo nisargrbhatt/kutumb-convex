@@ -18,9 +18,13 @@ type ToolConfig<Out extends z.ZodObject, In extends z.ZodObject | undefined> = {
 	outputSchema: Out;
 };
 
+/** What the tool body may need to know about the request beyond the Actor. */
+export type ToolCall = { clientId: string };
+
 type ToolRun<Out extends z.ZodObject, In extends z.ZodObject | undefined> = (
 	actor: ConnectionActor,
-	input: In extends z.ZodObject ? z.output<In> : undefined
+	input: In extends z.ZodObject ? z.output<In> : undefined,
+	call: ToolCall
 ) => Promise<z.input<Out>>;
 
 /**
@@ -38,12 +42,13 @@ function wrapTool<Out extends z.ZodObject, In extends z.ZodObject | undefined>(
 		const startedAt = Date.now();
 		const ctx = cbArgs[cbArgs.length - 1] as ServerContext;
 		const actor = getActor(ctx);
+		const clientId = ctx.http?.authInfo?.clientId ?? "unknown";
 		let result: CallToolResult;
 		let outcome: string | undefined;
 		try {
 			if (write) requireWrite(actor);
 			const input = (hasInput ? cbArgs[0] : undefined) as never;
-			const output = (await run(actor, input)) as Record<string, unknown>;
+			const output = (await run(actor, input, { clientId })) as Record<string, unknown>;
 			if (write && typeof output.outcome === "string") outcome = output.outcome;
 			result = toolResult(output);
 		} catch (error) {
@@ -53,7 +58,7 @@ function wrapTool<Out extends z.ZodObject, In extends z.ZodObject | undefined>(
 			tool: name,
 			userId: actor.userId,
 			organizationId: actor.organizationId,
-			clientId: ctx.http?.authInfo?.clientId ?? "unknown",
+			clientId,
 			isError: result.isError === true,
 			durationMs: Date.now() - startedAt,
 			...(outcome ? { outcome } : {}),

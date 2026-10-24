@@ -66,10 +66,10 @@ describe("createMcpEndpoint", () => {
 		expect(fetch).not.toHaveBeenCalled();
 	});
 
-	it("rate-limits per clientId:userId → 429 + Retry-After", async () => {
+	it("rate-limits per clientId:userId:orgId → 429 + Retry-After", async () => {
 		const { handle, limit, fetch } = setup({ success: false });
 		const res = await handle(req());
-		expect(limit).toHaveBeenCalledWith({ key: "c1:u1" });
+		expect(limit).toHaveBeenCalledWith({ key: "c1:u1:o1" });
 		expect(res.status).toBe(429);
 		expect(res.headers.get("retry-after")).toBe("60");
 		expect(fetch).not.toHaveBeenCalled();

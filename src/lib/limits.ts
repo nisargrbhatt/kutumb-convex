@@ -8,5 +8,6 @@ export const limits = makeLimits(
 		orgMembersAndPending: countOrgMembersAndPending,
 		orgProfiles: countOrgProfiles,
 	},
-	captureLimitReached
+	// Resolved at call time, so importing this module doesn't need the PostHog client.
+	(e) => captureLimitReached(e)
 );

@@ -22,6 +22,18 @@ export const SEARCH_MAX_LIMIT = 100;
 
 const crCol = (col: SQLiteColumn) => sql`cr.${sql.identifier(col.name)}`;
 
+/** A draft the Actor created: the subject of their own pending `create` Change Request. */
+function ownDraftWhere(actor: Actor): SQL {
+	return and(
+		eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.draft),
+		// Columns named via `cr.` so drizzle's relational-query aliasing can't requalify them.
+		sql`EXISTS (SELECT 1 FROM ${changeRequest} cr WHERE ${crCol(changeRequest.profileId)} = ${communityProfile.id}
+			AND ${crCol(changeRequest.kind)} = ${CHANGE_REQUEST_KIND.create}
+			AND ${crCol(changeRequest.status)} = ${CHANGE_REQUEST_STATUS.pending}
+			AND ${crCol(changeRequest.submitterUserId)} = ${actor.userId})`
+	)!;
+}
+
 /**
  * The read-side visibility rule as a `communityProfile` condition (org scope included):
  * owner/admin see every profile; a plain member sees `active` profiles, drafts they created
@@ -32,20 +44,12 @@ export function visibleProfileWhere(actor: Actor): SQL {
 	const inOrg = eq(communityProfile.organizationId, actor.organizationId);
 	if (actor.role !== ORGANIZATION_ROLES.member) return inOrg;
 
-	const ownDraft = and(
-		eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.draft),
-		// Columns named via `cr.` so drizzle's relational-query aliasing can't requalify them.
-		sql`EXISTS (SELECT 1 FROM ${changeRequest} cr WHERE ${crCol(changeRequest.profileId)} = ${communityProfile.id}
-			AND ${crCol(changeRequest.kind)} = ${CHANGE_REQUEST_KIND.create}
-			AND ${crCol(changeRequest.status)} = ${CHANGE_REQUEST_STATUS.pending}
-			AND ${crCol(changeRequest.submitterUserId)} = ${actor.userId})`
-	);
 	return and(
 		inOrg,
 		or(
 			eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active),
 			eq(communityProfile.userId, actor.userId),
-			ownDraft
+			ownDraftWhere(actor)
 		)
 	)!;
 }
@@ -199,12 +203,12 @@ const counterpartColumns = {
 
 /**
  * Who is reading: `app` = the web app (role-aware visibility rule); `aiClient` = an MCP AI Client,
- * which sees `active` profiles only (plus the caller's own linked profile as subject) for every
- * role.
+ * which sees `active` profiles only (plus, as subject, the caller's own linked profile and the
+ * drafts they created, so a write reads back) for every role.
  */
 export type ReadAudience = "app" | "aiClient";
 
-function readRules(actor: Actor, audience: ReadAudience) {
+export function readRules(actor: Actor, audience: ReadAudience) {
 	if (audience === "app") {
 		const where = visibleProfileWhere(actor);
 		return { subjectWhere: where, counterpartWhere: where };
@@ -218,7 +222,8 @@ function readRules(actor: Actor, audience: ReadAudience) {
 			eq(communityProfile.organizationId, actor.organizationId),
 			or(
 				eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active),
-				eq(communityProfile.userId, actor.userId)
+				eq(communityProfile.userId, actor.userId),
+				ownDraftWhere(actor)
 			)
 		)!,
 		counterpartWhere: inOrgActive,

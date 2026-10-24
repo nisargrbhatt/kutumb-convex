@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConnectionActor } from "./actor";
+import type * as WriteToolsModule from "./tools/writeTools";
 
 const mocks = vi.hoisted(() => ({
 	org: vi.fn(),
@@ -20,10 +21,11 @@ vi.mock("@/db", () => ({
 vi.mock("@/lib/posthog-server", () => ({ captureMcpToolCalled: mocks.capture }));
 vi.mock("cloudflare:workers", () => ({ env: { KV: {} } }));
 // No real write tools yet (slice 19+): a stand-in to observe the gate and `requireWrite`.
-vi.mock("./tools/writeTools", async () => {
+vi.mock("./tools/writeTools", async (importActual) => {
 	const { z } = await import("zod");
 	const { defineWriteTool } = await import("./tools/define");
 	return {
+		...(await importActual<typeof WriteToolsModule>()),
 		registerWriteTools: (server: never) =>
 			defineWriteTool(
 				server,
@@ -166,6 +168,30 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 		expect(mocks.capture).toHaveBeenCalledWith(
 			expect.objectContaining({ tool: "probe_write", outcome: "applied", isError: false })
 		);
+	});
+
+	it("stale write call (tool not offered) → isError WriteNotAllowed with reason + hint", async () => {
+		const read = await rpc("tools/call", { name: "create_profile", arguments: {} });
+		expect(read.result.isError).toBe(true);
+		const readText = read.result.content[0].text;
+		expect(readText).toContain("WriteNotAllowed");
+		expect(readText).toContain("connection_read_only");
+		expect(readText.toLowerCase()).toContain("reconnect");
+		expect(mocks.capture).toHaveBeenCalledWith(
+			expect.objectContaining({ tool: "create_profile", isError: true })
+		);
+
+		withWrite({ canWrite: false, reason: "org_writes_off" });
+		const off = await rpc("tools/call", { name: "remove_address", arguments: {} });
+		expect(off.result.isError).toBe(true);
+		expect(off.result.content[0].text).toContain("org_writes_off");
+		expect(off.result.content[0].text).toContain("Settings");
+
+		// Still hidden from the list, and a truly unknown tool is still a protocol error.
+		const list = await rpc("tools/list");
+		expect(list.result.tools.map((t: { name: string }) => t.name)).not.toContain("create_profile");
+		const unknown = await rpc("tools/call", { name: "nope", arguments: {} });
+		expect(unknown.error).toBeDefined();
 	});
 
 	it("whoami: writable Connection → canWrite, no reason or hint", async () => {

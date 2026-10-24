@@ -32,7 +32,40 @@ describe("toolErrorResult", () => {
 		for (const part of hint) expect(text.toLowerCase()).toContain(part.toLowerCase());
 	});
 
-	it.each([new Error("db exploded: secret"), new AppError("LimitReached", "limit"), "str"])(
+	it("Stale → isError, re-read and retry with the new version", () => {
+		const result = toolErrorResult(new AppError("Stale", "internal wording"));
+		const text = (result.content[0] as { text: string }).text;
+		expect(result.isError).toBe(true);
+		expect(text).toContain("Stale");
+		expect(text).toContain("get_profile");
+		expect(text).toContain("version");
+		expect(text).not.toContain("internal wording");
+	});
+
+	it("Conflict → isError, re-read and retry", () => {
+		const text = (toolErrorResult(new AppError("Conflict", "x")).content[0] as { text: string })
+			.text;
+		expect(text).toContain("Conflict");
+		expect(text).toContain("get_profile");
+	});
+
+	it("LimitReached → isError with the limit copy and a stop-and-tell-the-user hint", () => {
+		const pending = toolErrorResult(
+			new AppError("LimitReached", undefined, "PENDING_REQUEST_LIMIT_REACHED")
+		);
+		const text = (pending.content[0] as { text: string }).text;
+		expect(pending.isError).toBe(true);
+		expect(text).toContain("LimitReached");
+		expect(text).toContain("50 requests waiting for review");
+		expect(text.toLowerCase()).toContain("tell the user");
+
+		const quota = toolErrorResult(
+			new AppError("LimitReached", "Write quota reached, resets in ~12 min.", "WRITE_QUOTA_REACHED")
+		);
+		expect((quota.content[0] as { text: string }).text).toContain("resets in ~12 min");
+	});
+
+	it.each([new Error("db exploded: secret"), new AppError("NoActiveOrg", "limit"), "str"])(
 		"%s → generic Internal error, detail only on console.error",
 		(error) => {
 			const spy = vi.spyOn(console, "error").mockImplementation(() => {});

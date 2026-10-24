@@ -5,6 +5,7 @@ import { countProfilesInput, searchProfilesInput } from "@/domain/communityProfi
 import { countProfiles } from "@/domain/queries/profileAggregates";
 import { searchProfiles } from "@/domain/queries/profiles";
 import { getOrgGraph } from "@/lib/graph";
+import { profileChangesVia } from "@/lib/profileChanges";
 import { defineReadTool } from "./tools/define";
 import {
 	getFamilyGraph,
@@ -20,7 +21,8 @@ import {
 	listCustomFieldsOutput,
 } from "./tools/listCustomFields";
 import { searchProfilesDescription, searchProfilesOutput } from "./tools/searchProfiles";
-import { registerWriteTools } from "./tools/writeTools";
+import type { WriteDeps } from "./tools/writeSupport";
+import { denyStaleWriteCalls, registerWriteTools } from "./tools/writeTools";
 import { whoami, whoamiOutput } from "./tools/whoami";
 import { READ_ONLY } from "@/domain/mcpWrite";
 import type { WriteAccess } from "@/domain/mcpWrite";
@@ -33,7 +35,7 @@ export const MCP_INSTRUCTIONS = `Kutumb community directory. Before using custom
  * Connection with effective write (ADR 0006), so `tools/list` hides them otherwise.
  */
 export function buildMcpServer(
-	{ canWrite }: { canWrite: boolean } = { canWrite: false }
+	{ canWrite, write }: { canWrite: boolean; write?: WriteDeps } = { canWrite: false }
 ): McpServer {
 	const server = new McpServer(
 		{ name: "kutumb", version: "1.0.0" },
@@ -111,7 +113,8 @@ export function buildMcpServer(
 		(actor, input) => getFamilyGraph(db, actor, input, getOrgGraph)
 	);
 
-	if (canWrite) registerWriteTools(server);
+	if (canWrite) registerWriteTools(server, write ?? defaultWriteDeps());
+	else denyStaleWriteCalls(server);
 
 	return server;
 }
@@ -120,8 +123,21 @@ export function buildMcpServer(
 const writeAccessOf = (authInfo: { extra?: Record<string, unknown> } | undefined): WriteAccess =>
 	(authInfo?.extra?.actor as { write?: WriteAccess } | undefined)?.write ?? READ_ONLY;
 
-export const createKutumbMcpHandler = () =>
-	createMcpHandler((ctx) => buildMcpServer({ canWrite: writeAccessOf(ctx.authInfo).canWrite }), {
-		legacy: "stateless",
-		onerror: (error) => console.error("MCP handler error", error),
-	});
+const defaultWriteDeps = (): WriteDeps => ({ db, changesFor: profileChangesVia });
+
+/**
+ * `overrides` replace the production write wiring: the runtime passes the burst limiter binding
+ * (`env.MCP_WRITE_RATE_LIMITER`); tests fake the seam factory, limiter and clock.
+ */
+export const createKutumbMcpHandler = (overrides: Partial<WriteDeps> = {}) =>
+	createMcpHandler(
+		(ctx) =>
+			buildMcpServer({
+				canWrite: writeAccessOf(ctx.authInfo).canWrite,
+				write: { ...defaultWriteDeps(), ...overrides },
+			}),
+		{
+			legacy: "stateless",
+			onerror: (error) => console.error("MCP handler error", error),
+		}
+	);
