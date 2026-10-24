@@ -1,5 +1,5 @@
 /** Pure helpers for the MCP resource server (`/api/mcp`): bearer parsing, challenges, Origin/Host. */
-import { MCP_SCOPE } from "./mcpOauth";
+import { MCP_SCOPE, MCP_WRITE_SCOPE } from "./mcpOauth";
 import type { Role } from "./permission";
 
 export const PRM_PATH = "/.well-known/oauth-protected-resource/api/mcp";
@@ -23,12 +23,16 @@ export const parseScopes = (scope: unknown): string[] =>
 
 export type ChallengeError = "invalid_token" | "insufficient_scope";
 
-/** RFC 9728 / RFC 6750 `WWW-Authenticate`. No `error` when the request carried no credentials. */
+/**
+ * RFC 9728 / RFC 6750 `WWW-Authenticate`. No `error` when the request carried no credentials.
+ * Lists write too: MCP clients request exactly this `scope`, and the consent screen only offers
+ * write when it was requested (still opt-in there, ADR 0006).
+ */
 export function bearerChallenge(origin: string, error?: ChallengeError): string {
 	const params = [
 		...(error ? [`error="${error}"`] : []),
 		`resource_metadata="${protectedResourceMetadataUrl(origin)}"`,
-		`scope="${MCP_SCOPE}"`,
+		`scope="${MCP_SCOPE} ${MCP_WRITE_SCOPE}"`,
 	];
 	return `Bearer ${params.join(", ")}`;
 }
