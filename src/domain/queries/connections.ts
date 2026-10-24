@@ -10,9 +10,10 @@ import { connectionActivity, type ConnectionStatus } from "@/domain/connections"
 import {
 	clientDisplayName,
 	clientHost,
-	consentScopeFor,
+	MCP_WRITE_SCOPE,
+	parseStoredScopes,
 	registrationKind,
-	requestsWrite,
+	storeScopes,
 	type RegistrationKind,
 } from "@/domain/mcpOauth";
 import type { QueryDb } from "./db";
@@ -95,7 +96,9 @@ export async function listConnections(
 			orgId: c.orgId,
 			orgName: c.orgName,
 			connectedAt,
-			access: requestsWrite(c.scopes) ? ("write" as const) : ("read" as const),
+			access: parseStoredScopes(c.scopes).includes(MCP_WRITE_SCOPE)
+				? ("write" as const)
+				: ("read" as const),
 			...connectionActivity(
 				{
 					connectedAt,
@@ -177,10 +180,14 @@ export async function downgradeConnection(
 		.where(and(eq(oauthConsent.id, consentId), eq(oauthConsent.userId, userId)))
 		.limit(1);
 	if (!consent?.orgId) return null;
-	if (requestsWrite(consent.scopes)) {
+	const scopes = parseStoredScopes(consent.scopes);
+	if (scopes.includes(MCP_WRITE_SCOPE)) {
 		await db
 			.update(oauthConsent)
-			.set({ scopes: consentScopeFor(consent.scopes, false), updatedAt: new Date(now) })
+			.set({
+				scopes: storeScopes(scopes.filter((scope) => scope !== MCP_WRITE_SCOPE)),
+				updatedAt: new Date(now),
+			})
 			.where(and(eq(oauthConsent.id, consentId), eq(oauthConsent.userId, userId)));
 	}
 	return { clientId: consent.clientId, orgId: consent.orgId };

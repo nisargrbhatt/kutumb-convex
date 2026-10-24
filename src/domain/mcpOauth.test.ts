@@ -3,6 +3,8 @@ import {
 	MCP_SCOPES,
 	consentScopeFor,
 	grantedWrite,
+	parseStoredScopes,
+	storeScopes,
 	requestsWrite,
 	clientHost,
 	OAUTH_RATE_LIMITS,
@@ -145,6 +147,30 @@ describe("inferApplicationType", () => {
 	it("is undefined for empty or unparseable input", () => {
 		expect(inferApplicationType([])).toBeUndefined();
 		expect(inferApplicationType(["not a url"])).toBeUndefined();
+	});
+});
+
+describe("stored scopes (better-auth oauth rows)", () => {
+	it("parses better-auth's JSON array", () => {
+		expect(parseStoredScopes('["community:read","community:write"]')).toEqual([
+			"community:read",
+			"community:write",
+		]);
+	});
+	it("tolerates space-separated text", () => {
+		expect(parseStoredScopes("community:read community:write")).toEqual([
+			"community:read",
+			"community:write",
+		]);
+	});
+	it("empty / malformed → []", () => {
+		expect(parseStoredScopes(null)).toEqual([]);
+		expect(parseStoredScopes("[oops")).toEqual([]);
+		expect(parseStoredScopes("[1, 2]")).toEqual([]);
+	});
+	it("storeScopes round-trips", () => {
+		const scopes = ["community:read", "offline_access"];
+		expect(parseStoredScopes(storeScopes(scopes))).toEqual(scopes);
 	});
 });
 
