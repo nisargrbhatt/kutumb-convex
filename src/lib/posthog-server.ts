@@ -109,6 +109,25 @@ export function captureMcpConnectionRevoked(props: {
 	}
 }
 
+/** A member dropped `community:write` from one of their Connections ("Make read only"). */
+export function captureConnectionDowngraded(props: {
+	userId: string;
+	organizationId: string;
+	clientId: string;
+}) {
+	try {
+		const client = getPostHogClient();
+		client.capture({
+			distinctId: props.userId,
+			event: "connection_downgraded",
+			properties: { orgId: props.organizationId, clientId: props.clientId },
+		});
+		waitUntil(client.flush());
+	} catch (error) {
+		console.error("Failed to capture connection_downgraded event", error);
+	}
+}
+
 /** The owner switched "AI Client writes" for the community. Carries no names or values. */
 export function captureAiClientWritesToggled(props: {
 	userId: string;

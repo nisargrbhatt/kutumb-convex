@@ -20,7 +20,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { myConnectionsQuery, useRevokeConnection } from "@/queries/connections";
+import {
+	myConnectionsQuery,
+	useDowngradeConnection,
+	useRevokeConnection,
+} from "@/queries/connections";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_authed/_community/profile/ai/")({
@@ -34,6 +38,7 @@ function ConnectionsSection({ userId, orgId }: { userId: string; orgId: string }
 	const { data: connections } = useSuspenseQuery(myConnectionsQuery(userId));
 	const { data: activeOrg } = authClient.useActiveOrganization();
 	const revoke = useRevokeConnection(userId);
+	const downgrade = useDowngradeConnection(userId);
 	// Defaults to the active org; "all" shows every community.
 	const [filter, setFilter] = useState<string>(orgId);
 
@@ -89,6 +94,8 @@ function ConnectionsSection({ userId, orgId }: { userId: string; orgId: string }
 				emptyText="No connections in this community."
 				onRevoke={revoke.mutateAsync}
 				isRevoking={revoke.isPending}
+				onDowngrade={downgrade.mutateAsync}
+				isDowngrading={downgrade.isPending}
 			/>
 		</div>
 	);
