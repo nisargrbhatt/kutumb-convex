@@ -201,6 +201,9 @@ export const changeRequest = sqliteTable(
 		resolvedAt: integer("resolvedAt", { mode: "timestamp_ms" }),
 		resolutionNote: text("resolutionNote"),
 		submitterSeenAt: integer("submitterSeenAt", { mode: "timestamp_ms" }),
+		/** AI Client that filed this request (name is a snapshot); null = in-app. */
+		viaClientId: text("viaClientId"),
+		viaClientName: text("viaClientName"),
 	},
 	(table) => [
 		index("changeRequest_org_status_created_idx").on(
@@ -237,6 +240,9 @@ export const auditEvent = sqliteTable(
 		targetId: text("targetId"),
 		changeRequestId: text("changeRequestId"),
 		payload: text("payload", { mode: "json" }).$type<unknown>(),
+		/** AI Client the change came through (name is a snapshot); null = in-app. */
+		viaClientId: text("viaClientId"),
+		viaClientName: text("viaClientName"),
 	},
 	(table) => [
 		index("auditEvent_org_created_idx").on(table.organizationId, table.createdAt),

@@ -113,7 +113,7 @@ describe("makeProfileChanges", () => {
 		it("owner/admin create a Userless Profile → active + profile.created snapshot", async () => {
 			const res = await changes.submit(ADMIN, { kind: "create", profile: input() });
 
-			expect(res).toEqual({ outcome: "applied", profileId: "id1" });
+			expect(res).toEqual({ outcome: "applied", profileId: "id1", version: 0 });
 			const row = await profile("id1");
 			expect(row).toMatchObject({ status: "active", userId: null, firstName: "Asha" });
 			const [ev] = await events();
@@ -365,6 +365,7 @@ describe("makeProfileChanges", () => {
 			expect(await changes.submit(MEMBER, info("linked"))).toEqual({
 				outcome: "applied",
 				profileId: "linked",
+				version: 1,
 			});
 		});
 

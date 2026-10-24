@@ -113,6 +113,10 @@ describe("Change Request read fns", () => {
 					note: null,
 					bloodRelation: false,
 				});
+				// Re-attribute so no single submitter trips the pending request limit.
+				h.fresh.sqlite.exec(
+					`UPDATE changeRequest SET submitterUserId = 'u-bulk-${i}' WHERE submitterUserId = 'u-member'`
+				);
 			}
 			// One counterpart gone inactive: its relation_add is stale, the rest approvable.
 			await h.db

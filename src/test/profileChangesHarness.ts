@@ -2,7 +2,7 @@ import { asc } from "drizzle-orm";
 import { auditEvent, communityProfile } from "@/db/schema";
 import type { CommunityProfileInput } from "@/domain/communityProfile";
 import type { Actor, Role } from "@/domain/permission";
-import { makeProfileChanges, type AddressInput } from "@/domain/profileChanges";
+import { makeProfileChanges, type AddressInput, type Via } from "@/domain/profileChanges";
 import { freshDb } from "./sqliteDb";
 
 export const actor = (role: Role, userId = `u-${role}`): Actor => ({
@@ -62,18 +62,21 @@ export function profileChangesHarness() {
 	let t = 1000;
 	let n = 0;
 	const now = () => new Date(t++);
-	const changes = makeProfileChanges({
+	const seamDeps = {
 		db,
 		limits: { assertProfileSlot: async () => {} },
 		now,
 		newId: () => `id${++n}`,
-	});
+	};
+	const changes = makeProfileChanges(seamDeps);
 
 	type Seed = Partial<typeof communityProfile.$inferInsert> & { id: string };
 	return {
 		fresh,
 		db,
 		changes,
+		/** Same seam, as seen through an AI Client Connection. */
+		changesVia: (via: Via) => makeProfileChanges({ ...seamDeps, via }),
 		now,
 		/** Org data version (graph cache key); missing row = 0. */
 		version: async (organizationId = "o1") =>

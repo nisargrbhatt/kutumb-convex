@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-table";
 import { format, formatDistanceToNow } from "date-fns";
 import { ChevronDown, ChevronRight, History } from "lucide-react";
+import { ViaClient } from "@/components/ai/ViaClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -90,6 +91,7 @@ function EventDetail({ event }: { event: AuditEvent }) {
 					{event.actorName}{" "}
 					<span className="text-xs text-muted-foreground capitalize">({event.actorRole})</span>
 				</span>
+				<ViaClient name={event.viaClientName} />
 				<span className="text-muted-foreground">·</span>
 				<time className="text-xs text-muted-foreground" dateTime={event.createdAt.toISOString()}>
 					{format(event.createdAt, "d MMM yyyy, HH:mm")}
