@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { removeMemberConnections } from "@/domain/queries/connections";
 import { LIMIT_COPY, LimitError } from "@/domain/limits";
 import { ONBOARDING_INVITATIONS_PATH, loginHref } from "@/domain/authRoutes";
-import { inferApplicationType, registrationKind } from "@/domain/mcpOauth";
+import { grantedWrite, inferApplicationType, registrationKind } from "@/domain/mcpOauth";
 import InviteEmail from "@/emails/InviteEmail";
 import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
 import VerifyEmail from "@/emails/VerifyEmail";
@@ -135,15 +135,18 @@ export const mcpHooks = {
 		if (!redirect?.searchParams.has("code")) return;
 		const session = await getSessionFromCtx(ctx);
 		const organizationId = session?.session.activeOrganizationId;
-		const clientId = (ctx.body as { oauth_query?: string }).oauth_query
-			? new URLSearchParams(ctx.body.oauth_query).get("client_id")
+		const query = (ctx.body as { oauth_query?: string }).oauth_query
+			? new URLSearchParams(ctx.body.oauth_query)
 			: null;
+		const clientId = query?.get("client_id");
 		if (!session || !organizationId || !clientId) return;
+		const accepted = (ctx.body as { scope?: unknown }).scope;
 		captureMcpConnectionCreated({
 			userId: session.user.id,
 			organizationId,
 			clientId,
 			registration: registrationKind(clientId),
+			write: grantedWrite(typeof accepted === "string" ? accepted : undefined, query?.get("scope")),
 		});
 	}),
 } satisfies BetterAuthOptions["hooks"];

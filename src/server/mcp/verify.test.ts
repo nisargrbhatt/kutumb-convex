@@ -1,7 +1,7 @@
 import { SignJWT, exportJWK, generateKeyPair } from "jose";
 import type { JSONWebKeySet } from "jose";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { Actor } from "@/domain/permission";
+import type { ConnectionActor } from "./actor";
 import {
 	JWKS_TTL_MS,
 	JWKS_UNKNOWN_KID_COOLDOWN_MS,
@@ -14,7 +14,12 @@ const OWN = "https://kutumb.example.org";
 const ISS = `${OWN}/api/auth`;
 const AUD = `${OWN}/api/mcp`;
 const PRM = `${OWN}/.well-known/oauth-protected-resource/api/mcp`;
-const ACTOR: Actor = { userId: "u1", organizationId: "o1", role: "admin" };
+const ACTOR: ConnectionActor = {
+	userId: "u1",
+	organizationId: "o1",
+	role: "admin",
+	write: { canWrite: false, reason: "connection_read_only" },
+};
 
 type Pair = Awaited<ReturnType<typeof generateKeyPair>>;
 let keyA: { kid: string; pair: Pair };
@@ -72,7 +77,7 @@ async function token(over: Claims = {}) {
 const req = (authorization?: string) =>
 	new Request(AUD, { method: "POST", headers: authorization ? { authorization } : {} });
 
-function setup(opts: { actor?: Actor | null; keys?: JSONWebKeySet } = {}) {
+function setup(opts: { actor?: ConnectionActor | null; keys?: JSONWebKeySet } = {}) {
 	const loadActor = vi.fn(async () => (opts.actor === undefined ? ACTOR : opts.actor));
 	const loadKeys = vi.fn(async () => opts.keys ?? jwksA);
 	const verify = createMcpVerifier({ ownOrigin: OWN, loadKeys, loadActor });
@@ -100,7 +105,12 @@ describe("verifyMcpRequest", () => {
 			clientId: "client-1",
 			scopes: ["community:read", "offline_access"],
 		});
-		expect(loadActor).toHaveBeenCalledWith({ userId: "u1", clientId: "client-1", orgId: "o1" });
+		expect(loadActor).toHaveBeenCalledWith({
+			userId: "u1",
+			clientId: "client-1",
+			orgId: "o1",
+			tokenScopes: ["community:read", "offline_access"],
+		});
 	});
 
 	it("no Authorization header → 401 challenge without error", async () => {
@@ -174,7 +184,7 @@ describe("verifyMcpRequest", () => {
 
 	it("reflects the current role on every call", async () => {
 		const loadActor = vi
-			.fn<() => Promise<Actor | null>>()
+			.fn<() => Promise<ConnectionActor | null>>()
 			.mockResolvedValueOnce({ ...ACTOR, role: "member" })
 			.mockResolvedValueOnce({ ...ACTOR, role: "owner" })
 			.mockResolvedValueOnce(null);

@@ -8,7 +8,9 @@ export type AppErrorKind =
 	/** Concurrent write tripped a guard (e.g. request already closed). */
 	| "Conflict"
 	/** Domain rule broken (self-relation, duplicate pair, reassign a draft). */
-	| "Invalid";
+	| "Invalid"
+	/** MCP write refused: Connection is read only or the org turned AI writes off (`code` = reason). */
+	| "WriteNotAllowed";
 
 export class AppError extends Error {
 	name = "AppError" as const;

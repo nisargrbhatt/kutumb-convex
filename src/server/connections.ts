@@ -2,8 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db } from "@/db";
 import { AppError } from "@/domain/errors";
-import { listConnections, revokeConnection } from "@/domain/queries/connections";
-import { captureMcpConnectionRevoked } from "@/lib/posthog-server";
+import {
+	downgradeConnection,
+	listConnections,
+	revokeConnection,
+} from "@/domain/queries/connections";
+import { captureConnectionDowngraded, captureMcpConnectionRevoked } from "@/lib/posthog-server";
 import { authMiddleware } from "@/middleware/auth";
 
 /** The caller's own Connections across all their communities (filtering is client-side). */
@@ -19,6 +23,21 @@ export const revokeMyConnection = createServerFn({ method: "POST" })
 		const ended = await revokeConnection(db, context.userId, data.id);
 		if (!ended) throw new AppError("NotFound", "Connection not found");
 		captureMcpConnectionRevoked({
+			userId: context.userId,
+			organizationId: ended.orgId,
+			clientId: ended.clientId,
+		});
+		return { ok: true as const };
+	});
+
+/** "Make read only": drop `community:write` from the caller's own Connection. Idempotent. */
+export const downgradeMyConnection = createServerFn({ method: "POST" })
+	.middleware([authMiddleware])
+	.validator(z.object({ id: z.string().trim().min(1) }))
+	.handler(async ({ context, data }) => {
+		const ended = await downgradeConnection(db, context.userId, data.id);
+		if (!ended) throw new AppError("NotFound", "Connection not found");
+		captureConnectionDowngraded({
 			userId: context.userId,
 			organizationId: ended.orgId,
 			clientId: ended.clientId,

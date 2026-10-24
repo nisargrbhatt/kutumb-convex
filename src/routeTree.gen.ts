@@ -43,6 +43,7 @@ import { Route as DotwellKnownOauthAuthorizationServerApiAuthRouteImport } from 
 import { Route as AuthedCommunitySettingsOverviewIndexRouteImport } from './routes/_authed/_community/settings/overview/index'
 import { Route as AuthedCommunitySettingsMembersIndexRouteImport } from './routes/_authed/_community/settings/members/index'
 import { Route as AuthedCommunitySettingsFieldsIndexRouteImport } from './routes/_authed/_community/settings/fields/index'
+import { Route as AuthedCommunitySettingsAiIndexRouteImport } from './routes/_authed/_community/settings/ai/index'
 import { Route as AuthedCommunityProfileRelationshipsIndexRouteImport } from './routes/_authed/_community/profile/relationships/index'
 import { Route as AuthedCommunityProfileInfoIndexRouteImport } from './routes/_authed/_community/profile/info/index'
 import { Route as AuthedCommunityProfileAiIndexRouteImport } from './routes/_authed/_community/profile/ai/index'
@@ -234,6 +235,12 @@ const AuthedCommunitySettingsFieldsIndexRoute =
     path: '/fields/',
     getParentRoute: () => AuthedCommunitySettingsRoute,
   } as any)
+const AuthedCommunitySettingsAiIndexRoute =
+  AuthedCommunitySettingsAiIndexRouteImport.update({
+    id: '/ai/',
+    path: '/ai/',
+    getParentRoute: () => AuthedCommunitySettingsRoute,
+  } as any)
 const AuthedCommunityProfileRelationshipsIndexRoute =
   AuthedCommunityProfileRelationshipsIndexRouteImport.update({
     id: '/profile/relationships/',
@@ -299,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/profile/ai/': typeof AuthedCommunityProfileAiIndexRoute
   '/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
   '/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
+  '/settings/ai/': typeof AuthedCommunitySettingsAiIndexRoute
   '/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
   '/settings/members/': typeof AuthedCommunitySettingsMembersIndexRoute
   '/settings/overview/': typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -337,6 +345,7 @@ export interface FileRoutesByTo {
   '/profile/ai': typeof AuthedCommunityProfileAiIndexRoute
   '/profile/info': typeof AuthedCommunityProfileInfoIndexRoute
   '/profile/relationships': typeof AuthedCommunityProfileRelationshipsIndexRoute
+  '/settings/ai': typeof AuthedCommunitySettingsAiIndexRoute
   '/settings/fields': typeof AuthedCommunitySettingsFieldsIndexRoute
   '/settings/members': typeof AuthedCommunitySettingsMembersIndexRoute
   '/settings/overview': typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -379,6 +388,7 @@ export interface FileRoutesById {
   '/_authed/_community/profile/ai/': typeof AuthedCommunityProfileAiIndexRoute
   '/_authed/_community/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
   '/_authed/_community/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
+  '/_authed/_community/settings/ai/': typeof AuthedCommunitySettingsAiIndexRoute
   '/_authed/_community/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
   '/_authed/_community/settings/members/': typeof AuthedCommunitySettingsMembersIndexRoute
   '/_authed/_community/settings/overview/': typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/profile/ai/'
     | '/profile/info/'
     | '/profile/relationships/'
+    | '/settings/ai/'
     | '/settings/fields/'
     | '/settings/members/'
     | '/settings/overview/'
@@ -457,6 +468,7 @@ export interface FileRouteTypes {
     | '/profile/ai'
     | '/profile/info'
     | '/profile/relationships'
+    | '/settings/ai'
     | '/settings/fields'
     | '/settings/members'
     | '/settings/overview'
@@ -498,6 +510,7 @@ export interface FileRouteTypes {
     | '/_authed/_community/profile/ai/'
     | '/_authed/_community/profile/info/'
     | '/_authed/_community/profile/relationships/'
+    | '/_authed/_community/settings/ai/'
     | '/_authed/_community/settings/fields/'
     | '/_authed/_community/settings/members/'
     | '/_authed/_community/settings/overview/'
@@ -762,6 +775,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunitySettingsFieldsIndexRouteImport
       parentRoute: typeof AuthedCommunitySettingsRoute
     }
+    '/_authed/_community/settings/ai/': {
+      id: '/_authed/_community/settings/ai/'
+      path: '/ai'
+      fullPath: '/settings/ai/'
+      preLoaderRoute: typeof AuthedCommunitySettingsAiIndexRouteImport
+      parentRoute: typeof AuthedCommunitySettingsRoute
+    }
     '/_authed/_community/profile/relationships/': {
       id: '/_authed/_community/profile/relationships/'
       path: '/profile/relationships'
@@ -819,6 +839,7 @@ const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
 )
 
 interface AuthedCommunitySettingsRouteChildren {
+  AuthedCommunitySettingsAiIndexRoute: typeof AuthedCommunitySettingsAiIndexRoute
   AuthedCommunitySettingsFieldsIndexRoute: typeof AuthedCommunitySettingsFieldsIndexRoute
   AuthedCommunitySettingsMembersIndexRoute: typeof AuthedCommunitySettingsMembersIndexRoute
   AuthedCommunitySettingsOverviewIndexRoute: typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -826,6 +847,7 @@ interface AuthedCommunitySettingsRouteChildren {
 
 const AuthedCommunitySettingsRouteChildren: AuthedCommunitySettingsRouteChildren =
   {
+    AuthedCommunitySettingsAiIndexRoute: AuthedCommunitySettingsAiIndexRoute,
     AuthedCommunitySettingsFieldsIndexRoute:
       AuthedCommunitySettingsFieldsIndexRoute,
     AuthedCommunitySettingsMembersIndexRoute:

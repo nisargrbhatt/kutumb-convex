@@ -1,11 +1,12 @@
 import type { BatchItem, BatchResponse } from "drizzle-orm/batch";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, count, eq, isNull, or, sql } from "drizzle-orm";
 import {
 	auditEvent,
 	changeRequest,
 	communityAddress,
 	communityProfile,
 	communityRelation,
+	orgDataVersion,
 } from "@/db/app-schema";
 import {
 	CHANGE_REQUEST_KIND,
@@ -23,6 +24,7 @@ import type {
 import { fullName, type CommunityProfileInput } from "@/domain/communityProfile";
 import type { CustomFieldValues } from "@/domain/customFields";
 import { AppError, type AppErrorKind } from "@/domain/errors";
+import { LimitError, PENDING_REQUEST_LIMIT } from "@/domain/limits";
 import { can, type Actor } from "@/domain/permission";
 import type { RelationType } from "@/domain/relation";
 import { loadStaleReasons } from "@/domain/queries/changeRequests";
@@ -35,11 +37,14 @@ export type BatchDb = QueryDb & {
 	): Promise<BatchResponse<T>>;
 };
 
+/** The AI Client Connection a change came through; name is stored as a snapshot. */
+export type Via = { clientId: string; clientName: string };
+
 export type ProfileChangesDeps = {
 	db: BatchDb;
 	limits: { assertProfileSlot(organizationId: string, userId: string): Promise<void> };
-	/** After a committed change to status, graph-visible fields or relations. */
-	onGraphChanged: (organizationId: string) => void | Promise<void>;
+	/** Stamped on the Audit Events + Change Requests this seam's `submit` writes. */
+	via?: Via;
 	now?: () => Date;
 	newId?: () => string;
 };
@@ -80,10 +85,17 @@ export type ProfileChange =
 	  }
 	| { kind: "address_remove"; profileId: string; addressId: string };
 
+/**
+ * What an applied change created/touched: `version` = the new version of the profile (create,
+ * info) or address (add, edit) it wrote; ids of the address/relation it added, edited or removed.
+ */
+export type AppliedDetail = { version?: number; addressId?: string; relationId?: string };
+
 export type SubmitResult =
-	| { outcome: "applied"; profileId: string }
+	| ({ outcome: "applied"; profileId: string } & AppliedDetail)
 	| { outcome: "requested"; profileId: string; changeRequestId: string }
-	| { outcome: "unchanged"; profileId: string };
+	/** `changeRequestId`: an identical request of the submitter's is already pending. */
+	| { outcome: "unchanged"; profileId: string; changeRequestId?: string };
 
 export type ReviewDecision =
 	| { decision: "approve"; note?: string | null }
@@ -109,7 +121,10 @@ type EventDraft = {
 type Plan = {
 	statements: BatchItem<"sqlite">[];
 	events: EventDraft[];
-	graphChanged: boolean;
+	/** Surfaced in `SubmitResult` when this plan is applied directly. */
+	result?: AppliedDetail;
+	/** Changes live data → bumps the org data version in the same batch (ADR 0008). */
+	applied: boolean;
 	/** Domain error when an in-batch guard trips (a fn re-reads to classify it). */
 	onGuardTrip: AppErrorKind | (() => Promise<AppErrorKind>);
 };
@@ -162,10 +177,18 @@ const isGuardTrip = (e: unknown) => {
 	return text.includes(STALE_GUARD_MESSAGE);
 };
 
+/** JSON with sorted keys, so equal payloads compare equal whatever their key order. */
+const stableJson = (v: unknown): string =>
+	JSON.stringify(v, (_k, x) =>
+		x && typeof x === "object" && !Array.isArray(x)
+			? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : 1)))
+			: x
+	);
+
 export function makeProfileChanges({
 	db,
 	limits,
-	onGraphChanged,
+	via,
 	now = () => new Date(),
 	newId = () => crypto.randomUUID(),
 }: ProfileChangesDeps) {
@@ -179,6 +202,21 @@ export function makeProfileChanges({
 		if (!Number.isInteger(n) || n < 0) throw new Error(`bad guard count ${n}`);
 		return db.all(sql.raw(`SELECT CASE WHEN changes() = ${n} THEN 1 ELSE json('stale') END`));
 	};
+
+	/** Soft cap (count then insert): a racing burst may overshoot by a few. */
+	async function assertPendingRequestSlot(actor: Actor) {
+		const [row] = await db
+			.select({ n: count() })
+			.from(changeRequest)
+			.where(
+				and(
+					eq(changeRequest.organizationId, actor.organizationId),
+					eq(changeRequest.submitterUserId, actor.userId),
+					eq(changeRequest.status, CHANGE_REQUEST_STATUS.pending)
+				)
+			);
+		if ((row?.n ?? 0) >= PENDING_REQUEST_LIMIT) throw new LimitError("pendingRequest");
+	}
 
 	async function actorName(actor: Actor) {
 		const u = await db.query.user.findFirst({
@@ -271,17 +309,8 @@ export function makeProfileChanges({
 		}
 	}
 
-	/**
-	 * Turns a validated direct `plan` into a pending Change Request instead: its main event is the
-	 * would-be change, so payload / target / counterpart come from it (statements are dropped).
-	 */
-	function planRequest(
-		actor: Actor,
-		name: string,
-		subject: ProfileRow,
-		change: Exclude<ProfileChange, { kind: "create" }>,
-		applied: Plan
-	) {
+	/** What a pending request for this change stores: payload + target (from its would-be event). */
+	function requestShape(change: Exclude<ProfileChange, { kind: "create" }>, applied: Plan) {
 		const main = applied.events[0]!;
 		let payload: unknown = main.payload;
 		let targetId: string | null = null;
@@ -314,6 +343,47 @@ export function makeProfileChanges({
 				targetId = change.addressId;
 				break;
 		}
+		return { main, payload, targetId };
+	}
+
+	/** The submitter's own pending request for exactly this change, if any (idempotent repeat). */
+	async function findPendingRepeat(
+		actor: Actor,
+		profileId: string,
+		kind: ProfileChange["kind"],
+		shape: { payload: unknown; targetId: string | null }
+	) {
+		const rows = await db
+			.select({ id: changeRequest.id, payload: changeRequest.payload })
+			.from(changeRequest)
+			.where(
+				and(
+					eq(changeRequest.organizationId, actor.organizationId),
+					eq(changeRequest.submitterUserId, actor.userId),
+					eq(changeRequest.status, CHANGE_REQUEST_STATUS.pending),
+					eq(changeRequest.profileId, profileId),
+					eq(changeRequest.kind, kind),
+					shape.targetId === null
+						? isNull(changeRequest.targetId)
+						: eq(changeRequest.targetId, shape.targetId)
+				)
+			);
+		const wanted = stableJson(shape.payload);
+		return rows.find((r) => stableJson(r.payload) === wanted);
+	}
+
+	/**
+	 * Turns a validated direct `plan` into a pending Change Request instead: its main event is the
+	 * would-be change, so payload / target / counterpart come from it (statements are dropped).
+	 */
+	function planRequest(
+		actor: Actor,
+		name: string,
+		subject: ProfileRow,
+		change: Exclude<ProfileChange, { kind: "create" }>,
+		applied: Plan
+	) {
+		const { main, payload, targetId } = requestShape(change, applied);
 		const changeRequestId = newId();
 		const plan: Plan = {
 			statements: [
@@ -329,6 +399,8 @@ export function makeProfileChanges({
 					submitterUserId: actor.userId,
 					submitterName: name,
 					createdAt: now(),
+					viaClientId: via?.clientId ?? null,
+					viaClientName: via?.clientName ?? null,
 				}),
 			],
 			events: [
@@ -343,7 +415,7 @@ export function makeProfileChanges({
 					payload: { kind: change.kind, payload },
 				},
 			],
-			graphChanged: false,
+			applied: false,
 			onGuardTrip: "Conflict",
 		};
 		return { plan, changeRequestId };
@@ -389,7 +461,8 @@ export function makeProfileChanges({
 		return { statements, events };
 	}
 
-	async function commit(actor: Actor, name: string, plan: Plan) {
+	/** `attribute`: only a submit is attributed; Reviews and the rest stay the member's in-app acts. */
+	async function commit(actor: Actor, name: string, plan: Plan, attribute?: Via) {
 		const at = now();
 		const eventInserts = plan.events.map((e) =>
 			db.insert(auditEvent).values({
@@ -403,10 +476,24 @@ export function makeProfileChanges({
 				counterpartName: null,
 				targetId: null,
 				changeRequestId: null,
+				viaClientId: attribute?.clientId ?? null,
+				viaClientName: attribute?.clientName ?? null,
 				...e,
 			})
 		);
-		const items = [...plan.statements, ...eventInserts];
+		// After the plan's last guard(): a rolled-back batch never bumps (ADR 0008).
+		const bump = plan.applied
+			? [
+					db
+						.insert(orgDataVersion)
+						.values({ organizationId: actor.organizationId, version: 1 })
+						.onConflictDoUpdate({
+							target: orgDataVersion.organizationId,
+							set: { version: sql`${orgDataVersion.version} + 1` },
+						}),
+				]
+			: [];
+		const items = [...plan.statements, ...bump, ...eventInserts];
 		if (items.length > 0) {
 			try {
 				await db.batch(items as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
@@ -424,13 +511,12 @@ export function makeProfileChanges({
 				throw e;
 			}
 		}
-		if (plan.graphChanged) await onGraphChanged(actor.organizationId);
 	}
 
 	const emptyPlan = (): Plan => ({
 		statements: [],
 		events: [],
-		graphChanged: false,
+		applied: false,
 		onGuardTrip: "Conflict",
 	});
 
@@ -455,6 +541,7 @@ export function makeProfileChanges({
 			change.self || isReviewer(actor)
 				? COMMUNITY_PROFILE_STATUS.active
 				: COMMUNITY_PROFILE_STATUS.draft;
+		if (status === COMMUNITY_PROFILE_STATUS.draft) await assertPendingRequestSlot(actor);
 		const row: ProfileRow = {
 			...change.profile,
 			id: newId(),
@@ -474,7 +561,8 @@ export function makeProfileChanges({
 				profileName: fullName(row),
 				payload: snapshot,
 			});
-			plan.graphChanged = true;
+			plan.result = { version: 0 };
+			plan.applied = true;
 			return { plan, profileId: row.id, changeRequestId: null };
 		}
 		// Member-created draft: judged via its pending create Change Request (payload null).
@@ -491,6 +579,8 @@ export function makeProfileChanges({
 				submitterUserId: userId,
 				submitterName: name,
 				createdAt: now(),
+				viaClientId: via?.clientId ?? null,
+				viaClientName: via?.clientName ?? null,
 			})
 		);
 		plan.events.push({
@@ -510,8 +600,6 @@ export function makeProfileChanges({
 	): Plan | null {
 		if (subject.version !== change.expectedVersion) throw staleError();
 		const diff: Record<string, unknown> = diffFields(INFO_FIELDS, subject, change.profile);
-		const graphChanged =
-			subject.status === COMMUNITY_PROFILE_STATUS.active && Object.keys(diff).length > 0;
 
 		const before = subject.customFieldData ?? {};
 		const after = change.profile.customFieldData ?? {};
@@ -546,7 +634,8 @@ export function makeProfileChanges({
 					payload: diff,
 				},
 			],
-			graphChanged,
+			result: { version: change.expectedVersion + 1 },
+			applied: true,
 			onGuardTrip: "Stale",
 		};
 	}
@@ -601,7 +690,8 @@ export function makeProfileChanges({
 					payload: relationSnapshot(row),
 				},
 			],
-			graphChanged: true,
+			result: { relationId: row.id },
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -657,7 +747,8 @@ export function makeProfileChanges({
 		if (!rel) throw new AppError("NotFound", "Relationship not found");
 		return {
 			...(await relationRemovals(subject, [rel], { deleteRows: true })),
-			graphChanged: true,
+			result: { relationId: rel.id },
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -691,7 +782,8 @@ export function makeProfileChanges({
 					payload: addressSnapshot(row),
 				},
 			],
-			graphChanged: false,
+			result: { addressId: row.id, version: 0 },
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -726,7 +818,8 @@ export function makeProfileChanges({
 					payload: diff,
 				},
 			],
-			graphChanged: false,
+			result: { addressId: row.id, version: change.expectedVersion + 1 },
+			applied: true,
 			onGuardTrip: "Stale",
 		};
 	}
@@ -747,7 +840,8 @@ export function makeProfileChanges({
 					payload: addressSnapshot(row),
 				},
 			],
-			graphChanged: false,
+			result: { addressId: row.id },
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -794,7 +888,7 @@ export function makeProfileChanges({
 					payload: { status: [from, to] },
 				},
 			],
-			graphChanged: true,
+			applied: true,
 			onGuardTrip: "Conflict",
 		});
 	}
@@ -829,7 +923,7 @@ export function makeProfileChanges({
 				},
 				...removals.events,
 			],
-			graphChanged: subject.status === COMMUNITY_PROFILE_STATUS.active,
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -901,7 +995,7 @@ export function makeProfileChanges({
 					},
 				},
 			],
-			graphChanged: true,
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -1000,10 +1094,10 @@ export function makeProfileChanges({
 			const name = await actorName(actor);
 			if (change.kind === "create") {
 				const { plan, profileId, changeRequestId } = await planCreate(actor, name, change);
-				await commit(actor, name, plan);
+				await commit(actor, name, plan, via);
 				return changeRequestId
 					? { outcome: "requested", profileId, changeRequestId }
-					: { outcome: "applied", profileId };
+					: { outcome: "applied", profileId, ...plan.result };
 			}
 
 			const subject = await loadProfile(actor, change.profileId);
@@ -1032,16 +1126,26 @@ export function makeProfileChanges({
 			}
 			if (!plan) return { outcome: "unchanged", profileId: subject.id };
 			if (how === "request") {
+				const repeat = await findPendingRepeat(
+					actor,
+					subject.id,
+					change.kind,
+					requestShape(change, plan)
+				);
+				if (repeat) {
+					return { outcome: "unchanged", profileId: subject.id, changeRequestId: repeat.id };
+				}
+				await assertPendingRequestSlot(actor);
 				const req = planRequest(actor, name, subject, change, plan);
-				await commit(actor, name, req.plan);
+				await commit(actor, name, req.plan, via);
 				return {
 					outcome: "requested",
 					profileId: subject.id,
 					changeRequestId: req.changeRequestId,
 				};
 			}
-			await commit(actor, name, plan);
-			return { outcome: "applied", profileId: subject.id };
+			await commit(actor, name, plan, via);
+			return { outcome: "applied", profileId: subject.id, ...plan.result };
 		},
 
 		/**
@@ -1088,7 +1192,7 @@ export function makeProfileChanges({
 					},
 					...applied.events.map((e) => ({ ...e, changeRequestId: req.id })),
 				],
-				graphChanged: applied.graphChanged,
+				applied: applied.applied,
 				onGuardTrip: async () => {
 					const current = await db.query.changeRequest.findFirst({
 						where: (f, o) => o.eq(f.id, req.id),
@@ -1122,7 +1226,7 @@ export function makeProfileChanges({
 					},
 					...applied.events.map((e) => ({ ...e, changeRequestId: req.id })),
 				],
-				graphChanged: applied.graphChanged,
+				applied: applied.applied,
 				onGuardTrip: "Conflict",
 			});
 			return { kind: req.kind, profileId: subject.id };
@@ -1187,7 +1291,7 @@ export function makeProfileChanges({
 						},
 					},
 				],
-				graphChanged: false,
+				applied: true,
 				onGuardTrip: "Conflict",
 			});
 		},

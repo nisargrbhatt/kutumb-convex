@@ -3,7 +3,8 @@ import { LOGIN_PATH } from "@/domain/authRoutes";
 
 /**
  * `beforeLoad` shared by `/oauth/*` screens. They sit outside `_authed`, so each gates itself: an
- * expired session returns here after /login. Yields the requesting `client_id`.
+ * expired session returns here after /login. Yields the requesting `client_id` and the `scope`
+ * the client asked for (space-separated; part of the signed authorization query).
  */
 export function oauthBeforeLoad({
 	context,
@@ -15,5 +16,6 @@ export function oauthBeforeLoad({
 	if (!context.session) {
 		throw redirect({ to: LOGIN_PATH, search: { redirectTo: location.href } });
 	}
-	return { clientId: new URLSearchParams(location.searchStr).get("client_id") };
+	const params = new URLSearchParams(location.searchStr);
+	return { clientId: params.get("client_id"), requestedScope: params.get("scope") };
 }

@@ -12,6 +12,7 @@ vi.mock("@/db", async () => {
 	return { db: h.fresh.db };
 });
 vi.mock("cloudflare:workers", () => ({
+	waitUntil: (p: Promise<unknown>) => void p,
 	env: {
 		KV: {
 			get: async (k: string) => (h.kv.has(k) ? JSON.parse(h.kv.get(k)!) : null),
@@ -75,12 +76,16 @@ const chain = (n: number) =>
 		"\n"
 	);
 
+// the isolate LRU outlives a test; a fresh version per seed keeps it from serving old data
+let seedVersion = 0;
+
 function seed(extra = "") {
 	h.fresh.sqlite.exec(`
-		DELETE FROM changeRequest; DELETE FROM communityRelation; DELETE FROM communityProfile; DELETE FROM user;
+		DELETE FROM orgDataVersion; DELETE FROM changeRequest; DELETE FROM communityRelation; DELETE FROM communityProfile; DELETE FROM user;
 		DELETE FROM organization;
 		INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('u1', 'U1', 'u1@x.test', 1, 0, 0);
 		INSERT INTO organization (id, name, slug, created_at) VALUES ('o1', 'Org 1', 'o1', 0), ('o2', 'Org 2', 'o2', 0);
+		INSERT INTO orgDataVersion (organizationId, version) VALUES ('o1', ${++seedVersion}), ('o2', ${seedVersion});
 		${extra}
 	`);
 }
@@ -207,6 +212,33 @@ describe("get_family_graph", () => {
 			expect(ids).not.toContain("dina");
 			expect(JSON.stringify(g.edges)).not.toMatch(/ghost|dina/);
 		}
+	});
+
+	it("a write through makeProfileChanges shows on the very next read (cache warm)", async () => {
+		seed(family);
+		await call({ focusId: "jared", depth: 1 }); // warms LRU + KV
+		const { makeProfileChanges } = await import("@/domain/profileChanges");
+		const changes = makeProfileChanges({
+			db: h.fresh.db,
+			limits: { assertProfileSlot: async () => {} },
+		});
+		h.fresh.sqlite.exec(
+			`INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ('m1', 'o1', 'u1', 'admin', 0);`
+		);
+		await changes.submit(
+			{ ...ACTOR, role: "admin" },
+			{
+				kind: "relation_add",
+				profileId: "jared",
+				toId: "far",
+				type: "father",
+				note: null,
+				bloodRelation: false,
+			}
+		);
+
+		const g = (await call({ focusId: "jared", depth: 1 })).result.structuredContent;
+		expect(ids(g.nodes)).toEqual(["anna", "far", "jared", "mia"]);
 	});
 
 	it("description states the edge direction", async () => {

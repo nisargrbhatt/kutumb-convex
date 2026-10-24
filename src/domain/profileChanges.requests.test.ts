@@ -70,7 +70,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 				profileId: "p",
 			});
 			expect(ev!.payload).toEqual({ kind: "info", payload: diff });
-			expect(h.onGraphChanged).not.toHaveBeenCalled();
+			expect(await h.version()).toBe(0);
 		});
 
 		it("approve → applied, approved (note) + profile.updated linked to request, Actor = reviewer", async () => {
@@ -95,7 +95,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 			]);
 			expect(evs[1]!.payload).toEqual({ lastName: ["Patel", "Shah"] });
 			expect(evs[1]!.profileName).toBe("Asha Shah");
-			expect(h.onGraphChanged).toHaveBeenCalledTimes(1);
+			expect(await h.version()).toBe(1);
 		});
 
 		it("two requests patching one field: approving one makes the other Stale; reject still allowed", async () => {
@@ -197,7 +197,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 				["change_request.approved", id],
 				["relation.added", id],
 			]);
-			expect(h.onGraphChanged).toHaveBeenCalledTimes(1);
+			expect(await h.version()).toBe(1);
 		});
 
 		it("relation_add stale: counterpart not active; pair related either direction", async () => {
@@ -236,14 +236,14 @@ describe("member Change Requests on an active Userless Profile", () => {
 		it("relation_remove: outgoing only; snapshot payload; approve removes; gone → Stale", async () => {
 			await addRel("q", ADMIN);
 			const [rel] = await h.db.query.communityRelation.findMany();
-			const remove = () =>
-				h.changes.submit(MEMBER, { kind: "relation_remove", profileId: "p", relationId: rel!.id });
+			const remove = (who = MEMBER) =>
+				h.changes.submit(who, { kind: "relation_remove", profileId: "p", relationId: rel!.id });
 			await expectError(
 				h.changes.submit(MEMBER, { kind: "relation_remove", profileId: "q", relationId: rel!.id }),
 				"NotFound"
 			);
 			const a = requested(await remove());
-			const b = requested(await remove());
+			const b = requested(await remove(OTHER));
 			expect(await h.request(a)).toMatchObject({
 				targetId: rel!.id,
 				payload: { id: rel!.id, fromId: "p", toId: "q", toName: "Q Doe", type: "father" },
@@ -275,7 +275,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 				action: "address.added",
 				changeRequestId: id,
 			});
-			expect(h.onGraphChanged).not.toHaveBeenCalled();
+			expect(await h.version()).toBe(1);
 		});
 
 		it("address_edit: diff payload; approve applies onto current; patched field changed or gone → Stale", async () => {
@@ -323,10 +323,10 @@ describe("member Change Requests on an active Userless Profile", () => {
 		it("address_remove: snapshot; approve removes; second remove → Stale (gone)", async () => {
 			await h.changes.submit(ADMIN, { kind: "address_add", profileId: "p", address });
 			const row = await addressRow();
-			const remove = () =>
-				h.changes.submit(MEMBER, { kind: "address_remove", profileId: "p", addressId: row.id });
+			const remove = (who = MEMBER) =>
+				h.changes.submit(who, { kind: "address_remove", profileId: "p", addressId: row.id });
 			const a = requested(await remove());
-			const b = requested(await remove());
+			const b = requested(await remove(OTHER));
 			expect(await h.request(a)).toMatchObject({
 				targetId: row.id,
 				payload: { id: row.id, city: "Surat" },
@@ -373,7 +373,7 @@ describe("member Change Requests on an active Userless Profile", () => {
 
 		it("many pending per profile allowed; inactive → NotFound for member; own linked stays direct", async () => {
 			requested(await info({ lastName: "Shah" }));
-			requested(await info({ lastName: "Shah" }));
+			requested(await info({ lastName: "Mehta" }));
 			await h.seed({ id: "mine", userId: "u-member" }, { id: "gone", status: "inactive" });
 			expect(
 				(await h.changes.submit(MEMBER, { kind: "address_add", profileId: "mine", address }))

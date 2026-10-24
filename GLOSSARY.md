@@ -19,7 +19,9 @@ When unqualified "member" is unavoidable, it means **Community Profile** in the 
 A person in a community. Has a `status` (`draft | active | inactive`) and an optional link to an Org
 Member (the linked user). Created either by a user describing themselves, or by another member on
 someone else's behalf (see Userless Profile). `inactive` means deactivated: seen only by owner/admin
-and its linked user. Other members see only `active` profiles, plus drafts they created.
+and its linked user. Other members see only `active` profiles, plus drafts they created. A profile
+with a date of death is **deceased** but stays `active`: status is about visibility, not whether the
+person is alive. _Avoid_: using `inactive` to mean deceased.
 
 ## Userless Profile
 
@@ -36,7 +38,8 @@ one thing: creating the profile, or one change to its info, one relation, or one
 owner/admin apply directly instead. A profile linked to an Org Member never has Change Requests.
 Ends **approved** or **rejected** by a Review, **withdrawn** by its submitter, or **superseded**
 when its profile is reassigned or deleted while it is pending. Only an `active` Userless Profile
-takes Change Requests beyond its creation. The member who proposes it is its **submitter**. A
+takes Change Requests beyond its creation. The member who proposes it is its **submitter**, who may
+hold at most a fixed number pending at once in an organization (the **pending request limit**). A
 pending Change Request is **stale** when its profile or target changed since submission so it can no
 longer apply as proposed; a stale one can only be rejected or withdrawn. _Avoid_: "suggestion",
 "edit request".
@@ -48,9 +51,11 @@ does not; a reason is required).
 
 ## Audit Event
 
-A permanent record of one change to a Community Profile: who, what, when, and which Change Request
-or Review it came from. Recorded for every profile change, linked or userless, and outlives the
-profile. Visible to owner/admin only. _Avoid_: "log", "history entry".
+A permanent record of one change to a Community Profile: who, what, when, which Change Request or
+Review it came from, and which AI Client made it, if any (a change or Change Request made through a
+Connection is **attributed** to that AI Client; the Actor is still the member). Recorded for every
+profile change, linked or userless, and outlives the profile. Visible to owner/admin only. _Avoid_:
+"log", "history entry".
 
 ## Relation
 
@@ -90,8 +95,8 @@ way the role is the Org Member's current role, not one captured earlier. _Avoid_
 
 An organization-level declaration of an extra attribute every Community Profile in that community
 may carry: a label and a type (`text | number | date | boolean`). Identified by a stable id — the
-label is display text and may change. _Avoid_: "custom field" alone when the definition (not the
-value) is meant.
+label is display text, unique within the community, and may change. _Avoid_: "custom field" alone
+when the definition (not the value) is meant.
 
 ## Custom Field Value
 
@@ -101,12 +106,17 @@ profile is simply absent.
 
 ## AI Client
 
-An external LLM application (e.g. Claude, ChatGPT, an IDE assistant) that reads community data on an
-Org Member's behalf through a Connection. _Avoid_: "LLM provider", "integration".
+An external LLM application (e.g. Claude, ChatGPT, an IDE assistant) that reads, and may change,
+community data on an Org Member's behalf through a Connection. _Avoid_: "LLM provider",
+"integration".
 
 ## Connection
 
 An Org Member's consent letting one AI Client act as them in **one** organization, chosen at consent
 time. The AI Client acts as that member's Actor with their current role. A Connection is revocable
 by its member and ends when their membership in that organization ends. Connecting a second
-organization means a second Connection. _Avoid_: "API token", "grant", "integration".
+organization means a second Connection. A Connection reads only, unless its member also granted
+**write** at consent; the member can later make it **read only** without revoking it (getting write
+back means reconnecting). An owner can turn off **AI Client writes** for the whole organization,
+making every Connection there read-only. Each Connection has its own **write quota**. _Avoid_: "API
+token", "grant", "integration".

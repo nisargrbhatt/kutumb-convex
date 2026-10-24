@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Actor } from "@/domain/permission";
+import type { ConnectionActor } from "./actor";
+import type * as WriteToolsModule from "./tools/writeTools";
 
 const mocks = vi.hoisted(() => ({
 	org: vi.fn(),
 	profile: vi.fn(),
+	fields: vi.fn(),
 	capture: vi.fn(),
 }));
 
@@ -12,20 +14,52 @@ vi.mock("@/db", () => ({
 		query: {
 			organization: { findFirst: mocks.org },
 			communityProfile: { findFirst: mocks.profile },
+			communityProfileCustomField: { findMany: mocks.fields },
 		},
 	},
 }));
 vi.mock("@/lib/posthog-server", () => ({ captureMcpToolCalled: mocks.capture }));
 vi.mock("cloudflare:workers", () => ({ env: { KV: {} } }));
+// No real write tools yet (slice 19+): a stand-in to observe the gate and `requireWrite`.
+vi.mock("./tools/writeTools", async (importActual) => {
+	const { z } = await import("zod");
+	const { defineWriteTool } = await import("./tools/define");
+	return {
+		...(await importActual<typeof WriteToolsModule>()),
+		registerWriteTools: (server: never) =>
+			defineWriteTool(
+				server,
+				"probe_write",
+				{
+					title: "Probe",
+					description: "test-only",
+					inputSchema: z.object({}),
+					outputSchema: z.object({ outcome: z.string() }),
+					destructive: false,
+					idempotent: false,
+				},
+				async () => ({ outcome: "applied" })
+			),
+	};
+});
 
 const { createKutumbMcpHandler } = await import("./server");
 
-const ACTOR: Actor = { userId: "u1", organizationId: "o1", role: "admin" };
-const authInfo = {
+const READ_ONLY = { canWrite: false, reason: "connection_read_only" } as const;
+const ACTOR: ConnectionActor = {
+	userId: "u1",
+	organizationId: "o1",
+	role: "admin",
+	write: READ_ONLY,
+};
+let authInfo = {
 	token: "t",
 	clientId: "c1",
 	scopes: ["community:read"],
 	extra: { actor: ACTOR },
+};
+const withWrite = (write: ConnectionActor["write"]) => {
+	authInfo = { ...authInfo, extra: { actor: { ...ACTOR, write } } };
 };
 
 async function rpc(method: string, params: unknown = {}) {
@@ -55,8 +89,10 @@ async function rpc(method: string, params: unknown = {}) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	authInfo = { ...authInfo, extra: { actor: ACTOR } };
 	mocks.org.mockResolvedValue({ id: "o1", name: "Patel Parivar" });
 	mocks.profile.mockResolvedValue({ id: "p1" });
+	mocks.fields.mockResolvedValue([{ id: "f1", label: "Gotra", type: "text" }]);
 });
 
 describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
@@ -64,7 +100,9 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 		const { result } = await rpc("tools/list");
 		expect(result.tools.map((t: { name: string }) => t.name)).toEqual([
 			"whoami",
+			"list_custom_fields",
 			"search_profiles",
+			"count_profiles",
 			"get_profile",
 			"get_family_graph",
 		]);
@@ -83,6 +121,10 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 			organization: { id: "o1", name: "Patel Parivar" },
 			role: "admin",
 			profileId: "p1",
+			customFields: [{ id: "f1", label: "Gotra", type: "text" }],
+			canWrite: false,
+			reason: "connection_read_only",
+			hint: expect.stringContaining("reconnect"),
 		});
 		expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
 		expect(mocks.capture).toHaveBeenCalledWith(
@@ -94,6 +136,91 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 				isError: false,
 			})
 		);
+	});
+
+	it("write tools are hidden unless the Connection can effectively write", async () => {
+		const read = await rpc("tools/list");
+		expect(read.result.tools.map((t: { name: string }) => t.name)).not.toContain("probe_write");
+
+		withWrite({ canWrite: false, reason: "org_writes_off" });
+		const off = await rpc("tools/list");
+		expect(off.result.tools.map((t: { name: string }) => t.name)).not.toContain("probe_write");
+
+		withWrite({ canWrite: true });
+		const { result } = await rpc("tools/list");
+		const probe = result.tools.find((t: { name: string }) => t.name === "probe_write");
+		expect(probe).toMatchObject({
+			annotations: {
+				readOnlyHint: false,
+				openWorldHint: false,
+				destructiveHint: false,
+				idempotentHint: false,
+			},
+		});
+		// Read tools stay; the write tool is added after them.
+		expect(result.tools.at(-1).name).toBe("probe_write");
+	});
+
+	it("a write call runs only with effective write, and reports its outcome", async () => {
+		withWrite({ canWrite: true });
+		const { result } = await rpc("tools/call", { name: "probe_write", arguments: {} });
+		expect(result.structuredContent).toEqual({ outcome: "applied" });
+		expect(mocks.capture).toHaveBeenCalledWith(
+			expect.objectContaining({ tool: "probe_write", outcome: "applied", isError: false })
+		);
+	});
+
+	it("stale write call (tool not offered) → isError WriteNotAllowed with reason + hint", async () => {
+		const read = await rpc("tools/call", { name: "create_profile", arguments: {} });
+		expect(read.result.isError).toBe(true);
+		const readText = read.result.content[0].text;
+		expect(readText).toContain("WriteNotAllowed");
+		expect(readText).toContain("connection_read_only");
+		expect(readText.toLowerCase()).toContain("reconnect");
+		expect(mocks.capture).toHaveBeenCalledWith(
+			expect.objectContaining({ tool: "create_profile", isError: true })
+		);
+
+		withWrite({ canWrite: false, reason: "org_writes_off" });
+		const off = await rpc("tools/call", { name: "remove_address", arguments: {} });
+		expect(off.result.isError).toBe(true);
+		expect(off.result.content[0].text).toContain("org_writes_off");
+		expect(off.result.content[0].text).toContain("Settings");
+
+		// Still hidden from the list, and a truly unknown tool is still a protocol error.
+		const list = await rpc("tools/list");
+		expect(list.result.tools.map((t: { name: string }) => t.name)).not.toContain("create_profile");
+		const unknown = await rpc("tools/call", { name: "nope", arguments: {} });
+		expect(unknown.error).toBeDefined();
+	});
+
+	it("whoami: writable Connection → canWrite, no reason or hint", async () => {
+		withWrite({ canWrite: true });
+		const { result } = await rpc("tools/call", { name: "whoami", arguments: {} });
+		expect(result.structuredContent).toMatchObject({
+			canWrite: true,
+			reason: null,
+			hint: null,
+		});
+	});
+
+	it("whoami: owner turned writes off → org_writes_off + owner hint", async () => {
+		withWrite({ canWrite: false, reason: "org_writes_off" });
+		const { result } = await rpc("tools/call", { name: "whoami", arguments: {} });
+		expect(result.structuredContent).toMatchObject({
+			canWrite: false,
+			reason: "org_writes_off",
+			hint: expect.stringContaining("owner"),
+		});
+	});
+
+	it("initialize instructions tell the model to list custom fields first", async () => {
+		const { result } = await rpc("initialize", {
+			protocolVersion: "2025-06-18",
+			capabilities: {},
+			clientInfo: { name: "t", version: "1" },
+		});
+		expect(result.instructions).toContain("whoami or list_custom_fields");
 	});
 
 	it("profileId is null when the member has no profile", async () => {

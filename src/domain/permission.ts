@@ -14,6 +14,7 @@ export const statement = {
 	customFields: ["create", "read", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
+	orgSetting: ["update"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -39,6 +40,7 @@ export const owner = ac.newRole({
 	customFields: ["read", "create", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
+	orgSetting: ["update"],
 });
 
 const roles = { owner, admin, member };

@@ -30,7 +30,7 @@
 		"@cloudflare/vite-plugin": "^1.40.0",
 		"@fontsource-variable/geist": "^5.2.9",
 		"@hookform/resolvers": "^5.4.0",
-		"@modelcontextprotocol/server": "^2.2.0",
+		"@modelcontextprotocol/server": "2.2.0",
 		"@posthog/react": "^1.10.0",
 		"@react-email/components": "1.0.12",
 		"@remixicon/react": "^4.9.0",

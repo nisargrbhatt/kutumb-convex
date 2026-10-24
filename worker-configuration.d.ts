@@ -5,6 +5,7 @@ interface __BaseEnv_Env {
 	KV: KVNamespace;
 	D1: D1Database;
 	MCP_RATE_LIMITER: RateLimit;
+	MCP_WRITE_RATE_LIMITER: RateLimit;
 	BETTER_AUTH_SECRET: string;
 	BETTER_AUTH_URL: string;
 	BETTER_AUTH_DISABLE_SIGNUP: string;

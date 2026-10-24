@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Actor } from "@/domain/permission";
+import type { ConnectionActor } from "./actor";
 import { createMcpEndpoint } from "./endpoint";
 import type { VerifiedMcpRequest } from "./verify";
 
 const OWN = "https://kutumb.example.org";
-const ACTOR: Actor = { userId: "u1", organizationId: "o1", role: "member" };
+const ACTOR: ConnectionActor = {
+	userId: "u1",
+	organizationId: "o1",
+	role: "member",
+	write: { canWrite: false, reason: "connection_read_only" },
+};
 const VERIFIED: VerifiedMcpRequest = {
 	token: "tok",
 	actor: ACTOR,
@@ -61,10 +66,10 @@ describe("createMcpEndpoint", () => {
 		expect(fetch).not.toHaveBeenCalled();
 	});
 
-	it("rate-limits per clientId:userId → 429 + Retry-After", async () => {
+	it("rate-limits per clientId:userId:orgId → 429 + Retry-After", async () => {
 		const { handle, limit, fetch } = setup({ success: false });
 		const res = await handle(req());
-		expect(limit).toHaveBeenCalledWith({ key: "c1:u1" });
+		expect(limit).toHaveBeenCalledWith({ key: "c1:u1:o1" });
 		expect(res.status).toBe(429);
 		expect(res.headers.get("retry-after")).toBe("60");
 		expect(fetch).not.toHaveBeenCalled();

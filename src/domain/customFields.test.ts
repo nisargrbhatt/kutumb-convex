@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { LIMIT_COPY, CUSTOM_FIELD_LIMIT } from "./limits";
 import {
 	EMPTY_VALUE,
 	customFieldTypeSchema,
 	customFieldValuesSchema,
+	addFieldFormSchema,
 	formatCustomFieldValue,
 	toCustomFieldValues,
 	valuesForDefs,
@@ -27,6 +29,11 @@ describe("customFieldValuesSchema", () => {
 		expect(customFieldValuesSchema.safeParse({ a: "x", b: 1, c: true, d: null }).success).toBe(
 			true
 		);
+	});
+
+	it("accepts text up to 500 chars, rejects 501", () => {
+		expect(customFieldValuesSchema.safeParse({ a: "x".repeat(500) }).success).toBe(true);
+		expect(customFieldValuesSchema.safeParse({ a: "x".repeat(501) }).success).toBe(false);
 	});
 
 	it("rejects nested values", () => {
@@ -105,5 +112,34 @@ describe("toCustomFieldValues", () => {
 
 	it("null → empty", () => {
 		expect(toCustomFieldValues(null)).toEqual({});
+	});
+});
+
+describe("addFieldFormSchema", () => {
+	const existing = [{ label: "Gotra" }];
+	const messages = (input: unknown, defs = existing) => {
+		const r = addFieldFormSchema(defs).safeParse(input);
+		return r.success ? [] : r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
+	};
+
+	it("accepts a new label", () => {
+		expect(messages({ label: "Height", type: "number" })).toEqual([]);
+	});
+
+	it("rejects a blank label", () => {
+		expect(messages({ label: "   ", type: "text" })).toEqual(["label: Label is required"]);
+	});
+
+	it("rejects a duplicate label, case-insensitive and trimmed", () => {
+		expect(messages({ label: "  gotra ", type: "text" })).toEqual([
+			'label: A field named "Gotra" already exists',
+		]);
+	});
+
+	it("rejects when the org is at the field limit", () => {
+		const full = Array.from({ length: CUSTOM_FIELD_LIMIT }, (_, i) => ({ label: `F${i}` }));
+		expect(messages({ label: "New", type: "text" }, full)).toEqual([
+			`label: ${LIMIT_COPY.customField.description}`,
+		]);
 	});
 });

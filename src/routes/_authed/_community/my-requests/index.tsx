@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { formatDistanceToNow, format } from "date-fns";
 import { AlertTriangle, ExternalLink, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
+import { ViaClient } from "@/components/ai/ViaClient";
 import { KindBadge, RequestDiff } from "@/components/changeRequest/RequestDiff";
 import { RequestStatusBadge } from "@/components/changeRequest/RequestStatusBadge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -178,6 +179,7 @@ function RequestDrawer({ request, onClose }: { request: MyRequest | null; onClos
 							</SheetTitle>
 							<SheetDescription>
 								Submitted <When at={request.createdAt} />
+								<ViaClient name={request.viaClientName} className="ml-2 align-middle" />
 							</SheetDescription>
 						</SheetHeader>
 						<ScrollArea className="min-h-0 flex-1">

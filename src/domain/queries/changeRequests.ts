@@ -144,6 +144,7 @@ const requestColumns = {
 	submitterUserId: changeRequest.submitterUserId,
 	submitterName: changeRequest.submitterName,
 	createdAt: changeRequest.createdAt,
+	viaClientName: changeRequest.viaClientName,
 };
 
 /**
@@ -188,6 +189,7 @@ export async function listPendingByProfile(db: QueryDb, actor: Actor) {
 				payload: r.payload,
 				submitterUserId: r.submitterUserId,
 				submitterName: r.submitterName,
+				viaClientName: r.viaClientName,
 				createdAt: r.createdAt,
 				stale: stale.get(r.id) ?? null,
 				overlapsWith: reqs
@@ -308,4 +310,24 @@ export async function pendingForProfile(db: QueryDb, actor: Actor, profileId: st
 			)
 		);
 	return { scope: all ? ("all" as const) : ("mine" as const), count: row?.total ?? 0 };
+}
+
+/** The Actor's own pending requests on one profile, oldest first (any role: never others'). */
+export async function listMyPendingForProfile(db: QueryDb, actor: Actor, profileId: string) {
+	return db
+		.select({
+			id: changeRequest.id,
+			kind: changeRequest.kind,
+			createdAt: changeRequest.createdAt,
+		})
+		.from(changeRequest)
+		.where(
+			and(
+				eq(changeRequest.organizationId, actor.organizationId),
+				eq(changeRequest.profileId, profileId),
+				eq(changeRequest.status, CHANGE_REQUEST_STATUS.pending),
+				eq(changeRequest.submitterUserId, actor.userId)
+			)
+		)
+		.orderBy(asc(changeRequest.createdAt), asc(changeRequest.id));
 }

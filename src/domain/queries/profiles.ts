@@ -8,17 +8,31 @@ import {
 	ORGANIZATION_ROLES,
 } from "@/db/constants";
 import { changeRequest, communityProfile, communityRelation } from "@/db/app-schema";
+import { storedIsoToDay } from "@/domain/calendarDay";
 import { AppError } from "@/domain/errors";
 import type { MemberFilter, SearchProfilesInput } from "@/domain/communityProfile";
 import { fullName } from "@/domain/communityProfile";
-import type { CustomFieldDefinition } from "@/domain/customFields";
+import { listCustomFieldDefinitions } from "@/domain/customFieldDefinitions";
 import type { Actor } from "@/domain/permission";
 import type { QueryDb } from "./db";
+import { matchedAddressesSql, resolveProfileFilter, type PlaceKey } from "./profileFilters";
 
 export const SEARCH_DEFAULT_LIMIT = 25;
 export const SEARCH_MAX_LIMIT = 100;
 
 const crCol = (col: SQLiteColumn) => sql`cr.${sql.identifier(col.name)}`;
+
+/** A draft the Actor created: the subject of their own pending `create` Change Request. */
+function ownDraftWhere(actor: Actor): SQL {
+	return and(
+		eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.draft),
+		// Columns named via `cr.` so drizzle's relational-query aliasing can't requalify them.
+		sql`EXISTS (SELECT 1 FROM ${changeRequest} cr WHERE ${crCol(changeRequest.profileId)} = ${communityProfile.id}
+			AND ${crCol(changeRequest.kind)} = ${CHANGE_REQUEST_KIND.create}
+			AND ${crCol(changeRequest.status)} = ${CHANGE_REQUEST_STATUS.pending}
+			AND ${crCol(changeRequest.submitterUserId)} = ${actor.userId})`
+	)!;
+}
 
 /**
  * The read-side visibility rule as a `communityProfile` condition (org scope included):
@@ -30,20 +44,12 @@ export function visibleProfileWhere(actor: Actor): SQL {
 	const inOrg = eq(communityProfile.organizationId, actor.organizationId);
 	if (actor.role !== ORGANIZATION_ROLES.member) return inOrg;
 
-	const ownDraft = and(
-		eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.draft),
-		// Columns named via `cr.` so drizzle's relational-query aliasing can't requalify them.
-		sql`EXISTS (SELECT 1 FROM ${changeRequest} cr WHERE ${crCol(changeRequest.profileId)} = ${communityProfile.id}
-			AND ${crCol(changeRequest.kind)} = ${CHANGE_REQUEST_KIND.create}
-			AND ${crCol(changeRequest.status)} = ${CHANGE_REQUEST_STATUS.pending}
-			AND ${crCol(changeRequest.submitterUserId)} = ${actor.userId})`
-	);
 	return and(
 		inOrg,
 		or(
 			eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active),
 			eq(communityProfile.userId, actor.userId),
-			ownDraft
+			ownDraftWhere(actor)
 		)
 	)!;
 }
@@ -100,11 +106,12 @@ export async function listCommunityMembers(db: QueryDb, actor: Actor, filter: Me
 	};
 }
 
-const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
-
 /**
- * Cursor-paged search for AI Clients. Every whitespace-separated token must match one of the name
- * parts (so "jared smith" works), ordered by id so the cursor (last id) is a stable keyset.
+ * Cursor-paged search for AI Clients: the shared profile filter (`resolveProfileFilter`) plus
+ * paging, ordered by id so the cursor (last id) is a stable keyset. Items echo the filtered
+ * fields only (besides id/name/gender/status): `bloodGroup`, `dateOfBirth` (born range),
+ * `dateOfDeath` (living), `addresses` (matching addresses, filtered place parts only) and
+ * `customFields` (filtered definitions, `{id,label,type,value}`).
  */
 export async function searchProfiles(
 	db: QueryDb,
@@ -115,37 +122,36 @@ export async function searchProfiles(
 		Math.max(Math.trunc(input.limit ?? SEARCH_DEFAULT_LIMIT), 1),
 		SEARCH_MAX_LIMIT
 	);
+	const { limit: _limit, cursor, ...filter } = input;
+	const resolved = await resolveProfileFilter(db, actor, filter);
+	const { places, customFields } = resolved;
 
-	const conditions = [
-		eq(communityProfile.organizationId, actor.organizationId),
-		// AI Clients see `active` only, whatever the caller's role.
-		eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active),
-	];
-	if (input.gender) conditions.push(eq(communityProfile.gender, input.gender));
-	if (input.cursor) conditions.push(gt(communityProfile.id, input.cursor));
+	const echoBloodGroup = !!filter.bloodGroup?.length;
+	const echoBirth = filter.bornOnOrAfter !== undefined || filter.bornOnOrBefore !== undefined;
+	const echoDeath = filter.living !== undefined;
 
-	for (const token of input.query?.trim().split(/\s+/).filter(Boolean) ?? []) {
-		const term = `%${escapeLike(token)}%`;
-		const match = (col: SQLiteColumn) => sql`${col} LIKE ${term} ESCAPE '\\'`;
-		conditions.push(
-			sql`(${match(communityProfile.firstName)} OR ${match(communityProfile.middleName)} OR ${match(communityProfile.lastName)} OR ${match(communityProfile.nickName)})`
-		);
-	}
-
-	const rows = await db.query.communityProfile.findMany({
-		where: () => and(...conditions)!,
-		orderBy: () => [asc(communityProfile.id)],
-		limit: limit + 1,
-		columns: {
-			id: true,
-			firstName: true,
-			middleName: true,
-			lastName: true,
-			nickName: true,
-			gender: true,
-			status: true,
-		},
-	});
+	const rows = await db
+		.select({
+			id: communityProfile.id,
+			firstName: communityProfile.firstName,
+			middleName: communityProfile.middleName,
+			lastName: communityProfile.lastName,
+			nickName: communityProfile.nickName,
+			gender: communityProfile.gender,
+			status: communityProfile.status,
+			bloodGroup: communityProfile.bloodGroup,
+			dateOfBirth: communityProfile.dateOfBirth,
+			dateOfDeath: communityProfile.dateOfDeath,
+			customFieldData: communityProfile.customFieldData,
+			// Matching addresses as JSON, so one query serves the echo.
+			matchedAddresses: resolved.placeWhere
+				? matchedAddressesSql(resolved.placeWhere)
+				: sql<string>`NULL`,
+		})
+		.from(communityProfile)
+		.where(cursor ? and(resolved.where, gt(communityProfile.id, cursor)) : resolved.where)
+		.orderBy(asc(communityProfile.id))
+		.limit(limit + 1);
 
 	const page = rows.slice(0, limit);
 	return {
@@ -155,11 +161,36 @@ export async function searchProfiles(
 			nickName: r.nickName,
 			gender: r.gender,
 			status: r.status,
+			...(echoBloodGroup && { bloodGroup: r.bloodGroup }),
+			...(echoBirth && { dateOfBirth: storedIsoToDay(r.dateOfBirth) }),
+			...(echoDeath && { dateOfDeath: storedIsoToDay(r.dateOfDeath) }),
+			...(places.length > 0 && { addresses: echoAddresses(r.matchedAddresses, places) }),
+			...(customFields.length > 0 && {
+				customFields: customFields.map((def) => {
+					const value = r.customFieldData?.[def.id] ?? null;
+					return {
+						...def,
+						value: def.type === "date" && typeof value === "string" ? storedIsoToDay(value) : value,
+					};
+				}),
+			}),
 		})),
 		nextCursor: rows.length > limit ? page[page.length - 1]!.id : null,
 	};
 }
 
+/** Distinct matching addresses reduced to the place parts that were filtered. */
+function echoAddresses(json: string | null, places: PlaceKey[]) {
+	const all = JSON.parse(json ?? "[]") as Record<PlaceKey, string>[];
+	const seen = new Set<string>();
+	return all.flatMap((address) => {
+		const picked = Object.fromEntries(places.map((key) => [key, address[key]]));
+		const key = JSON.stringify(picked);
+		if (seen.has(key)) return [];
+		seen.add(key);
+		return [picked as Partial<Record<PlaceKey, string>>];
+	});
+}
 const counterpartColumns = {
 	id: true,
 	firstName: true,
@@ -172,12 +203,12 @@ const counterpartColumns = {
 
 /**
  * Who is reading: `app` = the web app (role-aware visibility rule); `aiClient` = an MCP AI Client,
- * which sees `active` profiles only (plus the caller's own linked profile as subject) for every
- * role.
+ * which sees `active` profiles only (plus, as subject, the caller's own linked profile and the
+ * drafts they created, so a write reads back) for every role.
  */
 export type ReadAudience = "app" | "aiClient";
 
-function readRules(actor: Actor, audience: ReadAudience) {
+export function readRules(actor: Actor, audience: ReadAudience) {
 	if (audience === "app") {
 		const where = visibleProfileWhere(actor);
 		return { subjectWhere: where, counterpartWhere: where };
@@ -191,7 +222,8 @@ function readRules(actor: Actor, audience: ReadAudience) {
 			eq(communityProfile.organizationId, actor.organizationId),
 			or(
 				eq(communityProfile.status, COMMUNITY_PROFILE_STATUS.active),
-				eq(communityProfile.userId, actor.userId)
+				eq(communityProfile.userId, actor.userId),
+				ownDraftWhere(actor)
 			)
 		)!,
 		counterpartWhere: inOrgActive,
@@ -223,37 +255,38 @@ export async function getCommunityProfileDetail(
 		throw new AppError("NotFound", "Community Profile not found");
 	}
 
-	const profileAddresses = await db.query.communityAddress.findMany({
-		where: (fields, ops) => ops.eq(fields.communityProfileId, foundProfile.id),
-		columns: {
-			communityProfileId: false,
-		},
-	});
-
-	const customFieldDefs = await db.query.communityProfileCustomField.findMany({
-		where: (fields, ops) => ops.eq(fields.organizationId, organizationId),
-		columns: { id: true, label: true, type: true },
-	});
-
-	// Outgoing: subject is the `from`. Type read subject-centric.
-	const outgoingRelations = await db.query.communityRelation.findMany({
-		where: (fields, ops) => ops.eq(fields.fromId, foundProfile.id),
-		columns: { organizationId: false },
-		with: {
-			toCommunityProfile: { columns: counterpartColumns },
-		},
-	});
-
-	// Incoming: subject is the `to`. Type shown as stored (no inversion — ADR 0001).
-	const incomingRelations = await db.query.communityRelation.findMany({
-		where: (fields, ops) => ops.eq(fields.toId, foundProfile.id),
-		columns: { organizationId: false },
-		with: {
-			fromCommunityProfile: { columns: counterpartColumns },
-		},
-	});
-
-	const [visibleOut, visibleIn] = await Promise.all([
+	// Independent of each other: one round of parallel reads.
+	const [
+		profileAddresses,
+		customFieldDefs,
+		outgoingRelations,
+		incomingRelations,
+		visibleOut,
+		visibleIn,
+	] = await Promise.all([
+		db.query.communityAddress.findMany({
+			where: (fields, ops) => ops.eq(fields.communityProfileId, foundProfile.id),
+			columns: {
+				communityProfileId: false,
+			},
+		}),
+		listCustomFieldDefinitions(db, organizationId),
+		// Outgoing: subject is the `from`. Type read subject-centric.
+		db.query.communityRelation.findMany({
+			where: (fields, ops) => ops.eq(fields.fromId, foundProfile.id),
+			columns: { organizationId: false },
+			with: {
+				toCommunityProfile: { columns: counterpartColumns },
+			},
+		}),
+		// Incoming: subject is the `to`. Type shown as stored (no inversion — ADR 0001).
+		db.query.communityRelation.findMany({
+			where: (fields, ops) => ops.eq(fields.toId, foundProfile.id),
+			columns: { organizationId: false },
+			with: {
+				fromCommunityProfile: { columns: counterpartColumns },
+			},
+		}),
 		relationsWithVisibleCounterpart(db, counterpartWhere, "out", foundProfile.id),
 		relationsWithVisibleCounterpart(db, counterpartWhere, "in", foundProfile.id),
 	]);
@@ -261,7 +294,7 @@ export async function getCommunityProfileDetail(
 	return {
 		profile: foundProfile,
 		addresses: profileAddresses,
-		customFieldDefs: customFieldDefs satisfies CustomFieldDefinition[],
+		customFieldDefs,
 		outgoingRelations: outgoingRelations.filter((r) => visibleOut.has(r.id)),
 		incomingRelations: incomingRelations.filter((r) => visibleIn.has(r.id)),
 	};
