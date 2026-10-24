@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
 	MCP_SCOPES,
+	consentScopeFor,
+	grantedWrite,
+	requestsWrite,
 	clientHost,
 	OAUTH_RATE_LIMITS,
 	ORG_PICK_TTL_MS,
@@ -80,8 +83,8 @@ describe("org pick marker", () => {
 });
 
 describe("config", () => {
-	it("exposes only the community:read + offline_access scopes", () => {
-		expect([...MCP_SCOPES]).toEqual(["community:read", "offline_access"]);
+	it("exposes read, write (opt-in) and offline_access scopes", () => {
+		expect([...MCP_SCOPES]).toEqual(["community:read", "community:write", "offline_access"]);
 	});
 
 	it("limits register to 5/h and token + authorize to 30/min", () => {
@@ -142,5 +145,34 @@ describe("inferApplicationType", () => {
 	it("is undefined for empty or unparseable input", () => {
 		expect(inferApplicationType([])).toBeUndefined();
 		expect(inferApplicationType(["not a url"])).toBeUndefined();
+	});
+});
+
+describe("consent scopes (write opt-in)", () => {
+	const asked = "community:read community:write offline_access";
+
+	it("requestsWrite: only when the client asked for community:write", () => {
+		expect(requestsWrite(asked)).toBe(true);
+		expect(requestsWrite("community:read offline_access")).toBe(false);
+		expect(requestsWrite(null)).toBe(false);
+	});
+
+	it("consentScopeFor: read only drops community:write and keeps the rest", () => {
+		expect(consentScopeFor(asked, false)).toBe("community:read offline_access");
+	});
+
+	it("consentScopeFor: write keeps everything requested", () => {
+		expect(consentScopeFor(asked, true)).toBe(asked);
+	});
+
+	it("consentScopeFor: never adds write the client did not ask for", () => {
+		expect(consentScopeFor("community:read", true)).toBe("community:read");
+	});
+
+	it("grantedWrite: the accepted subset wins over the original request", () => {
+		expect(grantedWrite("community:read offline_access", asked)).toBe(false);
+		expect(grantedWrite(asked, asked)).toBe(true);
+		expect(grantedWrite(undefined, asked)).toBe(true);
+		expect(grantedWrite(undefined, "community:read")).toBe(false);
 	});
 });

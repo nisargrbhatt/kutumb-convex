@@ -9,6 +9,7 @@ import {
 	type RegistrationKind,
 } from "@/domain/mcpOauth";
 import type { Role } from "@/domain/permission";
+import { getAiClientWrites } from "@/domain/queries/orgSettings";
 import { auth } from "@/lib/auth";
 import { markOrgPicked } from "@/lib/oauth-flow";
 import { safeAsync } from "@/lib/safe";
@@ -76,17 +77,21 @@ export const getOauthSelectOrgFn = createServerFn({ method: "GET" })
 		};
 	});
 
-/** Data for `/oauth/consent`: the requesting client + the community it was just pointed at. */
+/**
+ * Data for `/oauth/consent`: the requesting client, the community it was just pointed at and
+ * whether that community lets AI Clients write (owner toggle, ADR 0006).
+ */
 export const getOauthConsentFn = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
 	.validator(clientInput)
 	.handler(async ({ context, data }) => {
 		const orgId = context.session.session.activeOrganizationId;
-		const [client, org] = await Promise.all([
+		const [client, org, aiClientWrites] = await Promise.all([
 			loadClient(data.clientId),
 			orgId ? loadOrg(context.userId, orgId) : null,
+			orgId ? getAiClientWrites(db, orgId) : true,
 		]);
-		return { client, org };
+		return { client, org, aiClientWrites };
 	});
 
 /**

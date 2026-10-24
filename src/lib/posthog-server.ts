@@ -38,6 +38,8 @@ export function captureMcpConnectionCreated(props: {
 	organizationId: string;
 	clientId: string;
 	registration: RegistrationKind;
+	/** Member chose "Read and make changes" (`community:write` granted). */
+	write: boolean;
 }) {
 	try {
 		const client = getPostHogClient();
@@ -48,6 +50,7 @@ export function captureMcpConnectionCreated(props: {
 				orgId: props.organizationId,
 				clientId: props.clientId,
 				registration: props.registration,
+				write: props.write,
 			},
 		});
 		waitUntil(client.flush());
@@ -64,6 +67,8 @@ export function captureMcpToolCalled(props: {
 	clientId: string;
 	isError: boolean;
 	durationMs: number;
+	/** Write tools only: applied | requested | unchanged | possible_duplicate. */
+	outcome?: string;
 }) {
 	try {
 		const client = getPostHogClient();
@@ -76,6 +81,7 @@ export function captureMcpToolCalled(props: {
 				clientId: props.clientId,
 				isError: props.isError,
 				durationMs: props.durationMs,
+				...(props.outcome ? { outcome: props.outcome } : {}),
 			},
 		});
 		waitUntil(client.flush());
@@ -100,5 +106,24 @@ export function captureMcpConnectionRevoked(props: {
 		waitUntil(client.flush());
 	} catch (error) {
 		console.error("Failed to capture mcp_connection_revoked event", error);
+	}
+}
+
+/** The owner switched "AI Client writes" for the community. Carries no names or values. */
+export function captureAiClientWritesToggled(props: {
+	userId: string;
+	organizationId: string;
+	enabled: boolean;
+}) {
+	try {
+		const client = getPostHogClient();
+		client.capture({
+			distinctId: props.userId,
+			event: "ai_client_writes_toggled",
+			properties: { orgId: props.organizationId, enabled: props.enabled },
+		});
+		waitUntil(client.flush());
+	} catch (error) {
+		console.error("Failed to capture ai_client_writes_toggled event", error);
 	}
 }

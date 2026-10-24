@@ -1,14 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangle, BadgeCheck, Eye, RefreshCw, UserRound } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AccessLevelCards, type AccessLevel } from "@/components/ai/AccessLevelCards";
 import { AuthCardShell } from "@/components/auth/AuthCardShell";
 import { OauthRequestError } from "@/components/oauth/OauthRequestError";
 import { OrgCardIcon } from "@/components/oauth/OrgCardIcon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { OAUTH_SELECT_ORG_PATH } from "@/domain/mcpOauth";
+import { OAUTH_SELECT_ORG_PATH, consentScopeFor, requestsWrite } from "@/domain/mcpOauth";
+import type { Role } from "@/domain/permission";
 import { useOauthStep } from "@/hooks/useOauthStep";
 import { authClient } from "@/lib/auth-client";
 import { oauthBeforeLoad } from "@/lib/oauth-gate";
@@ -34,6 +36,7 @@ const selectOrgHref = () => `${OAUTH_SELECT_ORG_PATH}${window.location.search}`;
 
 function RouteComponent() {
 	const data = Route.useLoaderData();
+	const { requestedScope } = Route.useRouteContext();
 	const needsOrg = !!data?.client && !data.org;
 
 	// No community picked yet (opened directly): the picker comes first.
@@ -43,12 +46,39 @@ function RouteComponent() {
 
 	if (needsOrg) return null;
 	if (!data?.client || !data.org) return <OauthRequestError />;
-	return <Consent client={data.client} org={data.org} />;
+	return (
+		<Consent
+			client={data.client}
+			org={data.org}
+			requestedScope={requestedScope}
+			writesEnabled={data.aiClientWrites}
+		/>
+	);
 }
 
-function Consent({ client, org }: { client: OauthClientInfo; org: OauthOrg }) {
+const roleEffect = (role: Role) =>
+	role !== "member"
+		? "Changes apply right away, the same as when you edit in Kutumb."
+		: "Changes go to owners and admins as requests. Nothing is live until they approve.";
+
+function Consent({
+	client,
+	org,
+	requestedScope,
+	writesEnabled,
+}: {
+	client: OauthClientInfo;
+	org: OauthOrg;
+	/** `scope` of the authorize request; `null` when the page was opened without one. */
+	requestedScope: string | null;
+	/** The community owner's AI Client writes toggle. */
+	writesEnabled: boolean;
+}) {
 	const { pending, setPending, run } = useOauthStep();
 	const verified = client.registration === "cimd";
+	const asksWrite = requestsWrite(requestedScope);
+	// Read only unless the member opts in; never preselected.
+	const [level, setLevel] = useState<AccessLevel>("read");
 
 	const allow = async () => {
 		setPending(true);
@@ -58,7 +88,12 @@ function Consent({ client, org }: { client: OauthClientInfo; org: OauthOrg }) {
 			setPending(false);
 			return;
 		}
-		await run(() => authClient.oauth2.consent({ accept: true }), "Could not allow access");
+		// Always a subset of what the client asked for: read only drops `community:write`.
+		const scope = asksWrite ? consentScopeFor(requestedScope, level === "write") : undefined;
+		await run(
+			() => authClient.oauth2.consent(scope ? { accept: true, scope } : { accept: true }),
+			"Could not allow access"
+		);
 	};
 
 	const deny = () =>
@@ -112,23 +147,49 @@ function Consent({ client, org }: { client: OauthClientInfo; org: OauthOrg }) {
 					</a>
 				</div>
 				<Separator />
-				<ul className="flex flex-col gap-3 text-sm">
-					<li className="flex gap-3">
-						<Eye className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-						<span>
-							<b>Read</b> member profiles, addresses, custom fields and family relations you can see
-							in this community.
-						</span>
-					</li>
-					<li className="flex gap-3">
-						<UserRound className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-						<span>Act as you, with your current role. It can't change anything.</span>
-					</li>
-					<li className="flex gap-3">
-						<RefreshCw className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-						<span>Stay connected until you revoke it, or 30 days without use.</span>
-					</li>
-				</ul>
+				{asksWrite ? (
+					<>
+						<span className="text-sm font-medium">What can {client.name} do?</span>
+						<AccessLevelCards
+							aria-label={`What ${client.name} can do`}
+							value={level}
+							onChange={setLevel}
+							options={[
+								{
+									value: "read",
+									body: "See profiles, addresses, custom fields and relations you can see. Can't change anything.",
+								},
+								{
+									value: "write",
+									body: `Also add and edit profiles, addresses and relations. No deleting. ${roleEffect(org.role)}`,
+								},
+							]}
+							disabledNotes={writesEnabled ? undefined : { write: "Turned off by your community." }}
+						/>
+						<p className="flex gap-2 text-xs text-muted-foreground">
+							<RefreshCw className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+							Acts as you, with your role. Connected until you revoke it, or 30 days unused.
+						</p>
+					</>
+				) : (
+					<ul className="flex flex-col gap-3 text-sm">
+						<li className="flex gap-3">
+							<Eye className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+							<span>
+								<b>Read</b> member profiles, addresses, custom fields and family relations you can
+								see in this community.
+							</span>
+						</li>
+						<li className="flex gap-3">
+							<UserRound className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+							<span>Act as you, with your current role. It can't change anything.</span>
+						</li>
+						<li className="flex gap-3">
+							<RefreshCw className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+							<span>Stay connected until you revoke it, or 30 days without use.</span>
+						</li>
+					</ul>
+				)}
 				<div className="flex gap-2">
 					<Button variant="outline" className="flex-1" disabled={pending} onClick={deny}>
 						Deny

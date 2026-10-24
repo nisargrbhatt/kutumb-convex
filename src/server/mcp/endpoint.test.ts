@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Actor } from "@/domain/permission";
+import type { ConnectionActor } from "./actor";
 import { createMcpEndpoint } from "./endpoint";
 import type { VerifiedMcpRequest } from "./verify";
 
 const OWN = "https://kutumb.example.org";
-const ACTOR: Actor = { userId: "u1", organizationId: "o1", role: "member" };
+const ACTOR: ConnectionActor = {
+	userId: "u1",
+	organizationId: "o1",
+	role: "member",
+	write: { canWrite: false, reason: "connection_read_only" },
+};
 const VERIFIED: VerifiedMcpRequest = {
 	token: "tok",
 	actor: ACTOR,
