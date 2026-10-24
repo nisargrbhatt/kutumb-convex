@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b22b6c89-baba-4d5f-aef9-ff7029775412",
+  "id": "4244c0c7-358e-4b77-b71b-fa00d92f05ea",
   "prevId": "f93625cb-a6d0-4e80-9f64-34f8e94be711",
   "tables": {
     "account": {
@@ -741,20 +741,6 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "viaClientId": {
-          "name": "viaClientId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "viaClientName": {
-          "name": "viaClientName",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -925,20 +911,6 @@
         "submitterSeenAt": {
           "name": "submitterSeenAt",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "viaClientId": {
-          "name": "viaClientId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "viaClientName": {
-          "name": "viaClientName",
-          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1486,6 +1458,45 @@
         "communityRelation_organizationId_organization_id_fk": {
           "name": "communityRelation_organizationId_organization_id_fk",
           "tableFrom": "communityRelation",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organizationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "orgDataVersion": {
+      "name": "orgDataVersion",
+      "columns": {
+        "organizationId": {
+          "name": "organizationId",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "orgDataVersion_organizationId_organization_id_fk": {
+          "name": "orgDataVersion_organizationId_organization_id_fk",
+          "tableFrom": "orgDataVersion",
           "tableTo": "organization",
           "columnsFrom": [
             "organizationId"

@@ -1,4 +1,3 @@
-import { vi, type Mock } from "vitest";
 import { asc } from "drizzle-orm";
 import { auditEvent, communityProfile } from "@/db/schema";
 import type { CommunityProfileInput } from "@/domain/communityProfile";
@@ -60,14 +59,12 @@ export function profileChangesHarness() {
 			('m3', 'o1', 'u-member', 'member', 0),
 			('m4', 'o1', 'u-other', 'member', 0);
 	`);
-	const onGraphChanged: Mock<(organizationId: string) => void> = vi.fn();
 	let t = 1000;
 	let n = 0;
 	const now = () => new Date(t++);
 	const seamDeps = {
 		db,
 		limits: { assertProfileSlot: async () => {} },
-		onGraphChanged,
 		now,
 		newId: () => `id${++n}`,
 	};
@@ -80,8 +77,14 @@ export function profileChangesHarness() {
 		changes,
 		/** Same seam, as seen through an AI Client Connection. */
 		changesVia: (via: Via) => makeProfileChanges({ ...seamDeps, via }),
-		onGraphChanged,
 		now,
+		/** Org data version (graph cache key); missing row = 0. */
+		version: async (organizationId = "o1") =>
+			(
+				await db.query.orgDataVersion.findFirst({
+					where: (f, o) => o.eq(f.organizationId, organizationId),
+				})
+			)?.version ?? 0,
 		events: () =>
 			db.select().from(auditEvent).orderBy(asc(auditEvent.createdAt), asc(auditEvent.id)),
 		profile: (id: string) =>

@@ -11,7 +11,7 @@ import { changeRequest, communityProfile, communityRelation } from "@/db/app-sch
 import { AppError } from "@/domain/errors";
 import type { MemberFilter, SearchProfilesInput } from "@/domain/communityProfile";
 import { fullName } from "@/domain/communityProfile";
-import type { CustomFieldDefinition } from "@/domain/customFields";
+import { listCustomFieldDefinitions } from "@/domain/customFieldDefinitions";
 import type { Actor } from "@/domain/permission";
 import type { QueryDb } from "./db";
 
@@ -223,37 +223,38 @@ export async function getCommunityProfileDetail(
 		throw new AppError("NotFound", "Community Profile not found");
 	}
 
-	const profileAddresses = await db.query.communityAddress.findMany({
-		where: (fields, ops) => ops.eq(fields.communityProfileId, foundProfile.id),
-		columns: {
-			communityProfileId: false,
-		},
-	});
-
-	const customFieldDefs = await db.query.communityProfileCustomField.findMany({
-		where: (fields, ops) => ops.eq(fields.organizationId, organizationId),
-		columns: { id: true, label: true, type: true },
-	});
-
-	// Outgoing: subject is the `from`. Type read subject-centric.
-	const outgoingRelations = await db.query.communityRelation.findMany({
-		where: (fields, ops) => ops.eq(fields.fromId, foundProfile.id),
-		columns: { organizationId: false },
-		with: {
-			toCommunityProfile: { columns: counterpartColumns },
-		},
-	});
-
-	// Incoming: subject is the `to`. Type shown as stored (no inversion — ADR 0001).
-	const incomingRelations = await db.query.communityRelation.findMany({
-		where: (fields, ops) => ops.eq(fields.toId, foundProfile.id),
-		columns: { organizationId: false },
-		with: {
-			fromCommunityProfile: { columns: counterpartColumns },
-		},
-	});
-
-	const [visibleOut, visibleIn] = await Promise.all([
+	// Independent of each other: one round of parallel reads.
+	const [
+		profileAddresses,
+		customFieldDefs,
+		outgoingRelations,
+		incomingRelations,
+		visibleOut,
+		visibleIn,
+	] = await Promise.all([
+		db.query.communityAddress.findMany({
+			where: (fields, ops) => ops.eq(fields.communityProfileId, foundProfile.id),
+			columns: {
+				communityProfileId: false,
+			},
+		}),
+		listCustomFieldDefinitions(db, organizationId),
+		// Outgoing: subject is the `from`. Type read subject-centric.
+		db.query.communityRelation.findMany({
+			where: (fields, ops) => ops.eq(fields.fromId, foundProfile.id),
+			columns: { organizationId: false },
+			with: {
+				toCommunityProfile: { columns: counterpartColumns },
+			},
+		}),
+		// Incoming: subject is the `to`. Type shown as stored (no inversion — ADR 0001).
+		db.query.communityRelation.findMany({
+			where: (fields, ops) => ops.eq(fields.toId, foundProfile.id),
+			columns: { organizationId: false },
+			with: {
+				fromCommunityProfile: { columns: counterpartColumns },
+			},
+		}),
 		relationsWithVisibleCounterpart(db, counterpartWhere, "out", foundProfile.id),
 		relationsWithVisibleCounterpart(db, counterpartWhere, "in", foundProfile.id),
 	]);
@@ -261,7 +262,7 @@ export async function getCommunityProfileDetail(
 	return {
 		profile: foundProfile,
 		addresses: profileAddresses,
-		customFieldDefs: customFieldDefs satisfies CustomFieldDefinition[],
+		customFieldDefs,
 		outgoingRelations: outgoingRelations.filter((r) => visibleOut.has(r.id)),
 		incomingRelations: incomingRelations.filter((r) => visibleIn.has(r.id)),
 	};

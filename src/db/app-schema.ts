@@ -264,6 +264,15 @@ export const auditEvent = sqliteTable(
 	]
 );
 
+// Per-org data version: bumped inside every applied `makeProfileChanges` batch. Keys the cached
+// graph blob (`graph:{org}:v{n}`). Missing row = 0. See ADR 0008.
+export const orgDataVersion = sqliteTable("orgDataVersion", {
+	organizationId: text("organizationId")
+		.primaryKey()
+		.references(() => organization.id, { onDelete: "cascade" }),
+	version: integer("version").notNull().default(0),
+});
+
 // better-auth rate limiter state. Written only by `createD1RateLimitStorage`
 // (src/lib/rate-limit-d1.ts), never through the better-auth adapter.
 export const rateLimit = sqliteTable(

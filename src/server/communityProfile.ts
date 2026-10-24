@@ -5,12 +5,8 @@ import { db } from "@/db";
 import { CHANGE_REQUEST_STATUS, COMMUNITY_PROFILE_STATUS } from "@/db/constants";
 import { changeRequest, communityProfile } from "@/db/app-schema";
 import { and, count, eq } from "drizzle-orm";
-import {
-	extractSubgraph,
-	getOrgGraphBlob,
-	resolveAnchorId,
-	searchProfiles,
-} from "@/lib/communityGraphCache";
+import { extractSubgraph, resolveAnchorId, searchProfiles } from "@/domain/queries/graph";
+import { getOrgGraph } from "@/lib/graph";
 import { assertCan } from "@/domain/permission";
 import { communityProfileInput, memberFilterSchema } from "@/domain/communityProfile";
 import { getCommunityProfileDetail, listCommunityMembers } from "@/domain/queries/profiles";
@@ -123,7 +119,7 @@ export const getFocusedCommunityGraph = createServerFn({ method: "GET" })
 	.handler(async ({ context, data }) => {
 		const { organizationId, userId } = context.actor;
 
-		const blob = await getOrgGraphBlob(organizationId);
+		const blob = await getOrgGraph(organizationId);
 
 		// Resolve anchor: requested focus → own profile (if active & connected) → most-connected node.
 		let preferredId = data.focusId;
@@ -148,7 +144,7 @@ export const searchCommunityProfilesLite = createServerFn({ method: "GET" })
 	.handler(async ({ context, data }) => {
 		const { organizationId } = context.actor;
 
-		const blob = await getOrgGraphBlob(organizationId);
+		const blob = await getOrgGraph(organizationId);
 		return searchProfiles(blob, data.query, 20);
 	});
 

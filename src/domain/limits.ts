@@ -5,6 +5,7 @@ export const MEMBER_LIMIT = 1000;
 export const PROFILE_LIMIT = MEMBER_LIMIT;
 /** Pending Change Requests per submitter per org. */
 export const PENDING_REQUEST_LIMIT = 50;
+export const CUSTOM_FIELD_LIMIT = 50;
 
 export const canJoinOrganization = (membershipCount: number) => membershipCount < ORG_LIMIT;
 export const canInviteMember = (membersPlusPending: number) => membersPlusPending < MEMBER_LIMIT;
@@ -15,6 +16,7 @@ export const LIMIT_ERROR_CODES = {
 	member: "ORGANIZATION_MEMBERSHIP_LIMIT_REACHED",
 	profile: "COMMUNITY_PROFILE_LIMIT_REACHED",
 	pendingRequest: "PENDING_REQUEST_LIMIT_REACHED",
+	customField: "CUSTOM_FIELD_LIMIT_REACHED",
 } as const;
 
 export const LIMIT_COPY = {
@@ -41,6 +43,10 @@ export const LIMIT_COPY = {
 	pendingRequest: {
 		title: "Too many pending requests",
 		description: `You already have ${PENDING_REQUEST_LIMIT} requests waiting for review. Withdraw one or wait for a review before sending another.`,
+	},
+	customField: {
+		title: "Field limit reached",
+		description: `This organization already has ${CUSTOM_FIELD_LIMIT} custom fields. Delete one to add another.`,
 	},
 } as const;
 
@@ -101,6 +107,8 @@ export const limitMessage = (codeOrError: string | AppError | null | undefined) 
 			return LIMIT_COPY.profileAdmin;
 		case LIMIT_ERROR_CODES.pendingRequest:
 			return LIMIT_COPY.pendingRequest;
+		case LIMIT_ERROR_CODES.customField:
+			return LIMIT_COPY.customField;
 		default:
 			return undefined;
 	}

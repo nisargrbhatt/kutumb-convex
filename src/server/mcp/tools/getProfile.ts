@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { genderSchema, fullName, profileStatusSchema } from "@/domain/communityProfile";
+import { storedIsoToDay } from "@/domain/calendarDay";
 import type { Actor } from "@/domain/permission";
-import { customFieldTypeSchema, customFieldValueSchema } from "@/domain/customFields";
+import { customFieldTypeSchema, storedCustomFieldValueSchema } from "@/domain/customFields";
 import { relationTypeSchema } from "@/domain/relation";
 import { getCommunityProfileDetail } from "@/domain/queries/profiles";
 import type { QueryDb } from "@/domain/queries/db";
@@ -28,8 +29,8 @@ export const getProfileOutput = z.object({
 	status: profileStatusSchema,
 	bloodGroup: z.enum(COMMUNITY_PROFILE_BLOOD_GROUP).nullable(),
 	mobileNumber: z.string().nullable(),
-	dateOfBirth: z.string().nullable().describe("ISO 8601"),
-	dateOfDeath: z.string().nullable().describe("ISO 8601"),
+	dateOfBirth: z.string().nullable().describe("YYYY-MM-DD"),
+	dateOfDeath: z.string().nullable().describe("YYYY-MM-DD"),
 	comment: z.string().nullable(),
 	userId: z.string().nullable().describe("Linked app user; null for a userless profile."),
 	addresses: z.array(
@@ -52,10 +53,12 @@ export const getProfileOutput = z.object({
 				id: z.string(),
 				label: z.string(),
 				type: customFieldTypeSchema,
-				value: customFieldValueSchema,
+				value: storedCustomFieldValueSchema,
 			})
 		)
-		.describe("Only fields that have a value on this profile."),
+		.describe(
+			"Every custom field of the community in definition order; `value` is null when unset. date fields are YYYY-MM-DD."
+		),
 	outgoing: z.array(relation).describe("Counterpart is the subject's `<type>`."),
 	incoming: z.array(relation).describe("Subject is the counterpart's `<type>`."),
 });
@@ -67,6 +70,8 @@ Relations are subject-centric and are NEVER inverted. Read the section, then the
 - incoming[{type, counterpart}] = the subject is the counterpart's <type>.
 
 Worked example, subject Jared: outgoing [{type:"sister", counterpart: Anna}] means Anna is Jared's sister. incoming [{type:"brother", counterpart: Mia}] means Jared is Mia's brother (so Mia is Jared's sibling; counterpart.gender tells sister vs brother). It does NOT mean Mia is Jared's brother. To find "Jared's sisters", take outgoing entries of type "sister" plus incoming "brother"/"sister" entries whose counterpart.gender is "female".
+
+customFields lists every custom field of the community in order as {id, label, type, value}; value is null when the profile has none. Dates (dateOfBirth, dateOfDeath, date fields) are YYYY-MM-DD.
 
 Only "active" profiles (and your own linked profile, whatever its status) can be fetched; any other id returns "not found". Relations list "active" counterparts only. Use search_profiles to find an id.`;
 
@@ -89,11 +94,17 @@ export function toProfileView(detail: Detail): View {
 
 	return {
 		...columns,
+		dateOfBirth: storedIsoToDay(columns.dateOfBirth),
+		dateOfDeath: storedIsoToDay(columns.dateOfDeath),
 		fullName: fullName(profile),
 		addresses: addresses.map(({ version: _version, ...address }) => address),
-		customFields: customFieldDefs.flatMap((def) => {
-			const value = customFieldData?.[def.id];
-			return value === undefined || value === null ? [] : [{ ...def, value }];
+		// Every definition, in order; values of deleted definitions (orphans) never show.
+		customFields: customFieldDefs.map((def) => {
+			const value = customFieldData?.[def.id] ?? null;
+			return {
+				...def,
+				value: def.type === "date" && typeof value === "string" ? storedIsoToDay(value) : value,
+			};
 		}),
 		outgoing: outgoingRelations.flatMap((r) =>
 			r.toCommunityProfile

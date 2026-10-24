@@ -6,6 +6,7 @@ import {
 	communityAddress,
 	communityProfile,
 	communityRelation,
+	orgDataVersion,
 } from "@/db/app-schema";
 import {
 	CHANGE_REQUEST_KIND,
@@ -42,8 +43,6 @@ export type Via = { clientId: string; clientName: string };
 export type ProfileChangesDeps = {
 	db: BatchDb;
 	limits: { assertProfileSlot(organizationId: string, userId: string): Promise<void> };
-	/** After a committed change to status, graph-visible fields or relations. */
-	onGraphChanged: (organizationId: string) => void | Promise<void>;
 	/** Stamped on the Audit Events + Change Requests this seam's `submit` writes. */
 	via?: Via;
 	now?: () => Date;
@@ -121,9 +120,10 @@ type EventDraft = {
 type Plan = {
 	statements: BatchItem<"sqlite">[];
 	events: EventDraft[];
-	graphChanged: boolean;
 	/** Surfaced in `SubmitResult` when this plan is applied directly. */
 	result?: AppliedDetail;
+	/** Changes live data → bumps the org data version in the same batch (ADR 0008). */
+	applied: boolean;
 	/** Domain error when an in-batch guard trips (a fn re-reads to classify it). */
 	onGuardTrip: AppErrorKind | (() => Promise<AppErrorKind>);
 };
@@ -179,7 +179,6 @@ const isGuardTrip = (e: unknown) => {
 export function makeProfileChanges({
 	db,
 	limits,
-	onGraphChanged,
 	via,
 	now = () => new Date(),
 	newId = () => crypto.randomUUID(),
@@ -375,7 +374,7 @@ export function makeProfileChanges({
 					payload: { kind: change.kind, payload },
 				},
 			],
-			graphChanged: false,
+			applied: false,
 			onGuardTrip: "Conflict",
 		};
 		return { plan, changeRequestId };
@@ -441,7 +440,19 @@ export function makeProfileChanges({
 				...e,
 			})
 		);
-		const items = [...plan.statements, ...eventInserts];
+		// After the plan's last guard(): a rolled-back batch never bumps (ADR 0008).
+		const bump = plan.applied
+			? [
+					db
+						.insert(orgDataVersion)
+						.values({ organizationId: actor.organizationId, version: 1 })
+						.onConflictDoUpdate({
+							target: orgDataVersion.organizationId,
+							set: { version: sql`${orgDataVersion.version} + 1` },
+						}),
+				]
+			: [];
+		const items = [...plan.statements, ...bump, ...eventInserts];
 		if (items.length > 0) {
 			try {
 				await db.batch(items as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
@@ -459,13 +470,12 @@ export function makeProfileChanges({
 				throw e;
 			}
 		}
-		if (plan.graphChanged) await onGraphChanged(actor.organizationId);
 	}
 
 	const emptyPlan = (): Plan => ({
 		statements: [],
 		events: [],
-		graphChanged: false,
+		applied: false,
 		onGuardTrip: "Conflict",
 	});
 
@@ -510,8 +520,8 @@ export function makeProfileChanges({
 				profileName: fullName(row),
 				payload: snapshot,
 			});
-			plan.graphChanged = true;
 			plan.result = { version: 0 };
+			plan.applied = true;
 			return { plan, profileId: row.id, changeRequestId: null };
 		}
 		// Member-created draft: judged via its pending create Change Request (payload null).
@@ -549,8 +559,6 @@ export function makeProfileChanges({
 	): Plan | null {
 		if (subject.version !== change.expectedVersion) throw staleError();
 		const diff: Record<string, unknown> = diffFields(INFO_FIELDS, subject, change.profile);
-		const graphChanged =
-			subject.status === COMMUNITY_PROFILE_STATUS.active && Object.keys(diff).length > 0;
 
 		const before = subject.customFieldData ?? {};
 		const after = change.profile.customFieldData ?? {};
@@ -585,8 +593,8 @@ export function makeProfileChanges({
 					payload: diff,
 				},
 			],
-			graphChanged,
 			result: { version: change.expectedVersion + 1 },
+			applied: true,
 			onGuardTrip: "Stale",
 		};
 	}
@@ -641,8 +649,8 @@ export function makeProfileChanges({
 					payload: relationSnapshot(row),
 				},
 			],
-			graphChanged: true,
 			result: { relationId: row.id },
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -698,8 +706,8 @@ export function makeProfileChanges({
 		if (!rel) throw new AppError("NotFound", "Relationship not found");
 		return {
 			...(await relationRemovals(subject, [rel], { deleteRows: true })),
-			graphChanged: true,
 			result: { relationId: rel.id },
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -733,8 +741,8 @@ export function makeProfileChanges({
 					payload: addressSnapshot(row),
 				},
 			],
-			graphChanged: false,
 			result: { addressId: row.id, version: 0 },
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -769,8 +777,8 @@ export function makeProfileChanges({
 					payload: diff,
 				},
 			],
-			graphChanged: false,
 			result: { addressId: row.id, version: change.expectedVersion + 1 },
+			applied: true,
 			onGuardTrip: "Stale",
 		};
 	}
@@ -791,8 +799,8 @@ export function makeProfileChanges({
 					payload: addressSnapshot(row),
 				},
 			],
-			graphChanged: false,
 			result: { addressId: row.id },
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -839,7 +847,7 @@ export function makeProfileChanges({
 					payload: { status: [from, to] },
 				},
 			],
-			graphChanged: true,
+			applied: true,
 			onGuardTrip: "Conflict",
 		});
 	}
@@ -874,7 +882,7 @@ export function makeProfileChanges({
 				},
 				...removals.events,
 			],
-			graphChanged: subject.status === COMMUNITY_PROFILE_STATUS.active,
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -946,7 +954,7 @@ export function makeProfileChanges({
 					},
 				},
 			],
-			graphChanged: true,
+			applied: true,
 			onGuardTrip: "Conflict",
 		};
 	}
@@ -1134,7 +1142,7 @@ export function makeProfileChanges({
 					},
 					...applied.events.map((e) => ({ ...e, changeRequestId: req.id })),
 				],
-				graphChanged: applied.graphChanged,
+				applied: applied.applied,
 				onGuardTrip: async () => {
 					const current = await db.query.changeRequest.findFirst({
 						where: (f, o) => o.eq(f.id, req.id),
@@ -1168,7 +1176,7 @@ export function makeProfileChanges({
 					},
 					...applied.events.map((e) => ({ ...e, changeRequestId: req.id })),
 				],
-				graphChanged: applied.graphChanged,
+				applied: applied.applied,
 				onGuardTrip: "Conflict",
 			});
 			return { kind: req.kind, profileId: subject.id };
@@ -1233,7 +1241,7 @@ export function makeProfileChanges({
 						},
 					},
 				],
-				graphChanged: false,
+				applied: true,
 				onGuardTrip: "Conflict",
 			});
 		},

@@ -57,7 +57,6 @@ async function expectError(p: Promise<unknown>, kind: AppError["kind"]) {
 describe("makeProfileChanges", () => {
 	let fresh: ReturnType<typeof freshDb>;
 	let db: ReturnType<typeof freshDb>["db"];
-	let onGraphChanged: Mock<(organizationId: string) => void>;
 	let assertProfileSlot: Mock<(organizationId: string, userId: string) => Promise<void>>;
 	let changes: ReturnType<typeof makeProfileChanges>;
 
@@ -65,6 +64,9 @@ describe("makeProfileChanges", () => {
 		db.select().from(auditEvent).orderBy(asc(auditEvent.createdAt), asc(auditEvent.id));
 	const profile = (id: string) =>
 		db.query.communityProfile.findFirst({ where: (f, o) => o.eq(f.id, id) });
+	const version = async () =>
+		(await db.query.orgDataVersion.findFirst({ where: (f, o) => o.eq(f.organizationId, "o1") }))
+			?.version ?? 0;
 
 	type Seed = Partial<typeof communityProfile.$inferInsert> & { id: string };
 	const seed = (...rows: Seed[]) =>
@@ -96,14 +98,12 @@ describe("makeProfileChanges", () => {
 				('m4', 'o1', 'u-other', 'member', 0),
 				('m5', 'o1', 'u-new', 'member', 0);
 		`);
-		onGraphChanged = vi.fn();
 		assertProfileSlot = vi.fn(async () => {});
 		let t = 1000;
 		let n = 0;
 		changes = makeProfileChanges({
 			db,
 			limits: { assertProfileSlot },
-			onGraphChanged,
 			now: () => new Date(t++),
 			newId: () => `id${++n}`,
 		});
@@ -127,7 +127,7 @@ describe("makeProfileChanges", () => {
 				changeRequestId: null,
 			});
 			expect(ev!.payload).toMatchObject({ firstName: "Asha", status: "active" });
-			expect(onGraphChanged).toHaveBeenCalledWith("o1");
+			expect(await version()).toBe(1);
 		});
 
 		it("member create → draft + pending create request + change_request.submitted", async () => {
@@ -153,7 +153,7 @@ describe("makeProfileChanges", () => {
 				kind: "create",
 				profile: expect.objectContaining({ id: "id1", firstName: "Asha", status: "draft" }),
 			});
-			expect(onGraphChanged).not.toHaveBeenCalled();
+			expect(await version()).toBe(0);
 		});
 
 		it("self create → linked, active, profile.created", async () => {
@@ -210,7 +210,7 @@ describe("makeProfileChanges", () => {
 			]);
 			expect(evs[0]!.payload).toEqual({ kind: "create", note: "Welcome" });
 			expect(evs[1]!.payload).toEqual({ status: ["draft", "active"] });
-			expect(onGraphChanged).toHaveBeenCalledWith("o1");
+			expect(await version()).toBe(1);
 		});
 
 		it("reject (reason required) → draft hard-deleted, rejected + profile.deleted snapshot", async () => {
@@ -241,7 +241,8 @@ describe("makeProfileChanges", () => {
 				status: "draft",
 				addresses: [expect.objectContaining({ city: "Surat" })],
 			});
-			expect(onGraphChanged).not.toHaveBeenCalled();
+			// address_add on the creator's own draft applies directly (+1), the reject delete is +1
+			expect(await version()).toBe(2);
 		});
 
 		it("withdraw (submitter only) → draft hard-deleted, withdrawn + profile.deleted", async () => {
@@ -458,11 +459,11 @@ describe("makeProfileChanges", () => {
 			expect(await events()).toHaveLength(1);
 		});
 
-		it("onGraphChanged on a name change, not on a custom-field-only change", async () => {
+		it("every applied info change bumps the org version, custom-field-only included", async () => {
 			await info(0, { customFieldData: { f1: "New" } });
-			expect(onGraphChanged).not.toHaveBeenCalled();
+			expect(await version()).toBe(1);
 			await info(1, { firstName: "Ashu" });
-			expect(onGraphChanged).toHaveBeenCalledTimes(1);
+			expect(await version()).toBe(2);
 		});
 	});
 
@@ -487,6 +488,7 @@ describe("makeProfileChanges", () => {
 			);
 			expect((await profile("p"))!.firstName).toBe("P");
 			expect(await events()).toEqual([]);
+			expect(await version()).toBe(0);
 		});
 
 		it("lifecycle guard trip → Conflict", async () => {
@@ -535,7 +537,7 @@ describe("makeProfileChanges", () => {
 				counterpartName: "B Doe",
 				targetId: rel!.id,
 			});
-			expect(onGraphChanged).toHaveBeenCalledTimes(1);
+			expect(await version()).toBe(1);
 		});
 
 		it("self → Invalid; pair either direction → Invalid; non-active target → NotFound", async () => {
@@ -564,7 +566,7 @@ describe("makeProfileChanges", () => {
 			const ev = (await events()).at(-1)!;
 			expect(ev).toMatchObject({ action: "relation.removed", counterpartProfileId: "b" });
 			expect(ev.payload).toMatchObject({ fromId: "a", toId: "b", type: "father" });
-			expect(onGraphChanged).toHaveBeenCalledTimes(2);
+			expect(await version()).toBe(2);
 		});
 	});
 
@@ -601,7 +603,7 @@ describe("makeProfileChanges", () => {
 			]);
 			expect(evs[1]!.payload).toEqual({ city: ["Surat", "Vadodara"] });
 			expect(evs.every((e) => e.targetId === row!.id)).toBe(true);
-			expect(onGraphChanged).not.toHaveBeenCalled();
+			expect(await version()).toBe(3);
 		});
 
 		it("edit with stale version → Stale; empty edit → unchanged", async () => {
@@ -663,7 +665,7 @@ describe("makeProfileChanges", () => {
 				["change_request.superseded", "r2"],
 				["profile.deactivated", null],
 			]);
-			expect(onGraphChanged).toHaveBeenCalledTimes(1);
+			expect(await version()).toBe(1);
 		});
 
 		it("reactivate inactive → active; wrong status → Invalid; member → Forbidden", async () => {
@@ -684,7 +686,7 @@ describe("makeProfileChanges", () => {
 			const ev = (await events()).at(-1)!;
 			expect(ev.action).toBe("profile.reassigned");
 			expect(ev.payload).toEqual({ userId: "u-new", name: "Nia New", email: "n@x.test" });
-			expect(onGraphChanged).not.toHaveBeenCalled();
+			expect(await version()).toBe(1);
 		});
 
 		it("reassign rejects: draft, self, non-member, plain member, user already linked", async () => {
@@ -711,7 +713,7 @@ describe("makeProfileChanges", () => {
 				`INSERT INTO communityRelation (id, fromId, toId, organizationId, type) VALUES ('in1', 'd', 'a', 'o1', 'child')`
 			);
 			pending("r1", "a");
-			onGraphChanged.mockClear();
+			const before = await version();
 
 			await expectError(changes.remove(ADMIN, "a"), "Forbidden");
 			await changes.remove(OWNER, "a");
@@ -733,13 +735,13 @@ describe("makeProfileChanges", () => {
 				firstName: "A",
 				addresses: [expect.objectContaining({ city: "Surat" })],
 			});
-			expect(onGraphChanged).toHaveBeenCalledTimes(1);
+			expect(await version()).toBe(before + 1);
 		});
 
-		it("remove a draft: no graph change", async () => {
+		it("remove a draft: applied, bumps too", async () => {
 			await changes.remove(OWNER, "d");
 			expect(await profile("d")).toBeUndefined();
-			expect(onGraphChanged).not.toHaveBeenCalled();
+			expect(await version()).toBe(1);
 		});
 	});
 });
