@@ -19,7 +19,7 @@ export type EndpointDeps = {
 const forbidden = (message: string) => Response.json({ error: message }, { status: 403 });
 
 /**
- * `/api/mcp`: Origin/Host guard → bearer verify → per-`clientId:userId` rate limit → MCP handler.
+ * `/api/mcp`: Origin/Host guard → bearer verify → per-`clientId:userId:orgId` rate limit → MCP handler.
  * No CORS headers: browser-based clients are unsupported in v1.
  */
 export function createMcpEndpoint(deps: EndpointDeps) {
@@ -35,7 +35,7 @@ export function createMcpEndpoint(deps: EndpointDeps) {
 		if (verified instanceof Response) return verified;
 
 		const { success } = await deps.limiter.limit({
-			key: `${verified.clientId}:${verified.actor.userId}`,
+			key: `${verified.clientId}:${verified.actor.userId}:${verified.actor.organizationId}`,
 		});
 		if (!success) {
 			return Response.json(

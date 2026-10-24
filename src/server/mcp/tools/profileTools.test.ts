@@ -100,12 +100,14 @@ describe("get_profile", () => {
 		const p = result.structuredContent;
 		expect(p.outgoing).toEqual([
 			{
+				id: "r1",
 				type: "sister",
 				counterpart: { id: "anna", fullName: "Anna Shah", gender: "female", status: "active" },
 			},
 		]);
 		expect(p.incoming).toEqual([
 			{
+				id: "r2",
 				type: "brother",
 				counterpart: { id: "mia", fullName: "Mia Shah", gender: "female", status: "active" },
 			},
@@ -137,10 +139,12 @@ describe("get_profile", () => {
 		});
 		expect(p).not.toHaveProperty("organizationId");
 		expect(p).not.toHaveProperty("customFieldData");
-		expect(p).not.toHaveProperty("version");
+		// Concurrency handles for the write tools: profile + each address carry `version`.
+		expect(p.version).toBe(0);
 		expect(p.addresses).toEqual([
 			{
 				id: "ad1",
+				version: 0,
 				line1: "1 Main St",
 				line2: null,
 				city: "Pune",
@@ -152,6 +156,25 @@ describe("get_profile", () => {
 				digipin: null,
 			},
 		]);
+	});
+
+	describe("myPendingRequests", () => {
+		it("lists only the caller's own pending requests on that profile", async () => {
+			h.fresh.sqlite.exec(`
+				INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('u2', 'U2', 'u2@x.test', 1, 0, 0);
+				INSERT INTO changeRequest (id, organizationId, profileId, profileName, kind, status, submitterUserId, submitterName, createdAt) VALUES
+					('mine', 'o1', 'jared', 'Jared Shah', 'info', 'pending', 'u1', 'U1', 86400000),
+					('mine-done', 'o1', 'jared', 'Jared Shah', 'info', 'approved', 'u1', 'U1', 0),
+					('theirs', 'o1', 'jared', 'Jared Shah', 'info', 'pending', 'u2', 'U2', 0),
+					('elsewhere', 'o1', 'anna', 'Anna Shah', 'info', 'pending', 'u1', 'U1', 0);
+			`);
+			const jared = (await call("get_profile", { id: "jared" })).result.structuredContent;
+			expect(jared.myPendingRequests).toEqual([
+				{ id: "mine", kind: "info", createdAt: "1970-01-02T00:00:00.000Z" },
+			]);
+			const mia = (await call("get_profile", { id: "mia" })).result.structuredContent;
+			expect(mia.myPendingRequests).toEqual([]);
+		});
 	});
 
 	describe("custom fields", () => {
@@ -232,18 +255,30 @@ describe("get_profile", () => {
 	describe("active only, every role", () => {
 		const ROLES: Actor[] = [ACTOR, { ...ACTOR, role: "admin" }, { ...ACTOR, role: "owner" }];
 
-		it("non-active subject → NotFound, except the caller's own linked profile", async () => {
+		it("non-active subject → NotFound, except the caller's own linked profile and own drafts", async () => {
 			for (const actor of ROLES) {
-				for (const id of ["ivy", "dina"]) {
-					const { result } = await call("get_profile", { id }, actor);
-					expect(result, `${actor.role} ${id}`).toMatchObject({
-						isError: true,
-						content: [{ text: "Community Profile not found" }],
-					});
-				}
+				const { result } = await call("get_profile", { id: "ivy" }, actor);
+				expect(result, `${actor.role} ivy`).toMatchObject({
+					isError: true,
+					content: [{ text: "Community Profile not found" }],
+				});
 				const own = await call("get_profile", { id: "me" }, actor);
 				expect(own.result.structuredContent).toMatchObject({ id: "me", status: "inactive" });
+				// Read-your-writes: the draft this Actor created (pending create request) shows.
+				const draft = await call("get_profile", { id: "dina" }, actor);
+				expect(draft.result.structuredContent, `${actor.role} dina`).toMatchObject({
+					id: "dina",
+					status: "draft",
+				});
 			}
+		});
+
+		it("someone else's draft stays NotFound", async () => {
+			const { result } = await call("get_profile", { id: "dina" }, { ...ACTOR, userId: "u2" });
+			expect(result).toMatchObject({
+				isError: true,
+				content: [{ text: "Community Profile not found" }],
+			});
 		});
 
 		it("counterparts: active only (inactive, draft, own inactive dropped)", async () => {

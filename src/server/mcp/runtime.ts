@@ -28,5 +28,5 @@ export const handleMcpRequest = createMcpEndpoint({
 		loadActor: (key) => loadConnectionActor(db, key),
 	}),
 	limiter: env.MCP_RATE_LIMITER,
-	handler: createKutumbMcpHandler(),
+	handler: createKutumbMcpHandler({ burst: env.MCP_WRITE_RATE_LIMITER }),
 });
