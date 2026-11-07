@@ -287,6 +287,7 @@ Throwaway code, not committed. Wrangler 4.158 local dev, Chrome 157 headless on 
 34. Images features: https://developers.cloudflare.com/images/optimization/features/
 35. Images pricing: https://developers.cloudflare.com/images/pricing/
 36. Media Transformations: https://developers.cloudflare.com/stream/transform-videos/
+37. MDN nosniff: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Content-Type-Options
 
 ## Recommendation
 
@@ -306,7 +307,7 @@ Verify after upload, in the Worker, with no decoding and no paid add-ons.
 5. **Poster:** the browser captures one at upload, and it goes through the photo path. Placeholder
    if the browser can't decode.
 6. **Serving:** set `Content-Type` from the verified kind, never the client's. Add
-   `X-Content-Type-Options: nosniff`, honour `Range`. On `<video>` error, show poster plus download.
+   `X-Content-Type-Options: nosniff` [37], honour `Range`. On `<video>` error, show poster plus download.
 7. **Accept the gap:** HEVC won't play on some Windows and Linux setups. Revisit only with evidence
    of real users hitting it. Stream or client-side transcoding are the options then.
 
