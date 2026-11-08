@@ -1,6 +1,6 @@
 # `photo` Change Request
 
-Status: ready-for-agent Blocked by: 26
+Status: resolved Blocked by: 26
 
 ## What to build
 
@@ -29,3 +29,7 @@ A plain member proposes a photo for an `active` Userless Profile, and owner/admi
 - [ ] Approve applies with one Audit Event; old photo's bytes go.
 - [ ] Reject, withdraw and supersede delete the proposed bytes; Audit keeps metadata.
 - [ ] Reassign supersedes a pending `photo` request.
+
+## Comments
+
+Merged 4bd3128cd3d7937b1d882d6d427e203493885731 on feat/storage-integration.
