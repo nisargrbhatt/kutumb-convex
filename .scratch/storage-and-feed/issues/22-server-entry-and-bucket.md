@@ -1,6 +1,6 @@
 # Server entry and R2 binding
 
-Status: ready-for-agent Blocked by:
+Status: resolved Blocked by:
 
 ## What to build
 
@@ -28,3 +28,7 @@ blob behaviour yet.
 ## Human step
 
 Before deploy: `wrangler r2 bucket create kutumb-blobs --location apac`. Local Uploads off.
+
+## Comments
+
+Merged 1a04eb8 on feat/storage-integration.
