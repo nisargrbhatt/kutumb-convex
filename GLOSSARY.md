@@ -34,7 +34,8 @@ change to it is a Change Request. _Avoid_: "orphan profile".
 ## Change Request
 
 A member's proposed change to one Userless Profile, awaiting an owner/admin Review. Covers exactly
-one thing: creating the profile, or one change to its info, one relation, or one address. Changes by
+one thing: creating the profile, or one change to its info, its Profile Photo, one relation, or one
+address. Changes by
 owner/admin apply directly instead. A profile linked to an Org Member never has Change Requests.
 Ends **approved** or **rejected** by a Review, **withdrawn** by its submitter, or **superseded**
 when its profile is reassigned or deleted while it is pending. Only an `active` Userless Profile
@@ -83,6 +84,12 @@ role, with a **pending invitation reserving a slot**) and to **Community Profile
 linked or userless). Reaching it blocks inviting a new Org Member or creating a new Community
 Profile respectively. There is no exemption for an Org Member creating their own Community Profile.
 
+## Upload limit
+
+The maximum size of a single piece of media added to a community. A video is at most 2 minutes and
+95 MB. There is no limit on the total a community or Org Member stores; only media still being
+added is capped per Org Member, at 500 MB.
+
 ## Actor
 
 The subject of any action against a community: an Org Member identified by their user, the
@@ -120,3 +127,45 @@ organization means a second Connection. A Connection reads only, unless its memb
 back means reconnecting). An owner can turn off **AI Client writes** for the whole organization,
 making every Connection there read-only. Each Connection has its own **write quota**. _Avoid_: "API
 token", "grant", "integration".
+
+## Profile Photo
+
+The image identifying one Community Profile, shown as its avatar. Belongs to the profile, so one
+person can have different photos in different communities. Visible to exactly those who can see the
+profile. Set, replaced or removed like any other change to the profile, except that owner/admin may
+also remove (but not set) the photo of a profile linked to an Org Member. Stays with the profile if
+it is reassigned. A replaced or removed image is gone: history records that it changed, not what it
+showed. _Avoid_: "user image", "account picture" (the auth user's image is a separate thing).
+
+## Feed
+
+The stream of what Org Members share within their organization, most recently posted first. Visible
+only to Org Members of that organization: there is no public or cross-organization view. A link to
+something on the Feed can be shared, but opening it still requires signing in as one of those Org
+Members. Opening one moves that member into its organization. To anyone else it looks the same as
+something that does not exist.
+
+## Post
+
+One entry on the Feed, of exactly one kind, fixed when it is posted. Memory is the first kind;
+announcements and polls are expected later. Its author is an Org Member at the time of posting,
+never a Userless Profile, and the Post outlives that membership. Any Post can be liked and commented
+on, whatever its kind; media belongs to the kind, not to Post. _Avoid_: "feed item".
+
+## Memory
+
+A kind of Post: an Org Member's shared recollection, with a title, a formatted description and a
+gallery of up to five photos and short videos, which may be empty. Any Org Member may post one, and
+it is live at once: no drafts, no approval. Only its author may edit it, while still an Org Member.
+Its author or an owner/admin may remove it; removal is permanent and leaves no record.
+
+## Comment
+
+An Org Member's plain-text response to a Post, in one flat list with no replies. It can't be edited
+and can't be liked. Its author, while still an Org Member, or an owner/admin may remove it; removal
+is permanent and leaves no record. It outlives its author's membership.
+
+## Like
+
+An Org Member's single mark of appreciation on a Post, which they can take back. Who liked a Post is
+visible to its viewers. A Like outlives its author's membership. _Avoid_: "reaction".
