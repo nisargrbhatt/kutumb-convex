@@ -10,7 +10,8 @@ import { AppError } from "@/domain/errors";
 
 export const statement = {
 	...defaultStatements,
-	communityProfile: ["create", "delete", "reassign"],
+	/** `removePhoto`: take down a linked profile's photo (never set it). */
+	communityProfile: ["create", "delete", "reassign", "removePhoto"],
 	customFields: ["create", "read", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
@@ -30,7 +31,7 @@ export const member = ac.newRole({
 
 export const admin = ac.newRole({
 	...adminAc.statements,
-	communityProfile: ["create", "reassign"],
+	communityProfile: ["create", "reassign", "removePhoto"],
 	customFields: ["read"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
@@ -39,7 +40,7 @@ export const admin = ac.newRole({
 
 export const owner = ac.newRole({
 	...ownerAc.statements,
-	communityProfile: ["create", "delete", "reassign"],
+	communityProfile: ["create", "delete", "reassign", "removePhoto"],
 	customFields: ["read", "create", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],

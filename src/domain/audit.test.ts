@@ -119,4 +119,14 @@ describe("profile.photo_changed", () => {
 			{ label: "Photo", before: "Photo", after: "1024×1024, 92 KB" },
 		]);
 	});
+
+	it("deleted snapshot's `photo` → one Photo value row; null photo → no row", () => {
+		expect(diffRows({ firstName: "Asha", photo })).toEqual([
+			{ label: "First name", value: "Asha" },
+			{ label: "Photo", value: "1024×1024, 92 KB" },
+		]);
+		expect(diffRows({ firstName: "Asha", photo: null })).toEqual([
+			{ label: "First name", value: "Asha" },
+		]);
+	});
 });

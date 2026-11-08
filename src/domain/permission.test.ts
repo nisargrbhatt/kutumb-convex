@@ -7,7 +7,7 @@ const actorWith = (role: Role): Actor => ({ userId: "u1", organizationId: "o1", 
 // Custom app statements only (`communityProfile`, `customFields`, `changeRequest`, `auditEvent`) — better-auth's own
 // default statements (organization, member, invitation, ...) are its contract, not ours.
 const customStatements = {
-	communityProfile: ["create", "delete", "reassign"],
+	communityProfile: ["create", "delete", "reassign", "removePhoto"],
 	customFields: ["create", "read", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
@@ -22,14 +22,14 @@ const expected: Record<Role, Record<string, readonly string[]>> = {
 		changeRequest: ["create"],
 	},
 	admin: {
-		communityProfile: ["create", "reassign"],
+		communityProfile: ["create", "reassign", "removePhoto"],
 		customFields: ["read"],
 		changeRequest: ["create", "review"],
 		auditEvent: ["read"],
 		post: ["moderate"],
 	},
 	owner: {
-		communityProfile: ["create", "delete", "reassign"],
+		communityProfile: ["create", "delete", "reassign", "removePhoto"],
 		customFields: ["read", "create", "delete"],
 		changeRequest: ["create", "review"],
 		auditEvent: ["read"],

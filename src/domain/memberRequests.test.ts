@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AppError } from "./errors";
 import {
 	addMemberFeedback,
+	photoEditMode,
 	profileEditMode,
 	requestOutcome,
 	submitErrorFeedback,
@@ -26,6 +27,26 @@ describe("profileEditMode", () => {
 		const linked = { userId: "u1", status: "active" as const };
 		expect(profileEditMode({ canReview: true }, linked)).toBe("none");
 		expect(profileEditMode({ canReview: false }, linked)).toBe("none");
+	});
+});
+
+describe("photoEditMode", () => {
+	const reviewer = { canReview: true, canRemovePhoto: true };
+	const member = { canReview: false, canRemovePhoto: false };
+
+	it("Userless: owner/admin and draft creator edit; member on active gets nothing here (27)", () => {
+		for (const s of ["active", "inactive", "draft"] as const)
+			expect(photoEditMode(reviewer, userless(s))).toBe("edit");
+		expect(photoEditMode(member, userless("draft"))).toBe("edit");
+		expect(photoEditMode(member, userless("active"))).toBe("none");
+		expect(photoEditMode(member, userless("inactive"))).toBe("none");
+	});
+
+	it("linked: owner/admin remove only when there is a photo; member nothing", () => {
+		const linked = { userId: "u1", status: "active" as const };
+		expect(photoEditMode(reviewer, { ...linked, photoBlobId: "b1" })).toBe("remove");
+		expect(photoEditMode(reviewer, { ...linked, photoBlobId: null })).toBe("none");
+		expect(photoEditMode(member, { ...linked, photoBlobId: "b1" })).toBe("none");
 	});
 });
 
