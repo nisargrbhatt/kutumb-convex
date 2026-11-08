@@ -45,11 +45,13 @@ function RequestCard({
 	request,
 	index,
 	siblings,
+	currentPhotoBlobId,
 	onReject,
 }: {
 	request: Request;
 	index: number;
 	siblings: Request[];
+	currentPhotoBlobId: string | null;
 	onReject: (r: Request) => void;
 }) {
 	const approve = useReviewChangeRequest();
@@ -104,7 +106,7 @@ function RequestCard({
 				</p>
 			) : null}
 
-			<RequestDiff request={request} />
+			<RequestDiff request={request} currentPhotoBlobId={currentPhotoBlobId} />
 
 			<Form {...form}>
 				<form
@@ -202,6 +204,7 @@ export function ReviewDrawer({
 									request={r}
 									index={i}
 									siblings={shown.requests}
+									currentPhotoBlobId={shown.photoBlobId}
 									onReject={setRejecting}
 								/>
 							))}

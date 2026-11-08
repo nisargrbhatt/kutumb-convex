@@ -74,6 +74,7 @@ export const CHANGE_REQUEST_KIND = {
 	address_add: "address_add",
 	address_edit: "address_edit",
 	address_remove: "address_remove",
+	photo: "photo",
 } as const;
 
 export const CHANGE_REQUEST_STATUS = {

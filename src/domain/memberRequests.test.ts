@@ -34,11 +34,11 @@ describe("photoEditMode", () => {
 	const reviewer = { canReview: true, canRemovePhoto: true };
 	const member = { canReview: false, canRemovePhoto: false };
 
-	it("Userless: owner/admin and draft creator edit; member on active gets nothing here (27)", () => {
+	it("Userless: owner/admin and draft creator edit; member on active requests", () => {
 		for (const s of ["active", "inactive", "draft"] as const)
 			expect(photoEditMode(reviewer, userless(s))).toBe("edit");
 		expect(photoEditMode(member, userless("draft"))).toBe("edit");
-		expect(photoEditMode(member, userless("active"))).toBe("none");
+		expect(photoEditMode(member, userless("active"))).toBe("request");
 		expect(photoEditMode(member, userless("inactive"))).toBe("none");
 	});
 

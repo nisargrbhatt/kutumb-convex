@@ -12,7 +12,8 @@ const ProfilePhotoDrawer = lazy(() =>
 
 /**
  * "Add photo" / "Edit photo" plus Remove (confirm Dialog, no reason). `edit`: own linked profile, or
- * a Userless Profile the Actor edits directly. `remove`: owner/admin on someone's linked profile.
+ * a Userless Profile the Actor edits directly. `request`: same controls, but both file a `photo`
+ * Change Request ("Send for review"). `remove`: owner/admin on someone's linked profile.
  */
 export function ProfilePhotoActions({
 	profile,
@@ -20,7 +21,7 @@ export function ProfilePhotoActions({
 	own = true,
 }: {
 	profile: Parameters<typeof fullName>[0] & { id: string; photoBlobId: string | null };
-	mode?: "edit" | "remove";
+	mode?: "edit" | "request" | "remove";
 	/** Copy only: "Your initials" vs "Initials". */
 	own?: boolean;
 }) {
@@ -30,10 +31,12 @@ export function ProfilePhotoActions({
 	const [confirm, setConfirm] = useState(false);
 	const mutation = useSetMyProfilePhoto();
 	const hasPhoto = profile.photoBlobId !== null;
+	const request = mode === "request";
+	const editable = mode === "edit" || request;
 
 	return (
 		<>
-			{mode === "edit" ? (
+			{editable ? (
 				<Button
 					variant="outline"
 					onClick={() => {
@@ -42,26 +45,27 @@ export function ProfilePhotoActions({
 					}}
 				>
 					<CameraIcon />
-					{hasPhoto ? "Edit photo" : "Add photo"}
+					{request ? "Suggest photo" : hasPhoto ? "Edit photo" : "Add photo"}
 				</Button>
 			) : null}
 			{hasPhoto ? (
 				<Button
 					variant="outline"
 					size="icon"
-					aria-label="Remove photo"
+					aria-label={request ? "Suggest removing photo" : "Remove photo"}
 					onClick={() => setConfirm(true)}
 				>
 					<Trash2Icon />
 				</Button>
 			) : null}
 
-			{opened && mode === "edit" ? (
+			{opened && editable ? (
 				<Suspense fallback={null}>
 					<ProfilePhotoDrawer
 						open={open}
 						onOpenChange={setOpen}
 						profile={profile}
+						saveLabel={request ? "Send for review" : undefined}
 						onSave={(variants, signal) =>
 							mutation.mutateAsync({ profileId: profile.id, variants, signal })
 						}
@@ -72,10 +76,16 @@ export function ProfilePhotoActions({
 			<ConfirmDialog
 				open={confirm}
 				onOpenChange={setConfirm}
-				title="Remove profile photo?"
-				description={own ? "Your initials will show instead." : "Initials will show instead."}
-				confirmLabel="Remove"
-				destructive
+				title={request ? "Suggest removing this photo?" : "Remove profile photo?"}
+				description={
+					request
+						? "An owner/admin will review it. The photo stays until they approve."
+						: own
+							? "Your initials will show instead."
+							: "Initials will show instead."
+				}
+				confirmLabel={request ? "Send for review" : "Remove"}
+				destructive={!request}
 				isPending={mutation.isPending}
 				onConfirm={() =>
 					mutation.mutate({ profileId: profile.id }, { onSuccess: () => setConfirm(false) })

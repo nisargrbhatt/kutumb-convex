@@ -1,6 +1,6 @@
 import type { CommunityProfileInput, MemberFilter } from "@/domain/communityProfile";
 import { LIMIT_COPY } from "@/domain/limits";
-import { addMemberFeedback } from "@/domain/memberRequests";
+import { addMemberFeedback, submitFeedback } from "@/domain/memberRequests";
 import { queryOptions, useMutation, useQuery } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
@@ -252,9 +252,18 @@ export function useSetMyProfilePhoto() {
 			}
 		},
 		onSuccess: async (result, { variants }) => {
-			if (result.outcome === "unchanged") return;
-			toast.success(variants ? "Photo saved" : "Photo removed");
-			posthog.capture(variants ? "profile_photo_saved" : "profile_photo_removed");
+			if (result.outcome === "unchanged") {
+				if (result.changeRequestId) toast.info("Already sent for review");
+				return;
+			}
+			if (result.outcome === "requested") {
+				const fb = submitFeedback("requested", "");
+				toast.success(fb.title, { description: fb.description });
+				posthog.capture("profile_photo_requested", { remove: !variants });
+			} else {
+				toast.success(variants ? "Photo saved" : "Photo removed");
+				posthog.capture(variants ? "profile_photo_saved" : "profile_photo_removed");
+			}
 			await invalidate();
 		},
 		onError: (error) => {
