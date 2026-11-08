@@ -4,7 +4,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { auth } from "@/lib/auth";
 import { ORG_LIMIT, MEMBER_LIMIT } from "@/domain/limits";
-import { countUserMemberships, countOrgMembersAndPending, countOrgProfiles } from "@/lib/limits-db";
+import {
+	countUserMemberships,
+	countOrgMembersAndPending,
+	countOrgProfiles,
+	countOrgStorageBytes,
+} from "@/lib/limits-db";
 
 export const listMyOrganizationInvitations = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
@@ -27,10 +32,11 @@ export const getOrgUsage = createServerFn({ method: "GET" })
 	.handler(async ({ context }) => {
 		const { organizationId } = context.actor;
 
-		const [members, profiles] = await Promise.all([
+		const [members, profiles, storageBytes] = await Promise.all([
 			countOrgMembersAndPending(organizationId),
 			countOrgProfiles(organizationId),
+			countOrgStorageBytes(organizationId),
 		]);
 
-		return { members, profiles, limit: MEMBER_LIMIT };
+		return { members, profiles, storageBytes, limit: MEMBER_LIMIT };
 	});
