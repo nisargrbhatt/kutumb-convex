@@ -1,7 +1,7 @@
 import type { CommunityProfileInput, MemberFilter } from "@/domain/communityProfile";
 import { LIMIT_COPY } from "@/domain/limits";
 import { addMemberFeedback, submitFeedback } from "@/domain/memberRequests";
-import { queryOptions, useMutation } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import {
@@ -35,6 +35,12 @@ export const myProfileQuery = (orgId: string) =>
 		queryKey: profileKeys.mine(orgId),
 		queryFn: () => getMyCommunityProfile(),
 	});
+
+/** Active org's linked profile photo, null when none (or not loaded). Keyed by org, so it follows org switches. */
+export function useMyPhotoBlobId(orgId: string | undefined): string | null {
+	const { data } = useQuery({ ...myProfileQuery(orgId ?? ""), enabled: !!orgId });
+	return data?.photoBlobId ?? null;
+}
 
 export const activeMemberCountQuery = (orgId: string) =>
 	queryOptions({

@@ -248,3 +248,15 @@ describe("get_family_graph", () => {
 		expect(tool.annotations).toMatchObject({ readOnlyHint: true });
 	});
 });
+
+describe("get_family_graph stays photo-free (spec: Profile Photo > Who)", () => {
+	it("no photoBlobId in output though the graph blob carries it", async () => {
+		seed(`${family} UPDATE communityProfile SET photoBlobId = 'blob-' || id;`);
+		const { result } = await call({ depth: 2 });
+		expect(result.isError).toBeUndefined();
+		expect(result.structuredContent.nodes.length).toBeGreaterThan(1);
+		const out = JSON.stringify(result);
+		expect(out).not.toContain("photoBlobId");
+		expect(out).not.toContain("blob-");
+	});
+});

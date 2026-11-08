@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PICKED_PHOTO_MAX_BYTES } from "./limits";
-import { PHOTO_COPY, checkPickedPhoto, isHeic, outputEdge } from "./photo";
+import { PHOTO_COPY, checkPickedPhoto, isHeic, outputEdge, treeShowsPhotos } from "./photo";
 
 const ftyp = (brand: string) =>
 	new Uint8Array([
@@ -52,5 +52,14 @@ describe("outputEdge", () => {
 		expect(outputEdge("avatar", 1800)).toBe(128);
 		expect(outputEdge("avatar", 90)).toBe(90);
 		expect(outputEdge("display", 0.2)).toBe(1);
+	});
+});
+
+describe("treeShowsPhotos", () => {
+	it("photos at zoom 0.5 and above, initials below", () => {
+		expect(treeShowsPhotos(0.2)).toBe(false);
+		expect(treeShowsPhotos(0.49)).toBe(false);
+		expect(treeShowsPhotos(0.5)).toBe(true);
+		expect(treeShowsPhotos(2)).toBe(true);
 	});
 });

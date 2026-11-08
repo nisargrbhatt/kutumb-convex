@@ -1,6 +1,7 @@
 import { fullName, initials } from "@/domain/communityProfile";
 import { InfoItem } from "@/components/profile/InfoItem";
-import { ProfileAvatar } from "@/components/profile/ProfileName";
+import { PhotoAvatar, ProfileAvatar } from "@/components/profile/ProfileName";
+import { treeShowsPhotos } from "@/domain/photo";
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import {
 	useNodesState,
 	useEdgesState,
 	useReactFlow,
+	useStore,
 	Handle,
 	Position,
 	Panel,
@@ -31,7 +33,6 @@ import "@xyflow/react/dist/style.css";
 import { layoutGraph, type Point, type RelationEdgeData } from "@/lib/communityGraphLayout";
 import { useEffect, useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
 	Sheet,
@@ -79,9 +80,13 @@ function usePrefersReducedMotion() {
 	return reduced;
 }
 
+/** Zoomed out (< 0.5): initials only, so no image requests (spec: Profile Photo > Where it shows). */
+const useShowTreePhotos = () => useStore((s) => treeShowsPhotos(s.transform[2]));
+
 type MemberNodeData = {
 	name: string;
 	initials: string;
+	photoBlobId: string | null;
 	nickName: string | null;
 	hop: number;
 	deceased: boolean;
@@ -93,6 +98,7 @@ type MemberNodeData = {
 
 function MemberNode({ data }: NodeProps) {
 	const d = data as MemberNodeData;
+	const showPhoto = useShowTreePhotos();
 	const [visible, setVisible] = useState(d.reducedMotion);
 
 	useEffect(() => {
@@ -123,9 +129,12 @@ function MemberNode({ data }: NodeProps) {
 					d.deceased ? "opacity-80" : "",
 				].join(" ")}
 			>
-				<Avatar className="h-9 w-9 shrink-0">
-					<AvatarFallback className="text-xs font-medium">{d.initials}</AvatarFallback>
-				</Avatar>
+				<PhotoAvatar
+					initials={d.initials}
+					photoBlobId={showPhoto ? d.photoBlobId : null}
+					className="h-9 w-9 shrink-0"
+					fallbackClassName="text-xs"
+				/>
 				<div className="flex flex-1 flex-col overflow-hidden">
 					<span className="truncate text-sm leading-tight font-semibold">{d.name}</span>
 					{d.nickName ? (
@@ -261,6 +270,7 @@ function ProfilePanel(props: {
 }) {
 	const isMobile = useIsMobile();
 	const node = props.node;
+	const showPhoto = useShowTreePhotos();
 	const name = node ? fullName(node) : "";
 
 	return (
@@ -270,7 +280,11 @@ function ProfilePanel(props: {
 					<>
 						<SheetHeader>
 							<div className="flex items-center gap-3">
-								<ProfileAvatar profile={node} className="h-12 w-12" />
+								<ProfileAvatar
+									profile={node}
+									photoBlobId={showPhoto ? node.photoBlobId : null}
+									className="h-12 w-12"
+								/>
 								<div className="flex flex-col">
 									<SheetTitle className="text-base">{name}</SheetTitle>
 									<SheetDescription>
@@ -363,6 +377,7 @@ function Flow() {
 				data: {
 					name: fullName(p),
 					initials: initials(p),
+					photoBlobId: p.photoBlobId ?? null,
 					nickName: p.nickName,
 					hop: p.hop,
 					deceased: !!p.dateOfDeath,

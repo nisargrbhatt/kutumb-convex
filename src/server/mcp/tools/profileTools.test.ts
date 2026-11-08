@@ -540,3 +540,23 @@ describe("count_profiles", () => {
 		expect(tool.inputSchema.properties).toHaveProperty("customFieldFilters");
 	});
 });
+
+describe("AI Clients stay photo-free (spec: Profile Photo > Who)", () => {
+	beforeEach(() => {
+		h.fresh.sqlite.exec(
+			`UPDATE communityProfile SET photoBlobId = 'blob-' || id WHERE organizationId = 'o1';`
+		);
+	});
+
+	it.each([
+		["get_profile", { id: "jared" }],
+		["search_profiles", {}],
+		["search_profiles", { query: "Jared" }],
+	])("%s output has no photoBlobId", async (tool, args) => {
+		const { result } = await call(tool, args);
+		expect(result.isError).toBeUndefined();
+		const out = JSON.stringify(result);
+		expect(out).not.toContain("photoBlobId");
+		expect(out).not.toContain("blob-");
+	});
+});

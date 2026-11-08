@@ -204,7 +204,7 @@ export function ReviewDrawer({
 									request={r}
 									index={i}
 									siblings={shown.requests}
-									currentPhotoBlobId={shown.currentPhotoBlobId}
+									currentPhotoBlobId={shown.photoBlobId}
 									onReject={setRejecting}
 								/>
 							))}

@@ -24,6 +24,8 @@ export type GraphProfile = {
 	dateOfDeath: string | null;
 	email: string | null;
 	mobileNumber: string | null;
+	/** Profile Photo Blob (tree avatars). Optional: KV blobs cached before it existed lack it. */
+	photoBlobId?: string | null;
 };
 
 export type GraphEdge = {
@@ -127,6 +129,7 @@ async function rebuild(db: BatchDb, organizationId: string) {
 				dateOfDeath: communityProfile.dateOfDeath,
 				email: communityProfile.email,
 				mobileNumber: communityProfile.mobileNumber,
+				photoBlobId: communityProfile.photoBlobId,
 			})
 			.from(communityProfile)
 			.where(

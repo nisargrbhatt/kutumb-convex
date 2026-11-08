@@ -70,6 +70,18 @@ describe("getOrgGraphBlob", () => {
 		expect(s.waitUntil).toHaveBeenCalledTimes(1);
 	});
 
+	it("profiles carry photoBlobId (tree avatars)", async () => {
+		s.fresh.sqlite.exec(`
+			${profile("a")} ${profile("b")}
+			UPDATE communityProfile SET photoBlobId = 'blob-a' WHERE id = 'a';
+		`);
+		const blob = await s.get();
+		expect(Object.fromEntries(blob.profiles.map((p) => [p.id, p.photoBlobId]))).toEqual({
+			a: "blob-a",
+			b: null,
+		});
+	});
+
 	it("isolate LRU hit: no KV read, no rebuild", async () => {
 		s.fresh.sqlite.exec(profile("a"));
 		const first = await s.get();

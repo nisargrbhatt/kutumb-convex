@@ -18,7 +18,13 @@ export type FeedView = "card" | "detail";
  * `visibleProfileWhere(viewer)` finds it (`profileId` set: link it), else the frozen snapshot name
  * and its initials, no photo, no link.
  */
-export type AuthorDisplay = { name: string; initials: string; profileId: string | null };
+/** `photoBlobId`: the visible profile's photo; snapshot authors never get one. */
+export type AuthorDisplay = {
+	name: string;
+	initials: string;
+	profileId: string | null;
+	photoBlobId: string | null;
+};
 
 /** Per kind, what each view carries. Adding a `PostKind` without an entry fails to compile. */
 export type PostKindData = {

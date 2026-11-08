@@ -93,6 +93,7 @@ export async function listCommunityMembers(db: QueryDb, actor: Actor, filter: Me
 				bloodGroup: true,
 				mobileNumber: true,
 				dateOfBirth: true,
+				photoBlobId: true,
 			},
 		}),
 		db.select({ total: count() }).from(communityProfile).where(whereClause!),

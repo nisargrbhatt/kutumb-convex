@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { nameInitials } from "@/domain/feed";
 import { feedQuery } from "@/queries/feed";
+import { useMyPhotoBlobId } from "@/queries/communityProfile";
 
 /** `marked` rides in with the Drawer, never on the Feed's first load. */
 const MemoryDrawer = lazy(() => import("@/components/feed/MemoryDrawer"));
@@ -47,13 +48,14 @@ function CardSkeleton() {
 }
 
 function SharePrompt({ onOpen }: { onOpen: () => void }) {
-	const { session } = Route.useRouteContext();
+	const { session, organizationId } = Route.useRouteContext();
+	const photoBlobId = useMyPhotoBlobId(organizationId);
 	const name = session?.user.name ?? "";
 	return (
 		<Card className="py-3">
 			<CardContent className="flex items-center gap-3 px-4">
 				<AuthorAvatar
-					author={{ name, initials: nameInitials(name), profileId: null }}
+					author={{ name, initials: nameInitials(name), profileId: null, photoBlobId }}
 					className="size-9 shrink-0"
 				/>
 				<button
