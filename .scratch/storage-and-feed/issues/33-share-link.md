@@ -1,6 +1,6 @@
 # Share link
 
-Status: ready-for-agent Blocked by: 29
+Status: resolved Blocked by: 29
 
 ## What to build
 
@@ -22,3 +22,7 @@ Status: ready-for-agent Blocked by: 29
 - [ ] Non-member, ex-member, invitee, removed Post and unknown id get the same server response.
 - [ ] Signed out: login, then back to the Post.
 - [ ] No Post title in page `head`.
+
+## Comments
+
+- Merged b07ce30 on feat/storage-integration.
