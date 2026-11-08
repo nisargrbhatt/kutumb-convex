@@ -1,15 +1,17 @@
 import { Link } from "@tanstack/react-router";
 import { format, formatDistanceToNow } from "date-fns";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { PhotoAvatar } from "@/components/profile/ProfileName";
 import type { AuthorDisplay, PostBase } from "@/domain/feed";
 import { cn } from "@/lib/utils";
 
-/** Initials avatar. Snapshot authors never get a photo. */
+/** Visible profile's photo, else initials. Snapshot authors never get a photo. */
 export function AuthorAvatar({ author, className }: { author: AuthorDisplay; className?: string }) {
 	return (
-		<Avatar className={className}>
-			<AvatarFallback className="font-medium">{author.initials}</AvatarFallback>
-		</Avatar>
+		<PhotoAvatar
+			initials={author.initials}
+			photoBlobId={author.photoBlobId}
+			className={className}
+		/>
 	);
 }
 

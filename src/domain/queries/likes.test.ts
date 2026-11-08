@@ -91,8 +91,8 @@ describe("Likes", () => {
 		const first = await listLikers(db, OTHER, { postId });
 		expect(first.likers).toHaveLength(50);
 		expect(first.likers.slice(0, 2).map((l) => l.author)).toEqual([
-			{ name: "Asha Patel", initials: "AP", profileId: "cp1" },
-			{ name: "Liker 51", initials: "L5", profileId: null },
+			{ name: "Asha Patel", initials: "AP", profileId: "cp1", photoBlobId: null },
+			{ name: "Liker 51", initials: "L5", profileId: null, photoBlobId: null },
 		]);
 		const second = await listLikers(db, OTHER, { postId, cursor: first.nextCursor! });
 		expect(second.likers.map((l) => l.author.name)).toEqual(["Liker 2", "Liker 1", "Liker 0"]);
@@ -106,7 +106,7 @@ describe("Likes", () => {
 		expect(await likesOf(MEMBER)).toEqual({ A: { count: 1, viewerLiked: false } });
 		const { likers } = await listLikers(db, MEMBER, { postId });
 		expect(likers.map((l) => l.author)).toEqual([
-			{ name: "Gone Member", initials: "GM", profileId: null },
+			{ name: "Gone Member", initials: "GM", profileId: null, photoBlobId: null },
 		]);
 	});
 

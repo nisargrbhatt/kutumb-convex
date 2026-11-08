@@ -161,6 +161,7 @@ export async function listPendingByProfile(db: QueryDb, actor: Actor) {
 			currentMiddleName: communityProfile.middleName,
 			currentLastName: communityProfile.lastName,
 			profileStatus: communityProfile.status,
+			photoBlobId: communityProfile.photoBlobId,
 		})
 		.from(changeRequest)
 		.leftJoin(communityProfile, eq(communityProfile.id, changeRequest.profileId))
@@ -209,6 +210,8 @@ export async function listPendingByProfile(db: QueryDb, actor: Actor) {
 					: first.profileName,
 			/** null when the profile no longer exists. */
 			profileStatus: first.profileStatus,
+			/** Avatar; null when none or the profile is gone. */
+			photoBlobId: first.photoBlobId,
 			oldestAt: first.createdAt,
 			count: requests.length,
 			staleCount: requests.filter((r) => r.stale).length,

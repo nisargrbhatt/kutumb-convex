@@ -211,6 +211,17 @@ describe("profile queries", () => {
 			expect(paged.page).toBe(2);
 		});
 
+		it("rows carry photoBlobId for the list avatar", async () => {
+			await seed([
+				{ id: "a", firstName: "Asha", photoBlobId: "blob-a" },
+				{ id: "b", firstName: "Bina" },
+			]);
+			const base = { search: "", status: "", gender: "", page: 1, pageSize: 10 } as const;
+			const { data } = await listCommunityMembers(db, ADMIN, base);
+			const byId = Object.fromEntries(data.map((d) => [d.id, d.photoBlobId]));
+			expect(byId).toEqual({ a: "blob-a", b: null });
+		});
+
 		it("search matches first/last/email", async () => {
 			await seed([
 				{ id: "a", firstName: "Asha", email: "asha@x.test" },

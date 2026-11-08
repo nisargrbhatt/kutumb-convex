@@ -1,4 +1,4 @@
-import { ProfileName } from "@/components/profile/ProfileName";
+import { ProfileAvatar, ProfileName } from "@/components/profile/ProfileName";
 import { ProfileStatusBadge } from "@/components/profile/ProfileStatusBadge";
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { communityMembersQuery, useAddMissingMember } from "@/queries/communityProfile";
@@ -93,6 +93,7 @@ type CommunityMember = {
 	bloodGroup: string | null;
 	mobileNumber: string | null;
 	dateOfBirth: string | null;
+	photoBlobId: string | null;
 };
 
 const columns: ColumnDef<CommunityMember>[] = [
@@ -100,11 +101,23 @@ const columns: ColumnDef<CommunityMember>[] = [
 		accessorKey: "name",
 		header: "Name",
 		cell: ({ row }) => (
-			<Link to={"/members/$id"} params={{ id: row.original.id }}>
-				<div className="flex flex-col">
-					<ProfileName profile={row.original} className="font-medium" />
+			<Link
+				to={"/members/$id"}
+				params={{ id: row.original.id }}
+				className="flex min-w-0 items-center gap-3"
+			>
+				<ProfileAvatar
+					profile={row.original}
+					photoBlobId={row.original.photoBlobId}
+					className="size-8 shrink-0"
+					fallbackClassName="text-xs"
+				/>
+				<div className="flex min-w-0 flex-col">
+					<ProfileName profile={row.original} className="truncate font-medium" />
 					{row.original.nickName && (
-						<span className="text-xs text-muted-foreground">({row.original.nickName})</span>
+						<span className="truncate text-xs text-muted-foreground">
+							({row.original.nickName})
+						</span>
 					)}
 				</div>
 			</Link>
