@@ -129,4 +129,10 @@ describe("profile.photo_changed", () => {
 			{ label: "First name", value: "Asha" },
 		]);
 	});
+
+	it("submitted photo request `{ kind, photo: [before, after] }` → one Photo change row", () => {
+		expect(diffRows({ kind: "photo", photo: [null, photo] })).toEqual([
+			{ label: "Photo", before: null, after: "1024×1024, 92 KB" },
+		]);
+	});
 });

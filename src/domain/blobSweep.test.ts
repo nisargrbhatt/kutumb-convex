@@ -81,13 +81,35 @@ describe("blob sweep", () => {
 		expect(await s.h.blob("cross")).toBeUndefined();
 	});
 
-	it("leaves changeRequest and memory owned Blobs alone (owner checks are stubs)", async () => {
+	it("leaves memory owned Blobs alone (owner check is a stub)", async () => {
 		const s = setup();
-		await s.blob("cr", { status: "attached", ownerKind: "changeRequest", ownerId: "nope" });
 		await s.blob("mem", { status: "attached", ownerKind: "memory", ownerId: "nope" });
 		await s.sweep.run();
-		expect((await s.h.blob("cr"))?.status).toBe("attached");
 		expect((await s.h.blob("mem"))?.status).toBe("attached");
+	});
+
+	it("a Change Request Blob lives only while its request is pending in the same org", async () => {
+		const s = setup();
+		s.h.fresh.sqlite.exec(`
+			INSERT INTO organization (id, name, slug, created_at) VALUES ('o2', 'Org 2', 'o2', 0);
+			INSERT INTO changeRequest (id, organizationId, profileId, profileName, kind, status,
+				submitterUserId, submitterName, createdAt) VALUES
+				('cr-p', 'o1', 'p', 'P', 'photo', 'pending', 'u-member', 'M', 0),
+				('cr-r', 'o1', 'p', 'P', 'photo', 'rejected', 'u-member', 'M', 0),
+				('cr-x', 'o2', 'p', 'P', 'photo', 'pending', 'u-member', 'M', 0);
+		`);
+		const cr = (id: string, ownerId: string) =>
+			s.blob(id, { status: "attached", ownerKind: "changeRequest", ownerId });
+		await cr("live", "cr-p");
+		await cr("closed", "cr-r");
+		await cr("cross", "cr-x");
+		await cr("gone", "nope");
+		await s.sweep.run();
+		expect((await s.h.blob("live"))?.status).toBe("attached");
+		for (const id of ["closed", "cross", "gone"]) {
+			expect(await s.h.blob(id)).toBeUndefined();
+			expect(s.hasBytes(id)).toBe(false);
+		}
 	});
 
 	it("retries byte deletes on deleted rows; a failed delete keeps the row for next run", async () => {

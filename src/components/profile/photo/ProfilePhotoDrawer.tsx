@@ -58,11 +58,14 @@ export function ProfilePhotoDrawer({
 	onOpenChange,
 	profile,
 	onSave,
+	saveLabel = "Save photo",
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	profile: NamedProfile;
 	onSave: (variants: { avatar: Blob; display: Blob }, signal: AbortSignal) => Promise<unknown>;
+	/** Footer button: "Send for review" when the save files a `photo` Change Request. */
+	saveLabel?: string;
 }) {
 	const inputRef = useRef<HTMLInputElement | null>(null);
 	const [photo, setPhoto] = useState<DecodedPhoto | null>(null);
@@ -342,7 +345,7 @@ export function ProfilePhotoDrawer({
 						</Button>
 						<Button disabled={!photo || !area || saving} onClick={() => void save()}>
 							{saving ? <Spinner /> : null}
-							Save photo
+							{saveLabel}
 						</Button>
 					</div>
 				</SheetFooter>

@@ -40,7 +40,7 @@ export async function loadStaleReasons(
 	requests: StaleInput[]
 ): Promise<Map<string, StaleReason | null>> {
 	const of = (k: ChangeRequestKind) => requests.filter((r) => r.kind === k);
-	const infoIds = unique(of("info").map((r) => r.profileId));
+	const infoIds = unique([...of("info"), ...of("photo")].map((r) => r.profileId));
 	const addressIds = unique(
 		[...of("address_edit"), ...of("address_remove")].map((r) => r.targetId)
 	);
@@ -160,6 +160,7 @@ export async function listPendingByProfile(db: QueryDb, actor: Actor) {
 			currentFirstName: communityProfile.firstName,
 			currentMiddleName: communityProfile.middleName,
 			currentLastName: communityProfile.lastName,
+			currentPhotoBlobId: communityProfile.photoBlobId,
 			profileStatus: communityProfile.status,
 		})
 		.from(changeRequest)
@@ -209,6 +210,8 @@ export async function listPendingByProfile(db: QueryDb, actor: Actor) {
 					: first.profileName,
 			/** null when the profile no longer exists. */
 			profileStatus: first.profileStatus,
+			/** Current Profile Photo, beside a pending `photo` request's proposed one. */
+			currentPhotoBlobId: first.currentPhotoBlobId,
 			oldestAt: first.createdAt,
 			count: requests.length,
 			staleCount: requests.filter((r) => r.stale).length,

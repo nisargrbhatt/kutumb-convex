@@ -196,9 +196,9 @@ describe("Profile Photo on a Userless Profile", () => {
 		await expectError(photo("b1", OTHER, profileId), "NotFound");
 	});
 
-	it("plain member on an active Userless Profile → Forbidden, nothing filed (requests are 27)", async () => {
+	it("plain member on an inactive Userless Profile → NotFound, nothing filed", async () => {
 		await h.seedBlob({ id: "b1" });
-		await expectError(photo("b1", MEMBER), "Forbidden");
+		await expectError(photo("b1", MEMBER, "gone"), "NotFound");
 		expect((await h.blob("b1"))?.status).toBe("pending");
 		expect(await h.db.query.changeRequest.findMany()).toEqual([]);
 	});
