@@ -117,6 +117,9 @@ export const trak = ({
 	height = 1080,
 	rotation = 0,
 	extra = [],
+	mdiaExtra = [],
+	minfExtra = [],
+	stblExtra = [],
 }: {
 	handler?: string;
 	codec?: string;
@@ -124,6 +127,10 @@ export const trak = ({
 	height?: number;
 	rotation?: 0 | 90 | 180 | 270;
 	extra?: Uint8Array[];
+	/** Boxes after `minf` in `mdia`, after `stbl` in `minf`, after the sample table in `stbl`. */
+	mdiaExtra?: Uint8Array[];
+	minfExtra?: Uint8Array[];
+	stblExtra?: Uint8Array[];
 } = {}) =>
 	box(
 		"trak",
@@ -132,7 +139,8 @@ export const trak = ({
 			"mdia",
 			full("mdhd", 0, new Uint8Array(20)),
 			hdlr(handler),
-			box("minf", box("stbl", stsd(codec), stsz(2000)))
+			box("minf", box("stbl", stsd(codec), stsz(2000), ...stblExtra), ...minfExtra),
+			...mdiaExtra
 		),
 		...extra
 	);
@@ -160,6 +168,9 @@ export type MovieOptions = {
 	mdatSize?: number;
 	moovExtra?: Uint8Array[];
 	trakExtra?: Uint8Array[];
+	mdiaExtra?: Uint8Array[];
+	minfExtra?: Uint8Array[];
+	stblExtra?: Uint8Array[];
 	topExtra?: Uint8Array[];
 };
 
@@ -177,12 +188,15 @@ export function movie({
 	mdatSize = 1000,
 	moovExtra = [],
 	trakExtra = [],
+	mdiaExtra = [],
+	minfExtra = [],
+	stblExtra = [],
 	topExtra = [],
 }: MovieOptions = {}): SparseFile {
 	const moov = box(
 		"moov",
 		mvhd({ timescale: 600, duration: Math.round((durationMs * 600) / 1000) }),
-		trak({ codec, width, height, rotation, extra: trakExtra }),
+		trak({ codec, width, height, rotation, extra: trakExtra, mdiaExtra, minfExtra, stblExtra }),
 		trak({ handler: "soun", codec: "mp4a", width: 0, height: 0 }),
 		...moovExtra
 	);

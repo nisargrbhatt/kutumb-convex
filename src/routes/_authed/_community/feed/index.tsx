@@ -16,7 +16,7 @@ import {
 	EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import { nameInitials } from "@/domain/feed";
+import { nameInitials } from "@/domain/communityProfile";
 import { feedQuery } from "@/queries/feed";
 import { useMyPhotoBlobId } from "@/queries/communityProfile";
 

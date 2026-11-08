@@ -1,4 +1,4 @@
-import { BLOB_MEDIA_KIND, type BlobVariant } from "@/db/constants";
+import { BLOB_MEDIA_KIND, BLOB_VARIANT } from "@/db/constants";
 import { blobUrl, variantMaxEdge } from "@/domain/blob";
 import type { StartUploadInput } from "@/domain/blobStore";
 import { isAppError } from "@/domain/errors";
@@ -8,6 +8,7 @@ import { VIDEO_COPY, isVideoFile } from "@/domain/video";
 import { discardUploads, startUpload } from "@/server/blob";
 import type { GalleryUpload } from "./galleryDraft";
 import { PhotoError, exportJpeg, scaledCopy } from "./photo";
+import { putParts, type PutPart } from "./uploadParts";
 import { prepareVideo } from "./video";
 
 /**
@@ -17,7 +18,7 @@ import { prepareVideo } from "./video";
  */
 
 const NOT_PHOTO = new Set(["image/gif", "image/svg+xml"]);
-const edge = (variant: "thumb" | "display") =>
+const edge = (variant: typeof BLOB_VARIANT.thumb | typeof BLOB_VARIANT.display) =>
 	variantMaxEdge(BLOB_MEDIA_KIND.memoryImage, variant) ?? 0;
 
 /** Decode and export both variants. Messages are the spec's two, inline on the item. */
@@ -33,8 +34,8 @@ async function exportMemoryImage(file: File) {
 		throw new PhotoError(isHeic(file, head) ? PHOTO_COPY.heic : PHOTO_COPY.unreadable);
 	}
 	try {
-		const display = scaledCopy(bitmap, edge("display"));
-		const thumb = scaledCopy(display, edge("thumb"));
+		const display = scaledCopy(bitmap, edge(BLOB_VARIANT.display));
+		const thumb = scaledCopy(display, edge(BLOB_VARIANT.thumb));
 		return { display: await exportJpeg(display), thumb: await exportJpeg(thumb) };
 	} finally {
 		bitmap.close();
@@ -87,13 +88,14 @@ const startMessage = (error: unknown) => {
 };
 
 /**
- * Start, then `PUT` each part in order with overall progress. Returns the `pending` Blob id; on any
- * failure (abort included) the Blob is discarded before rethrowing.
+ * Start, then `PUT` each part in order with overall progress. Returns the `pending` Blob id and the
+ * variants sent (an optional part may be missing); on any other failure (abort included) the Blob
+ * is discarded before rethrowing.
  */
 async function startAndPut(
 	organizationId: string,
 	start: StartUploadInput,
-	parts: [BlobVariant, Blob][],
+	parts: PutPart[],
 	copy: PutCopy,
 	onProgress: (fraction: number) => void,
 	signal: AbortSignal
@@ -106,21 +108,14 @@ async function startAndPut(
 		throw new PhotoError(startMessage(error));
 	}
 	try {
-		signal.throwIfAborted();
-		onProgress(0.02);
-		let sent = 0;
-		for (const [variant, body] of parts) {
-			await putVariant(
-				blobUrl(organizationId, blobId, variant),
-				body,
-				(bytes) => onProgress(0.02 + (0.98 * (sent + bytes)) / start.size),
-				signal,
-				copy
-			);
-			sent += body.size;
-		}
-		onProgress(1);
-		return blobId;
+		const sent = await putParts(
+			parts,
+			(variant, body, onBytes) =>
+				putVariant(blobUrl(organizationId, blobId, variant), body, onBytes, signal, copy),
+			onProgress,
+			signal
+		);
+		return { blobId, sent };
 	} catch (error) {
 		await discardGalleryUploads([blobId]);
 		throw error;
@@ -132,15 +127,15 @@ export const uploadMemoryImage =
 	(organizationId: string): GalleryUpload =>
 	async (file, onProgress, signal) => {
 		const variants = await exportMemoryImage(file);
-		const blobId = await startAndPut(
+		const { blobId } = await startAndPut(
 			organizationId,
 			{
 				mediaKind: BLOB_MEDIA_KIND.memoryImage,
 				size: variants.thumb.size + variants.display.size,
 			},
 			[
-				["thumb", variants.thumb],
-				["display", variants.display],
+				{ variant: BLOB_VARIANT.thumb, body: variants.thumb },
+				{ variant: BLOB_VARIANT.display, body: variants.display },
 			],
 			PHOTO_PUT,
 			onProgress,
@@ -161,9 +156,10 @@ export const uploadMemoryVideo =
 	(organizationId: string): GalleryUpload =>
 	async (file, onProgress, signal) => {
 		const { video, poster, contentType } = await prepareVideo(file);
-		const parts: [BlobVariant, Blob][] = [["video", video]];
-		if (poster) parts.push(["poster", poster]);
-		const blobId = await startAndPut(
+		const parts: PutPart[] = [{ variant: BLOB_VARIANT.video, body: video }];
+		// Best effort: a failed `poster` PUT keeps the Blob, with no poster.
+		if (poster) parts.push({ variant: BLOB_VARIANT.poster, body: poster, optional: true });
+		const { blobId, sent } = await startAndPut(
 			organizationId,
 			{
 				mediaKind: BLOB_MEDIA_KIND.memoryVideo,
@@ -177,7 +173,7 @@ export const uploadMemoryVideo =
 		);
 		return {
 			blobId,
-			previewUrl: poster ? URL.createObjectURL(poster) : null,
+			previewUrl: poster && sent.includes(BLOB_VARIANT.poster) ? URL.createObjectURL(poster) : null,
 			mediaKind: BLOB_MEDIA_KIND.memoryVideo,
 		};
 	};

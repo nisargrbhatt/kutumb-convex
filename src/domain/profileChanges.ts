@@ -36,6 +36,7 @@ import { LimitError, PENDING_REQUEST_LIMIT } from "@/domain/limits";
 import { can, type Actor } from "@/domain/permission";
 import type { RelationType } from "@/domain/relation";
 import { loadStaleReasons } from "@/domain/queries/changeRequests";
+import { batchGuard, isBatchGuardTrip } from "@/domain/queries/batchGuard";
 import { inChunks, type QueryDb } from "@/domain/queries/db";
 
 /** Drizzle client that can run an all-or-nothing `batch` (D1 client and `freshDb` both fit). */
@@ -198,14 +199,6 @@ function diffFields<K extends string>(
 const landedSize = (row: Pick<BlobRow, "variants">) =>
 	Object.values(row.variants).reduce<number>((n, size) => n + (size ?? 0), 0);
 
-const STALE_GUARD_MESSAGE = "malformed JSON";
-
-/** True when `e` is the `json('stale')` guard firing (node:sqlite or D1 wording). */
-const isGuardTrip = (e: unknown) => {
-	const text = `${String(e)} ${String((e as { cause?: unknown } | null)?.cause ?? "")}`;
-	return text.includes(STALE_GUARD_MESSAGE);
-};
-
 /** JSON with sorted keys, so equal payloads compare equal whatever their key order. */
 const stableJson = (v: unknown): string =>
 	JSON.stringify(v, (_k, x) =>
@@ -224,14 +217,8 @@ export function makeProfileChanges({
 }: ProfileChangesDeps) {
 	const isReviewer = (actor: Actor) => can(actor, { changeRequest: ["review"] });
 
-	/**
-	 * Errors the batch unless the previous DML touched exactly `n` rows. Param-less on purpose:
-	 * raw `sql` with params inside `db.batch` breaks drizzle 0.45.2 on D1 (slice 08).
-	 */
-	const guard = (n = 1) => {
-		if (!Number.isInteger(n) || n < 0) throw new Error(`bad guard count ${n}`);
-		return db.all(sql.raw(`SELECT CASE WHEN changes() = ${n} THEN 1 ELSE json('stale') END`));
-	};
+	/** Errors the batch unless the previous DML touched exactly `n` rows. */
+	const guard = (n = 1) => batchGuard(db, n);
 
 	/** Soft cap (count then insert): a racing burst may overshoot by a few. */
 	async function assertPendingRequestSlot(actor: Actor) {
@@ -656,7 +643,7 @@ export function makeProfileChanges({
 			try {
 				await db.batch(items as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 			} catch (e) {
-				if (isGuardTrip(e)) {
+				if (isBatchGuardTrip(e)) {
 					const kind =
 						typeof plan.onGuardTrip === "function" ? await plan.onGuardTrip() : plan.onGuardTrip;
 					throw new AppError(

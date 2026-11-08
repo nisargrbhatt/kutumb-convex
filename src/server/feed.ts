@@ -1,7 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { env, waitUntil } from "cloudflare:workers";
 import { db } from "@/db";
-import { purgeBlobs as purgeBlobBytes } from "@/domain/blobStore";
 import {
 	commentIdInput,
 	commentsPageInput,
@@ -24,14 +22,11 @@ import {
 	getMemoryForEdit as getMemoryForEditRow,
 	updateMemory as updateMemoryRow,
 } from "@/domain/queries/memory";
-import { type PurgeBlobs, removePost as removePostRow } from "@/domain/queries/postBase";
+import { removePost as removePostRow } from "@/domain/queries/postBase";
 import { locatePost } from "@/domain/queries/postLocation";
+import { purgeBlobsAfterResponse as purgeBlobs } from "@/lib/blobPurge";
 import { authMiddleware } from "@/middleware/auth";
 import { orgMiddleware } from "@/middleware/org";
-
-/** After the batch, outside the response: never delays or fails the save. */
-const purgeBlobs: PurgeBlobs = async (organizationId, blobs) =>
-	waitUntil(purgeBlobBytes({ db, bucket: env.BLOBS }, organizationId, blobs));
 
 /** One Feed page of the active org, newest first. */
 export const getFeedPage = createServerFn({ method: "GET" })

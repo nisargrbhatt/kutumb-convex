@@ -10,6 +10,7 @@ import { isGalleryMediaKind, parseGallery } from "@/domain/gallery";
 import { parseDescription } from "@/domain/memoryDescription";
 import type { Actor } from "@/domain/permission";
 import type { BatchDb } from "@/domain/profileChanges";
+import { generatePrimaryKey } from "@/lib/generate";
 import { batchGuard, isBatchGuardTrip } from "./batchGuard";
 import type { QueryDb } from "./db";
 import { insertPostBase, loadPostForWrite, type PurgeBlobs } from "./postBase";
@@ -122,7 +123,7 @@ const galleryRows = (db: BatchDb, postId: string, ids: string[]) =>
  * attach in the same batch.
  */
 export async function createMemory(
-	{ db, now = () => new Date(), newId = () => crypto.randomUUID().replaceAll("-", "") }: MemoryDeps,
+	{ db, now = () => new Date(), newId = generatePrimaryKey }: MemoryDeps,
 	actor: Actor,
 	authorName: string,
 	input: MemoryInput

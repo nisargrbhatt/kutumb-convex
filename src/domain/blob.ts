@@ -110,3 +110,18 @@ export const canAttach = (
 	blob.uploadedByUserId === actor.userId &&
 	blob.mediaKind === mediaKind &&
 	missingVariants(blob.mediaKind, blob.variants).length === 0;
+
+const BYTE_UNITS = ["B", "KB", "MB", "GB"] as const;
+
+/** Human-readable storage size, decimal units (`12.3 MB`); one decimal under 100. */
+export function formatBytes(bytes: number) {
+	let value = bytes;
+	let unit = 0;
+	while (unit < BYTE_UNITS.length - 1 && Math.round(value) >= 1000) {
+		value /= 1000;
+		unit++;
+	}
+	if (unit === 0) return `${Math.round(value)} B`;
+	const text = value < 99.95 ? value.toFixed(1) : Math.round(value).toLocaleString("en-US");
+	return `${text} ${BYTE_UNITS[unit]}`;
+}

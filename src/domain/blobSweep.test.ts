@@ -11,7 +11,11 @@ import { makeBlobSweep } from "./blobSweep";
 const NOW = 1_700_000_000_000;
 const HOUR = 60 * 60 * 1000;
 
-function setup({ budget, pageSize }: { budget?: number; pageSize?: number } = {}) {
+function setup({
+	budget,
+	pageSize,
+	markLimit,
+}: { budget?: number; pageSize?: number; markLimit?: number } = {}) {
 	const h = profileChangesHarness();
 	const r2 = fakeR2();
 	/** Counting fakes: every D1 statement and R2 call is one subrequest. */
@@ -32,6 +36,7 @@ function setup({ budget, pageSize }: { budget?: number; pageSize?: number } = {}
 		now: () => new Date(NOW),
 		...(budget ? { budget } : {}),
 		...(pageSize ? { pageSize } : {}),
+		...(markLimit ? { markLimit } : {}),
 	});
 	/** A `profilePhoto` Blob with both variants' bytes in R2. */
 	const blob = async (id: string, over: Partial<typeof mediaBlob.$inferInsert> = {}) => {
@@ -157,6 +162,17 @@ describe("blob sweep", () => {
 		expect(await left()).toBe(1);
 		await s.sweep.run();
 		expect(await left()).toBe(0);
+	});
+
+	it("caps rows each mark step changes per run; the rest wait for the next run", async () => {
+		const s = setup({ markLimit: 2, budget: 2 });
+		for (const id of ["a", "b", "c"]) {
+			await s.blob(`pend-${id}`, { createdAt: new Date(NOW - PENDING_TTL_MS - 1) });
+			await s.blob(`orph-${id}`, { status: "attached", ownerKind: "profile", ownerId: "gone" });
+		}
+		expect(await s.sweep.run()).toMatchObject({ expired: 2, orphaned: 2 });
+		expect(await s.sweep.run()).toMatchObject({ expired: 1, orphaned: 1 });
+		expect(await s.sweep.run()).toMatchObject({ expired: 0, orphaned: 0 });
 	});
 
 	it("default budget is 40 subrequests", async () => {

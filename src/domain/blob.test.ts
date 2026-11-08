@@ -3,12 +3,26 @@ import {
 	blobKey,
 	blobUrl,
 	canAttach,
+	formatBytes,
 	isAllowedVariant,
 	missingVariants,
 	parseBlobPath,
 	PENDING_TTL_MS,
 	variantMaxEdge,
 } from "./blob";
+
+describe("formatBytes", () => {
+	it("shows storage in decimal units, one decimal under 100", () => {
+		expect(formatBytes(0)).toBe("0 B");
+		expect(formatBytes(999)).toBe("999 B");
+		expect(formatBytes(1_000)).toBe("1.0 KB");
+		expect(formatBytes(12_345_678)).toBe("12.3 MB");
+		expect(formatBytes(123_456_789)).toBe("123 MB");
+		expect(formatBytes(999_999)).toBe("1.0 MB");
+		expect(formatBytes(2_500_000_000)).toBe("2.5 GB");
+		expect(formatBytes(3_000_000_000_000)).toBe("3,000 GB");
+	});
+});
 
 describe("variants per mediaKind", () => {
 	it("profilePhoto needs avatar + display, memoryImage thumb + display, memoryVideo video", () => {

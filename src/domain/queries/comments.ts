@@ -1,6 +1,7 @@
 import { and, count, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { post, postComment } from "@/db/app-schema";
 import { AppError } from "@/domain/errors";
+import { generatePrimaryKey } from "@/lib/generate";
 import {
 	COMMENTS_PAGE_SIZE,
 	decodeFeedCursor,
@@ -38,11 +39,7 @@ export type CommentDeps = { db: BatchDb; now?: () => Date; newId?: () => string 
  * org-scoped Post, batched with the Post check, so a Post removed mid-action is `NotFound`.
  */
 export async function createComment(
-	{
-		db,
-		now = () => new Date(),
-		newId = () => crypto.randomUUID().replaceAll("-", ""),
-	}: CommentDeps,
+	{ db, now = () => new Date(), newId = generatePrimaryKey }: CommentDeps,
 	actor: Actor,
 	authorName: string,
 	{ postId, body }: CreateCommentInput
