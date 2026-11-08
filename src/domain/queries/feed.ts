@@ -16,6 +16,7 @@ import type { Actor } from "@/domain/permission";
 import type { BatchDb } from "@/domain/profileChanges";
 import { authorDisplay, authorProfilesQuery, type AuthorProfileRow } from "./authors";
 import type { QueryDb } from "./db";
+import { likeCountsQuery, viewerLikesQuery } from "./likes";
 import { memoryKind } from "./memory";
 
 /**
@@ -47,8 +48,8 @@ const baseColumns = {
 };
 
 /**
- * Step two of a Feed read: one `db.batch` for authors plus each present kind's `load`. Likes and
- * comment counts join this batch in their slices. Rows whose kind data is missing are dropped.
+ * Step two of a Feed read: one `db.batch` for authors plus each present kind's `load`. Like counts
+ * and the viewer's liked state ride it too; comment counts join in their slice. Rows whose kind data is missing are dropped.
  */
 async function hydrate<V extends FeedView>(
 	db: BatchDb,
@@ -59,8 +60,11 @@ async function hydrate<V extends FeedView>(
 	if (rows.length === 0) return [];
 	const kinds = [...new Set(rows.map((r) => r.kind))];
 	const userIds = [...new Set(rows.map((r) => r.authorUserId))];
-	const [authorRows, ...kindRows] = (await db.batch([
+	const postIds = rows.map((r) => r.id);
+	const [authorRows, countRows, likedRows, ...kindRows] = (await db.batch([
 		authorProfilesQuery(db, viewer, userIds),
+		likeCountsQuery(db, postIds),
+		viewerLikesQuery(db, viewer, postIds),
 		...kinds.map((k) =>
 			POST_KINDS[k].load(
 				db,
@@ -68,11 +72,18 @@ async function hydrate<V extends FeedView>(
 				view
 			)
 		),
-	])) as [AuthorProfileRow[], ...{ postId: string }[][]];
+	])) as [
+		AuthorProfileRow[],
+		{ postId: string; count: number }[],
+		{ postId: string }[],
+		...{ postId: string }[][],
+	];
 
 	const author = authorDisplay(authorRows);
 	const data = new Map<string, unknown>();
 	for (const list of kindRows) for (const { postId, ...rest } of list) data.set(postId, rest);
+	const counts = new Map(countRows.map((r) => [r.postId, r.count]));
+	const liked = new Set(likedRows.map((r) => r.postId));
 
 	return rows.flatMap((r) => {
 		if (!data.has(r.id)) return [];
@@ -82,6 +93,7 @@ async function hydrate<V extends FeedView>(
 			author: author(r.authorUserId, r.authorName),
 			createdAt: r.createdAt,
 			editedAt: r.editedAt ?? null,
+			likes: { count: counts.get(r.id) ?? 0, viewerLiked: liked.has(r.id) },
 			data: data.get(r.id) as PostKindData[PostKind][V],
 		};
 		return [p as FeedPost<V>];

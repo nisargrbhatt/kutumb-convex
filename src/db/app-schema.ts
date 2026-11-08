@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, blob, index } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, blob, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import {
 	AUDIT_ACTION,
 	CHANGE_REQUEST_KIND,
@@ -184,6 +184,25 @@ export const postMemory = sqliteTable("postMemory", {
 	descriptionDoc: text("descriptionDoc", { mode: "json" }).$type<DescriptionDoc>(),
 	descriptionText: text("descriptionText"),
 });
+
+// One like per Org Member per Post. `userName` is a frozen `user.name` snapshot, no FK to `user`:
+// a like outlives its member. Counts are computed at read (no counter column).
+export const postLike = sqliteTable(
+	"postLike",
+	{
+		id: text("id").primaryKey(),
+		postId: text("postId")
+			.references(() => post.id, { onDelete: "cascade" })
+			.notNull(),
+		userId: text("userId").notNull(),
+		userName: text("userName").notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [
+		uniqueIndex("postLike_post_user_uidx").on(table.postId, table.userId),
+		index("postLike_post_created_id_idx").on(table.postId, table.createdAt, table.id),
+	]
+);
 
 // Change Request: a proposed profile change awaiting Review. FK to org only; profile/user are
 // snapshotted so the row survives profile hard-delete (My requests still shows the outcome).

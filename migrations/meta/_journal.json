@@ -92,6 +92,13 @@
       "when": 1794118185673,
       "tag": "0012_aromatic_stepford_cuckoos",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1794118883335,
+      "tag": "0013_right_kang",
+      "breakpoints": true
     }
   ]
 }

@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { FeedPost } from "@/domain/feed";
 import { AuthorLine } from "./AuthorLine";
 import { DescriptionView } from "./DescriptionView";
+import { LikeAction } from "./LikeAction";
 
 /** Memory card: author line, title (opens detail), `descriptionText` at 3 lines. */
 export function MemoryCard({ post }: { post: FeedPost<"card", "memory"> }) {
@@ -24,6 +25,9 @@ export function MemoryCard({ post }: { post: FeedPost<"card", "memory"> }) {
 						</p>
 					) : null}
 				</div>
+				<div className="-mx-2 -mb-2 flex items-center gap-1">
+					<LikeAction post={post} />
+				</div>
 			</CardContent>
 		</Card>
 	);
@@ -36,6 +40,9 @@ export function MemoryDetail({ post }: { post: FeedPost<"detail", "memory"> }) {
 			<AuthorLine post={post} />
 			<h1 className="text-xl font-medium break-words">{post.data.title}</h1>
 			{post.data.descriptionDoc ? <DescriptionView doc={post.data.descriptionDoc} /> : null}
+			<div className="-mx-2 flex items-center gap-1">
+				<LikeAction post={post} />
+			</div>
 		</article>
 	);
 }
