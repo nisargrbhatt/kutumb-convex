@@ -57,6 +57,27 @@ export function useSwitchOrganization() {
 	};
 }
 
+/**
+ * Share link: switch to `organization` and stay on the current page (`invalidate` re-runs root
+ * `beforeLoad` + loaders under the new org), then drop the old tenant's cache. True on success.
+ */
+export function useSwitchOrganizationInPlace() {
+	const qc = useQueryClient();
+	const router = useRouter();
+	const previousOrgId = useActor()?.organizationId;
+	return async (organization: { id: string; name: string }) => {
+		const { error } = await authClient.organization.setActive({ organizationId: organization.id });
+		if (error) {
+			toastMutationError("Organization", "Could not switch organization")(error);
+			return false;
+		}
+		await router.invalidate();
+		if (previousOrgId) qc.removeQueries({ predicate: (q) => q.queryKey[1] === previousOrgId });
+		toast.success(`Switched to ${organization.name}`);
+		return true;
+	};
+}
+
 type OrgInput = { name: string; slug: string };
 
 const SLUG_TAKEN = "SLUG_TAKEN";
