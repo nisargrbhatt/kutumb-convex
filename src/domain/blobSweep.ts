@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, lt, not, or, sql, type SQL } from "drizzle-orm";
-import { mediaBlob } from "@/db/app-schema";
+import { mediaBlob, post } from "@/db/app-schema";
 import { changeRequest, communityProfile } from "@/db/schema";
 import { BLOB_STATUS, CHANGE_REQUEST_STATUS, type BlobOwnerKind } from "@/db/constants";
 import { blobKey, pendingCutoff, variantsOf } from "./blob";
@@ -21,8 +21,7 @@ const OWNER_EXISTS: Record<BlobOwnerKind, SQL> = {
 	// A `photo` request's proposed Blob: only while the request is pending (approve moves it to the
 	// profile; every other close marks it deleted, so a closed owner means a missed mark).
 	changeRequest: sql`exists (select 1 from ${changeRequest} where ${changeRequest.id} = ${mediaBlob.ownerId} and ${changeRequest.organizationId} = ${mediaBlob.organizationId} and ${changeRequest.status} = ${CHANGE_REQUEST_STATUS.pending})`,
-	// Stub: nothing attaches yet. Gallery images (34).
-	memory: sql`1`,
+	memory: sql`exists (select 1 from ${post} where ${post.id} = ${mediaBlob.ownerId} and ${post.organizationId} = ${mediaBlob.organizationId})`,
 };
 
 type Deps = {

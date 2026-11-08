@@ -4,11 +4,12 @@ import type { FeedPost } from "@/domain/feed";
 import { AuthorLine } from "./AuthorLine";
 import { CommentAction } from "./CommentAction";
 import { DescriptionView } from "./DescriptionView";
+import { MemoryGallery } from "./Gallery";
 import { LikeAction } from "./LikeAction";
 import { PostActions } from "./PostActions";
 import { ShareButton } from "./ShareButton";
 
-/** Memory card: author line, title (opens detail), `descriptionText` at 3 lines. */
+/** Memory card: author line, title (opens detail), `descriptionText` at 3 lines, gallery. */
 export function MemoryCard({ post }: { post: FeedPost<"card", "memory"> }) {
 	return (
 		<Card className="gap-3 py-4">
@@ -31,6 +32,7 @@ export function MemoryCard({ post }: { post: FeedPost<"card", "memory"> }) {
 						</p>
 					) : null}
 				</div>
+				<MemoryGallery media={post.data.media} title={post.data.title} />
 				<div className="-mx-2 -mb-2 flex items-center justify-between gap-1">
 					<div className="flex items-center gap-1">
 						<LikeAction post={post} />
@@ -43,7 +45,7 @@ export function MemoryCard({ post }: { post: FeedPost<"card", "memory"> }) {
 	);
 }
 
-/** Memory detail: author line, title, full description. */
+/** Memory detail: author line, title, full description, gallery. */
 export function MemoryDetail({ post }: { post: FeedPost<"detail", "memory"> }) {
 	return (
 		<article className="flex min-w-0 flex-col gap-4">
@@ -53,6 +55,7 @@ export function MemoryDetail({ post }: { post: FeedPost<"detail", "memory"> }) {
 			</div>
 			<h1 className="text-xl font-medium break-words">{post.data.title}</h1>
 			{post.data.descriptionDoc ? <DescriptionView doc={post.data.descriptionDoc} /> : null}
+			<MemoryGallery media={post.data.media} title={post.data.title} />
 			<div className="-mx-2 flex items-center justify-between gap-1">
 				<LikeAction post={post} />
 				<ShareButton postId={post.id} />

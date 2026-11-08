@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import { env, waitUntil } from "cloudflare:workers";
 import { db } from "@/db";
+import { purgeBlobs as purgeBlobBytes } from "@/domain/blobStore";
 import {
 	commentIdInput,
 	commentsPageInput,
@@ -22,10 +24,14 @@ import {
 	getMemoryForEdit as getMemoryForEditRow,
 	updateMemory as updateMemoryRow,
 } from "@/domain/queries/memory";
-import { removePost as removePostRow } from "@/domain/queries/postBase";
+import { type PurgeBlobs, removePost as removePostRow } from "@/domain/queries/postBase";
 import { locatePost } from "@/domain/queries/postLocation";
 import { authMiddleware } from "@/middleware/auth";
 import { orgMiddleware } from "@/middleware/org";
+
+/** After the batch, outside the response: never delays or fails the save. */
+const purgeBlobs: PurgeBlobs = async (organizationId, blobs) =>
+	waitUntil(purgeBlobBytes({ db, bucket: env.BLOBS }, organizationId, blobs));
 
 /** One Feed page of the active org, newest first. */
 export const getFeedPage = createServerFn({ method: "GET" })
@@ -85,19 +91,19 @@ export const getMemoryForEdit = createServerFn({ method: "GET" })
 	.validator(postIdInput)
 	.handler(({ context, data }) => getMemoryForEditRow(db, context.actor, data.postId));
 
-/** Author edits a Memory; sets `editedAt`. */
+/** Author edits a Memory; sets `editedAt`. Removed gallery media is marked and purged. */
 export const updateMemory = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
 	.validator(postIdInput.extend(memoryInput.shape))
 	.handler(({ context, data: { postId, ...input } }) =>
-		updateMemoryRow({ db }, context.actor, postId, input)
+		updateMemoryRow({ db, purgeBlobs }, context.actor, postId, input)
 	);
 
 /** Author or owner/admin removes a Post. Hard delete, no Audit Event. */
 export const removePost = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
 	.validator(postIdInput)
-	.handler(({ context, data }) => removePostRow(db, context.actor, data.postId));
+	.handler(({ context, data }) => removePostRow(db, context.actor, data.postId, { purgeBlobs }));
 
 /** A Post's comments, newest first, 20 per page. */
 export const getPostComments = createServerFn({ method: "GET" })

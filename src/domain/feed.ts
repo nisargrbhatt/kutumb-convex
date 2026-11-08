@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { PostKind } from "@/db/constants";
-import { COMMENT_MAX, MEMORY_DESCRIPTION_MAX, MEMORY_TITLE_MAX } from "./limits";
+import type { BlobMediaKind, PostKind } from "@/db/constants";
+import { COMMENT_MAX, GALLERY_MAX, MEMORY_DESCRIPTION_MAX, MEMORY_TITLE_MAX } from "./limits";
 import type { DescriptionDoc } from "./memoryDescription";
 
 /**
@@ -26,11 +26,23 @@ export type AuthorDisplay = {
 	photoBlobId: string | null;
 };
 
+/**
+ * One attached gallery item, in order. Ids and Worker-read size data only: the client builds the
+ * URL (`blobUrl`) and the mosaic ratio from `width` / `height`.
+ */
+export type GalleryItem = {
+	blobId: string;
+	mediaKind: BlobMediaKind;
+	width: number | null;
+	height: number | null;
+	durationMs: number | null;
+};
+
 /** Per kind, what each view carries. Adding a `PostKind` without an entry fails to compile. */
 export type PostKindData = {
 	memory: {
-		card: { title: string; descriptionText: string | null };
-		detail: { title: string; descriptionDoc: DescriptionDoc | null };
+		card: { title: string; descriptionText: string | null; media: GalleryItem[] };
+		detail: { title: string; descriptionDoc: DescriptionDoc | null; media: GalleryItem[] };
 	};
 };
 // Compile-time check: every kind has both views, and nothing else.
@@ -89,6 +101,12 @@ export const memoryInput = z.object({
 		.min(1, "Title is required")
 		.max(MEMORY_TITLE_MAX, `Title can be at most ${MEMORY_TITLE_MAX} characters`),
 	description: z.string().max(MEMORY_DESCRIPTION_MAX).default(""),
+	/** Gallery Blob ids in order: kept attached ones plus new `pending` uploads. */
+	media: z
+		.array(z.string().trim().min(1).max(64))
+		.max(GALLERY_MAX, `Up to ${GALLERY_MAX} photos`)
+		.refine((ids) => new Set(ids).size === ids.length, "Each photo once")
+		.default([]),
 });
 export type MemoryInput = z.infer<typeof memoryInput>;
 

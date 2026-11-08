@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
@@ -14,14 +14,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { memoryInput } from "@/domain/feed";
 import { MEMORY_DESCRIPTION_MAX } from "@/domain/limits";
 import { parseDescription } from "@/domain/memoryDescription";
+import { discardGalleryUploads, uploadMemoryImage } from "@/lib/gallery";
+import { makeGalleryDraft } from "@/lib/galleryDraft";
 import { memoryEditQuery, useCreateMemory, useUpdateMemory } from "@/queries/feed";
 import { useOrgId } from "@/queries/mutation";
 import { DescriptionView } from "./DescriptionView";
+import { GalleryField } from "./GalleryField";
 
 /**
  * Create / edit Memory Drawer. Loaded lazily (it pulls in `marked` through the description
- * module). Closing it any way discards the form. Text-only for now; the gallery lands with its
- * slice.
+ * module). Closing it any way without a save discards the form, aborts running uploads and
+ * discards what was uploaded since it opened; attached media comes back on the next open.
  */
 
 const formSchema = z.object({
@@ -90,8 +93,39 @@ export default function MemoryDrawer({
 	// Edit loads the source of truth (`description`), never the derived tree.
 	const loaded = source.data;
 	useEffect(() => {
-		if (open && loaded) form.reset(loaded);
+		if (open && loaded) form.reset({ title: loaded.title, description: loaded.description });
 	}, [open, loaded, form]);
+
+	const draft = useMemo(
+		() =>
+			makeGalleryDraft({
+				upload: uploadMemoryImage(orgId),
+				discard: discardGalleryUploads,
+				releasePreview: (url) => URL.revokeObjectURL(url),
+			}),
+		[orgId]
+	);
+	const [galleryError, setGalleryError] = useState<string | null>(null);
+	// Once per open: a refetch of the edit source must not wipe uploads in progress.
+	const seeded = useRef(false);
+	useEffect(() => {
+		if (!open) {
+			seeded.current = false;
+			return;
+		}
+		if (seeded.current || (isEdit && !loaded)) return;
+		seeded.current = true;
+		setGalleryError(null);
+		draft.reset(loaded?.media ?? []);
+	}, [open, isEdit, loaded, draft]);
+	// Leaving the page with the Drawer open counts as a close without a save.
+	useEffect(() => () => draft.cancel(), [draft]);
+
+	/** Every close but a save's own: Cancel, X, Esc, overlay all come through here. */
+	const handleOpenChange = (next: boolean) => {
+		if (!next) draft.cancel();
+		onOpenChange(next);
+	};
 	const loading = isEdit && !loaded;
 	const textarea = useRef<HTMLTextAreaElement | null>(null);
 	const description = useWatch({ control: form.control, name: "description" });
@@ -106,11 +140,21 @@ export default function MemoryDrawer({
 	};
 
 	const onSubmit = async (values: FormValues) => {
-		try {
-			await save.mutateAsync(values);
-		} catch {
-			return; // toast shown; text stays
+		setGalleryError(null);
+		// Submit waits for uploads; a rejected file blocks posting until removed.
+		const gallery = await draft.settle();
+		if (!gallery.ok) {
+			setGalleryError("Remove the photos that couldn't be uploaded, then try again.");
+			return;
 		}
+		try {
+			await save.mutateAsync({ ...values, media: gallery.blobIds });
+		} catch {
+			return; // toast shown; text and gallery stay
+		}
+		// The save's own close must not discard what it attached.
+		draft.saved();
+		draft.reset([]);
 		form.reset(EMPTY);
 		onOpenChange(false);
 	};
@@ -118,7 +162,7 @@ export default function MemoryDrawer({
 	return (
 		<FormDrawer
 			open={open}
-			onOpenChange={onOpenChange}
+			onOpenChange={handleOpenChange}
 			title={isEdit ? "Edit memory" : "Share a memory"}
 			description={
 				isEdit
@@ -128,7 +172,7 @@ export default function MemoryDrawer({
 			form={form}
 			onSubmit={onSubmit}
 			submitLabel={isEdit ? "Save" : "Post"}
-			isPending={save.isPending || loading}
+			isPending={save.isPending || loading || form.formState.isSubmitting}
 			size="lg"
 		>
 			{source.isError ? (
@@ -204,6 +248,10 @@ export default function MemoryDrawer({
 						{form.formState.errors.description.message}
 					</p>
 				) : null}
+			</div>
+			<div className="grid gap-2">
+				<Label>Photos</Label>
+				<GalleryField draft={draft} error={galleryError} />
 			</div>
 		</FormDrawer>
 	);

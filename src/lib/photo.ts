@@ -36,7 +36,7 @@ const canvas = (w: number, h: number) => {
 	return c;
 };
 
-const scaledCopy = (
+export const scaledCopy = (
 	src: CanvasImageSource & { width: number; height: number },
 	maxEdge: number
 ) => {
@@ -103,7 +103,7 @@ export function renderCrop(img: HTMLCanvasElement, area: Area, rotation: number,
 }
 
 /** Canvas → stripped JPEG. `toBlob` silently falls back to PNG, so the type is checked. */
-async function exportJpeg(c: HTMLCanvasElement) {
+export async function exportJpeg(c: HTMLCanvasElement) {
 	const blob = await toBlob(c, JPEG_QUALITY);
 	if (!blob || blob.type !== "image/jpeg") throw new PhotoError(PHOTO_COPY.unreadable);
 	return stripJpeg(blob);

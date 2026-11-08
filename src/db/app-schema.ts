@@ -1,4 +1,12 @@
-import { integer, sqliteTable, text, blob, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+	integer,
+	sqliteTable,
+	text,
+	blob,
+	index,
+	primaryKey,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import {
 	AUDIT_ACTION,
 	BLOB_MEDIA_KIND,
@@ -191,6 +199,23 @@ export const postMemory = sqliteTable("postMemory", {
 	descriptionDoc: text("descriptionDoc", { mode: "json" }).$type<DescriptionDoc>(),
 	descriptionText: text("descriptionText"),
 });
+
+// Memory gallery: ordered Blobs of one Memory (0 to 5). No FK to `blob`: the Blob row holds the
+// owner fields (`ownerKind` memory, `ownerId` postId) for the gate and the sweep.
+export const postMemoryMedia = sqliteTable(
+	"postMemoryMedia",
+	{
+		postId: text("postId")
+			.references(() => post.id, { onDelete: "cascade" })
+			.notNull(),
+		blobId: text("blobId").notNull(),
+		position: integer("position").notNull(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.postId, table.position] }),
+		uniqueIndex("postMemoryMedia_blob_uidx").on(table.blobId),
+	]
+);
 
 // One like per Org Member per Post. `userName` is a frozen `user.name` snapshot, no FK to `user`:
 // a like outlives its member. Counts are computed at read (no counter column).

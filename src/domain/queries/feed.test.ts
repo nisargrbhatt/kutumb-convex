@@ -144,11 +144,12 @@ describe("Feed", () => {
 	it("cards carry `descriptionText` only; detail carries `descriptionDoc` only", async () => {
 		const { postId } = await post_(MEMBER, "T", "# Hi\nthere");
 		const [card] = (await listFeed(db, MEMBER, {})).posts;
-		expect(card.data).toEqual({ title: "T", descriptionText: "Hi there" });
+		expect(card.data).toEqual({ title: "T", descriptionText: "Hi there", media: [] });
 
 		const detail = await getPost(db, MEMBER, postId);
 		expect(detail.data).toEqual({
 			title: "T",
+			media: [],
 			descriptionDoc: [
 				{ t: "h2", c: [{ t: "text", v: "Hi" }] },
 				{ t: "p", c: [{ t: "text", v: "there" }] },
@@ -184,7 +185,7 @@ describe("Feed", () => {
 	it("stores no description when blank", async () => {
 		const { postId } = await post_(MEMBER, "  Title  ", "   ");
 		const detail = await getPost(db, MEMBER, postId);
-		expect(detail.data).toEqual({ title: "Title", descriptionDoc: null });
+		expect(detail.data).toEqual({ title: "Title", descriptionDoc: null, media: [] });
 		const [row] = await db.select().from(postMemory);
 		expect(row.description).toBeNull();
 	});

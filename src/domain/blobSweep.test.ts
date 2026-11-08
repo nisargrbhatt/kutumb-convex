@@ -81,11 +81,24 @@ describe("blob sweep", () => {
 		expect(await s.h.blob("cross")).toBeUndefined();
 	});
 
-	it("leaves memory owned Blobs alone (owner check is a stub)", async () => {
+	it("a Memory lost to org delete takes its gallery Blobs; a live Memory keeps them", async () => {
 		const s = setup();
-		await s.blob("mem", { status: "attached", ownerKind: "memory", ownerId: "nope" });
+		s.h.fresh.sqlite.exec(`
+			INSERT INTO organization (id, name, slug, created_at) VALUES ('o2', 'Org 2', 'o2', 0), ('o3', 'Org 3', 'o3', 0);
+			INSERT INTO post (id, organizationId, kind, authorUserId, authorName, createdAt)
+				VALUES ('live', 'o1', 'memory', 'u-member', 'M', 0), ('doomed', 'o2', 'memory', 'u-member', 'M', 0),
+					('elsewhere', 'o3', 'memory', 'u-member', 'M', 0);
+		`);
+		const mem = { status: "attached", ownerKind: "memory", mediaKind: "memoryImage" } as const;
+		await s.blob("keep", { ...mem, ownerId: "live" });
+		await s.blob("lost", { ...mem, organizationId: "o2", ownerId: "doomed" });
+		// A post in another org never keeps a Blob alive.
+		await s.blob("cross", { ...mem, ownerId: "elsewhere" });
+		s.h.fresh.sqlite.exec(`DELETE FROM organization WHERE id = 'o2'`);
 		await s.sweep.run();
-		expect((await s.h.blob("mem"))?.status).toBe("attached");
+		expect((await s.h.blob("keep"))?.status).toBe("attached");
+		expect(await s.h.blob("lost")).toBeUndefined();
+		expect(await s.h.blob("cross")).toBeUndefined();
 	});
 
 	it("a Change Request Blob lives only while its request is pending in the same org", async () => {

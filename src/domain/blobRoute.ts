@@ -1,6 +1,6 @@
-import { and, eq, gte, not, sql } from "drizzle-orm";
+import { and, eq, gte, not, or, sql } from "drizzle-orm";
 import { mediaBlob } from "@/db/app-schema";
-import { changeRequest, communityProfile } from "@/db/schema";
+import { changeRequest, communityProfile, post } from "@/db/schema";
 import {
 	BLOB_MEDIA_KIND,
 	BLOB_OWNER_KIND,
@@ -89,9 +89,10 @@ const sha256Hex = async (text: string) =>
 	).join("");
 
 /**
- * Restricted Blobs of an org: everything but an `attached` photo on an `active` profile, the one
- * case any member may see. Covers `pending`, `deleted`, Change Request owned, photos on `inactive`
- * or `draft` profiles, orphans, and kinds without a memo rule yet.
+ * Restricted Blobs of an org: everything but the cases any member may see, an `attached` photo on
+ * an `active` profile and an `attached` Memory image whose Memory is in the same org. Covers
+ * `pending`, `deleted`, Change Request owned, photos on `inactive` or `draft` profiles, orphans,
+ * and kinds without a memo rule yet.
  */
 async function restrictedBlobIds(db: QueryDb, organizationId: string) {
 	const rows = await db
@@ -103,8 +104,17 @@ async function restrictedBlobIds(db: QueryDb, organizationId: string) {
 				not(
 					and(
 						eq(mediaBlob.status, BLOB_STATUS.attached),
-						eq(mediaBlob.ownerKind, BLOB_OWNER_KIND.profile),
-						sql`exists (select 1 from ${communityProfile} where ${communityProfile.id} = ${mediaBlob.ownerId} and ${communityProfile.organizationId} = ${mediaBlob.organizationId} and ${communityProfile.status} = ${COMMUNITY_PROFILE_STATUS.active})`
+						or(
+							and(
+								eq(mediaBlob.ownerKind, BLOB_OWNER_KIND.profile),
+								sql`exists (select 1 from ${communityProfile} where ${communityProfile.id} = ${mediaBlob.ownerId} and ${communityProfile.organizationId} = ${mediaBlob.organizationId} and ${communityProfile.status} = ${COMMUNITY_PROFILE_STATUS.active})`
+							),
+							and(
+								eq(mediaBlob.ownerKind, BLOB_OWNER_KIND.memory),
+								eq(mediaBlob.mediaKind, BLOB_MEDIA_KIND.memoryImage),
+								sql`exists (select 1 from ${post} where ${post.id} = ${mediaBlob.ownerId} and ${post.organizationId} = ${mediaBlob.organizationId})`
+							)
+						)
 					)!
 				)
 			)
@@ -139,9 +149,14 @@ const OWNER_CHECKS: Record<
 		if (!row) return false;
 		return row.submitterUserId === actor.userId || actor.role !== ORGANIZATION_ROLES.member;
 	},
-	// Memory gallery owner check lands with gallery images (ticket 34).
-	async memory() {
-		return false;
+	/** Any member of the Memory's org: the Feed has no per-Post visibility. */
+	async memory(db, actor, ownerId) {
+		const [row] = await db
+			.select({ id: post.id })
+			.from(post)
+			.where(and(eq(post.id, ownerId), eq(post.organizationId, actor.organizationId)))
+			.limit(1);
+		return row !== undefined;
 	},
 };
 

@@ -38,6 +38,8 @@ export const MEMORY_DESCRIPTION_MAX = 5000;
 export const MEMORY_DESCRIPTION_TEXT_MAX = 300;
 /** List nesting allowed in a Memory description. */
 export const MEMORY_LIST_DEPTH_MAX = 3;
+/** Media per Memory gallery. */
+export const GALLERY_MAX = 5;
 /** Comment body, trimmed, not empty. */
 export const COMMENT_MAX = 1000;
 
