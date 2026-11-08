@@ -34,9 +34,11 @@ For any other reference, lookout for `/tanstack-start-best-practices`,
 
 better-auth is configured with the **organization plugin**. Each organization is a tenant; users
 belong to orgs with roles `owner | admin | member`. Permissions use better-auth **access control**
-(`src/lib/permission.ts`) with custom statements (`communityProfile`, `customFields`) — check them
-server-side via `auth.api.hasPermission({ headers, body: { permissions: {...} } })`, never trust the
-client.
+(`src/domain/permission.ts`, re-exported by `src/lib/permission.ts`) with custom statements
+(`communityProfile`, `customFields`, `changeRequest`, `auditEvent`, `orgSetting`, `post`) — check
+them server-side with `can` / `assertCan(context.actor, {...})`, not `auth.api.hasPermission`; never
+trust the client. `can` looks at role only: load rows by id + `actor.organizationId` first. Feed
+rules (author-or-moderator) live in the pure `src/domain/feedPolicy.ts`, shared with the UI.
 
 The better-auth HTTP handler is mounted at the catch-all route `src/routes/api/auth/$.ts`. Org
 lifecycle hooks (e.g. `afterAddMember`) and invitation emails are wired inside the `auth` config.

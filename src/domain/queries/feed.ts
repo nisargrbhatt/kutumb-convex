@@ -80,6 +80,7 @@ async function hydrate<V extends FeedView>(
 			id: r.id,
 			kind: r.kind,
 			author: author(r.authorUserId, r.authorName),
+			authorUserId: r.authorUserId,
 			createdAt: r.createdAt,
 			editedAt: r.editedAt ?? null,
 			data: data.get(r.id) as PostKindData[PostKind][V],

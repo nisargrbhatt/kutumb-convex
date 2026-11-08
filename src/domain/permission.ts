@@ -15,6 +15,8 @@ export const statement = {
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
 	orgSetting: ["update"],
+	/** Feed: remove anyone's Post or comment. No role hierarchy: an admin may remove an owner's. */
+	post: ["moderate"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -32,6 +34,7 @@ export const admin = ac.newRole({
 	customFields: ["read"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
+	post: ["moderate"],
 });
 
 export const owner = ac.newRole({
@@ -41,6 +44,7 @@ export const owner = ac.newRole({
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
 	orgSetting: ["update"],
+	post: ["moderate"],
 });
 
 const roles = { owner, admin, member };
