@@ -126,6 +126,50 @@ const AUDIT_CATEGORY_PREFIX: Record<AuditCategory, string> = {
 export const auditActionsInCategory = (category: AuditCategory): AuditAction[] =>
 	Object.values(AUDIT_ACTION).filter((a) => a.startsWith(AUDIT_CATEGORY_PREFIX[category]));
 
+/** What a Blob holds; sets its variants (spec: Blobs > Variants). */
+export const BLOB_MEDIA_KIND = {
+	profilePhoto: "profilePhoto",
+	memoryImage: "memoryImage",
+	memoryVideo: "memoryVideo",
+} as const;
+
+export type BlobMediaKind = (typeof BLOB_MEDIA_KIND)[keyof typeof BLOB_MEDIA_KIND];
+
+/** `pending → attached → deleted`. */
+export const BLOB_STATUS = {
+	pending: "pending",
+	attached: "attached",
+	deleted: "deleted",
+} as const;
+
+export type BlobStatus = (typeof BLOB_STATUS)[keyof typeof BLOB_STATUS];
+
+/** Kind of record that owns an attached Blob. */
+export const BLOB_OWNER_KIND = {
+	profile: "profile",
+	memory: "memory",
+	changeRequest: "changeRequest",
+} as const;
+
+export type BlobOwnerKind = (typeof BLOB_OWNER_KIND)[keyof typeof BLOB_OWNER_KIND];
+
+/** Objects under one Blob, R2 key `<orgId>/<blobId>/<variant>`. */
+export const BLOB_VARIANT = {
+	avatar: "avatar",
+	display: "display",
+	thumb: "thumb",
+	video: "video",
+	poster: "poster",
+} as const;
+
+export type BlobVariant = (typeof BLOB_VARIANT)[keyof typeof BLOB_VARIANT];
+
+/** Allow-listed stored video types (`blob.contentType`). */
+export const BLOB_VIDEO_CONTENT_TYPE = {
+	mp4: "video/mp4",
+	quicktime: "video/quicktime",
+} as const;
+
 /** Non-empty tuple of an enum-like const's values, for Drizzle `text({ enum })`. */
 export const enumValues = <T extends Record<string, string>>(o: T) =>
 	Object.values(o) as [T[keyof T], ...T[keyof T][]];

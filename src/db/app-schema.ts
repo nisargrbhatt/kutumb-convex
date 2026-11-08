@@ -1,6 +1,11 @@
 import { integer, sqliteTable, text, blob, index } from "drizzle-orm/sqlite-core";
 import {
 	AUDIT_ACTION,
+	BLOB_MEDIA_KIND,
+	BLOB_OWNER_KIND,
+	BLOB_STATUS,
+	BLOB_VIDEO_CONTENT_TYPE,
+	type BlobVariant,
 	CHANGE_REQUEST_KIND,
 	CHANGE_REQUEST_STATUS,
 	COMMUNITY_ADDRESS_TYPE,
@@ -292,3 +297,51 @@ export const orgSetting = sqliteTable("orgSetting", {
 		.references(() => organization.id, { onDelete: "cascade" }),
 	aiClientWrites: integer("aiClientWrites", { mode: "boolean" }).notNull().default(true),
 });
+
+// Blob: one piece of private media in R2 (spec: Blobs > Record). Table `blob`; exported as
+// `mediaBlob` since `blob` is drizzle's column builder. No FKs on purpose: org delete must not take
+// the rows that locate the bytes (the sweep needs them).
+export const mediaBlob = sqliteTable(
+	"blob",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organizationId").notNull(),
+		mediaKind: text("mediaKind", { mode: "text", enum: enumValues(BLOB_MEDIA_KIND) }).notNull(),
+		status: text("status", { mode: "text", enum: enumValues(BLOB_STATUS) })
+			.notNull()
+			.default(BLOB_STATUS.pending),
+		/** Null while `pending`. */
+		ownerKind: text("ownerKind", { mode: "text", enum: enumValues(BLOB_OWNER_KIND) }),
+		ownerId: text("ownerId"),
+		uploadedByUserId: text("uploadedByUserId").notNull(),
+		/** Reservation while `pending`; real sum of landed variants once attached. */
+		size: integer("size").notNull(),
+		/** Landed variants and their real sizes. */
+		variants: text("variants", { mode: "json" })
+			.$type<Partial<Record<BlobVariant, number>>>()
+			.notNull()
+			.default({}),
+		/** Worker-read from `display` (images) or the video track. Never from the client. */
+		width: integer("width"),
+		height: integer("height"),
+		durationMs: integer("durationMs"),
+		/** Video only. */
+		contentType: text("contentType", {
+			mode: "text",
+			enum: enumValues(BLOB_VIDEO_CONTENT_TYPE),
+		}),
+		/** `profilePhoto` only, hex sha256 of `display` (ADR 0009). */
+		sha256: text("sha256"),
+		/** `pending` expires 24h after this. */
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [
+		index("blob_org_status_idx").on(table.organizationId, table.status),
+		index("blob_org_uploader_status_idx").on(
+			table.organizationId,
+			table.uploadedByUserId,
+			table.status
+		),
+		index("blob_status_created_idx").on(table.status, table.createdAt),
+	]
+);

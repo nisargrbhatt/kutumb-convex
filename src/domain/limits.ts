@@ -1,3 +1,4 @@
+import { pendingCutoff } from "./blob";
 import { AppError } from "./errors";
 
 export const ORG_LIMIT = 5;
@@ -14,9 +15,26 @@ export const WRITE_DAILY_LIMIT = 200;
 /** `create_profile` sub-cap inside the daily pool. */
 export const CREATE_DAILY_LIMIT = 50;
 
+/** Image variant body cap, checked by the Worker on every `PUT`. */
+export const IMAGE_VARIANT_MAX_BYTES = 5 * 1024 * 1024;
+/** Photo picked in the browser, before resize. */
+export const PICKED_PHOTO_MAX_BYTES = 50 * 1024 * 1024;
+/** Picked photo types; no GIF, no SVG. */
+export const PICKED_PHOTO_TYPES = [
+	"image/jpeg",
+	"image/png",
+	"image/webp",
+	"image/heic",
+	"image/heif",
+];
+/** Reserved bytes in unexpired `pending` Blobs per Org Member. */
+export const PENDING_UPLOAD_BYTES_LIMIT = 500_000_000;
+
 export const canJoinOrganization = (membershipCount: number) => membershipCount < ORG_LIMIT;
 export const canInviteMember = (membersPlusPending: number) => membersPlusPending < MEMBER_LIMIT;
 export const canCreateProfile = (profileCount: number) => profileCount < PROFILE_LIMIT;
+export const canReservePendingUpload = (pendingBytes: number, declared: number) =>
+	pendingBytes + declared <= PENDING_UPLOAD_BYTES_LIMIT;
 
 export const LIMIT_ERROR_CODES = {
 	org: "YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS",
@@ -24,6 +42,7 @@ export const LIMIT_ERROR_CODES = {
 	profile: "COMMUNITY_PROFILE_LIMIT_REACHED",
 	pendingRequest: "PENDING_REQUEST_LIMIT_REACHED",
 	customField: "CUSTOM_FIELD_LIMIT_REACHED",
+	pendingUpload: "PENDING_UPLOAD_LIMIT_REACHED",
 } as const;
 
 export const LIMIT_COPY = {
@@ -55,6 +74,10 @@ export const LIMIT_COPY = {
 		title: "Field limit reached",
 		description: `This organization already has ${CUSTOM_FIELD_LIMIT} custom fields. Delete one to add another.`,
 	},
+	pendingUpload: {
+		title: "Too many unsaved uploads",
+		description: `You have ${PENDING_UPLOAD_BYTES_LIMIT / 1_000_000} MB of uploads that aren't saved yet. Save or cancel them, or wait a day, then try again.`,
+	},
 } as const;
 
 export type LimitKind = keyof typeof LIMIT_ERROR_CODES;
@@ -69,6 +92,8 @@ export type Counters = {
 	userMemberships(userId: string): Promise<number>;
 	orgMembersAndPending(organizationId: string): Promise<number>;
 	orgProfiles(organizationId: string): Promise<number>;
+	/** Sum of `size` over the member's `pending` Blobs created at or after `since`. */
+	memberPendingBytes(organizationId: string, userId: string, since: Date): Promise<number>;
 };
 
 export type OnLimitReached = (e: {
@@ -99,6 +124,19 @@ export const makeLimits = (counters: Counters, onReached: OnLimitReached) => ({
 			throw new LimitError("profile");
 		}
 	},
+	/** Pending cap: unexpired rows only, so a missed sweep can't lock a member out. */
+	async assertPendingUploadSlot(
+		organizationId: string,
+		userId: string,
+		declared: number,
+		now: Date
+	) {
+		const n = await counters.memberPendingBytes(organizationId, userId, pendingCutoff(now));
+		if (!canReservePendingUpload(n, declared)) {
+			onReached({ limit: "pendingUpload", organizationId, userId });
+			throw new LimitError("pendingUpload");
+		}
+	},
 });
 
 // Generic code -> copy mapping for consumers with no site-specific message (LIMIT_COPY entries
@@ -116,6 +154,8 @@ export const limitMessage = (codeOrError: string | AppError | null | undefined) 
 			return LIMIT_COPY.pendingRequest;
 		case LIMIT_ERROR_CODES.customField:
 			return LIMIT_COPY.customField;
+		case LIMIT_ERROR_CODES.pendingUpload:
+			return LIMIT_COPY.pendingUpload;
 		default:
 			return undefined;
 	}
