@@ -134,6 +134,10 @@ function UsageCard() {
 						</ProgressValue>
 					</Progress>
 				))}
+				<div className="flex items-center justify-between text-sm">
+					<span className="font-medium">Storage used</span>
+					<span className="font-mono">{usage.storageBytes.toLocaleString()} bytes</span>
+				</div>
 			</CardContent>
 		</Card>
 	);

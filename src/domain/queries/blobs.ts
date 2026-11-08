@@ -23,3 +23,14 @@ export async function memberPendingBytes(
 		);
 	return Number(row?.n ?? 0);
 }
+
+/** Bytes of the org's `attached` Blobs. `pending` and `deleted` don't count. */
+export async function orgAttachedBytes(db: QueryDb, organizationId: string): Promise<number> {
+	const [row] = await db
+		.select({ n: sum(mediaBlob.size) })
+		.from(mediaBlob)
+		.where(
+			and(eq(mediaBlob.organizationId, organizationId), eq(mediaBlob.status, BLOB_STATUS.attached))
+		);
+	return Number(row?.n ?? 0);
+}
