@@ -94,6 +94,7 @@ describe("Feed", () => {
 				status: "active",
 				organizationId: "o1",
 				userId: "u1",
+				photoBlobId: "blob-asha",
 			},
 			{
 				id: "cp2",
@@ -116,16 +117,27 @@ describe("Feed", () => {
 			);
 
 		expect(await byTitle(MEMBER)).toEqual({
-			"By Asha": { name: "Asha Patel", initials: "AP", profileId: "cp1" },
+			"By Asha": {
+				name: "Asha Patel",
+				initials: "AP",
+				profileId: "cp1",
+				photoBlobId: "blob-asha",
+			},
 			// Inactive profile: a plain member can't see it.
-			"By Bina": { name: "Bina Snapshot", initials: "BS", profileId: null },
-			"By admin, no profile": { name: "Chetan Kumar Rao", initials: "CR", profileId: null },
+			"By Bina": { name: "Bina Snapshot", initials: "BS", profileId: null, photoBlobId: null },
+			"By admin, no profile": {
+				name: "Chetan Kumar Rao",
+				initials: "CR",
+				profileId: null,
+				photoBlobId: null,
+			},
 		});
 		// Owner/admin see the inactive profile.
 		expect((await byTitle(ADMIN))["By Bina"]).toEqual({
 			name: "Bina Shah",
 			initials: "BS",
 			profileId: "cp2",
+			photoBlobId: null,
 		});
 	});
 

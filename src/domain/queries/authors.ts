@@ -20,6 +20,7 @@ export const authorProfilesQuery = (db: QueryDb, viewer: Actor, userIds: readonl
 			firstName: communityProfile.firstName,
 			middleName: communityProfile.middleName,
 			lastName: communityProfile.lastName,
+			photoBlobId: communityProfile.photoBlobId,
 		})
 		.from(communityProfile)
 		.where(and(visibleProfileWhere(viewer), inArray(communityProfile.userId, [...userIds])));
@@ -31,7 +32,18 @@ export function authorDisplay(rows: readonly AuthorProfileRow[]) {
 	const byUser = new Map(rows.flatMap((r) => (r.userId ? [[r.userId, r] as const] : [])));
 	return (userId: string, snapshotName: string): AuthorDisplay => {
 		const p = byUser.get(userId);
-		if (!p) return { name: snapshotName, initials: nameInitials(snapshotName), profileId: null };
-		return { name: fullName(p), initials: initials(p), profileId: p.id };
+		if (!p)
+			return {
+				name: snapshotName,
+				initials: nameInitials(snapshotName),
+				profileId: null,
+				photoBlobId: null,
+			};
+		return {
+			name: fullName(p),
+			initials: initials(p),
+			profileId: p.id,
+			photoBlobId: p.photoBlobId,
+		};
 	};
 }

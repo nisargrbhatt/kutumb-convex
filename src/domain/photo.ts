@@ -47,3 +47,8 @@ export const outputEdge = (variant: "avatar" | "display", cropEdge: number) =>
 		1,
 		Math.min(variantMaxEdge(BLOB_MEDIA_KIND.profilePhoto, variant) ?? 0, Math.round(cropEdge))
 	);
+
+/** Community tree: below this zoom avatars show initials only, so no image requests (spec). */
+export const TREE_PHOTO_MIN_ZOOM = 0.5;
+
+export const treeShowsPhotos = (zoom: number) => zoom >= TREE_PHOTO_MIN_ZOOM;
