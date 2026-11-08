@@ -10,11 +10,19 @@ const ProfilePhotoDrawer = lazy(() =>
 	import("./ProfilePhotoDrawer").then((m) => ({ default: m.ProfilePhotoDrawer }))
 );
 
-/** "Add photo" / "Edit photo" plus Remove (confirm Dialog) for the Actor's own linked profile. */
+/**
+ * "Add photo" / "Edit photo" plus Remove (confirm Dialog, no reason). `edit`: own linked profile, or
+ * a Userless Profile the Actor edits directly. `remove`: owner/admin on someone's linked profile.
+ */
 export function ProfilePhotoActions({
 	profile,
+	mode = "edit",
+	own = true,
 }: {
 	profile: Parameters<typeof fullName>[0] & { id: string; photoBlobId: string | null };
+	mode?: "edit" | "remove";
+	/** Copy only: "Your initials" vs "Initials". */
+	own?: boolean;
 }) {
 	const [open, setOpen] = useState(false);
 	// Mounted from the first open on, so the Drawer can animate closed.
@@ -25,16 +33,18 @@ export function ProfilePhotoActions({
 
 	return (
 		<>
-			<Button
-				variant="outline"
-				onClick={() => {
-					setOpened(true);
-					setOpen(true);
-				}}
-			>
-				<CameraIcon />
-				{hasPhoto ? "Edit photo" : "Add photo"}
-			</Button>
+			{mode === "edit" ? (
+				<Button
+					variant="outline"
+					onClick={() => {
+						setOpened(true);
+						setOpen(true);
+					}}
+				>
+					<CameraIcon />
+					{hasPhoto ? "Edit photo" : "Add photo"}
+				</Button>
+			) : null}
 			{hasPhoto ? (
 				<Button
 					variant="outline"
@@ -46,7 +56,7 @@ export function ProfilePhotoActions({
 				</Button>
 			) : null}
 
-			{opened ? (
+			{opened && mode === "edit" ? (
 				<Suspense fallback={null}>
 					<ProfilePhotoDrawer
 						open={open}
@@ -63,7 +73,7 @@ export function ProfilePhotoActions({
 				open={confirm}
 				onOpenChange={setConfirm}
 				title="Remove profile photo?"
-				description="Your initials will show instead."
+				description={own ? "Your initials will show instead." : "Initials will show instead."}
 				confirmLabel="Remove"
 				destructive
 				isPending={mutation.isPending}

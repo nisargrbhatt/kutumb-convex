@@ -23,7 +23,8 @@ function setup() {
 	`);
 	const r2 = fakeR2();
 	let n = 0;
-	const now = () => new Date(1_700_000_000_000);
+	const clock = { t: 1_700_000_000_000 };
+	const now = () => new Date(clock.t);
 	const store = makeBlobStore({
 		db: h.db,
 		bucket: r2.bucket,
@@ -39,13 +40,23 @@ function setup() {
 		now,
 		newId: () => `b${++n}`,
 	});
+	const getUserId = vi.fn(async (req: Request) => req.headers.get("x-test-user"));
 	const route = makeBlobRoute({
 		db: h.db,
 		bucket: r2.bucket,
-		getUserId: async (req) => req.headers.get("x-test-user"),
+		getUserId,
+		// The test "session cookie" is the user header itself.
+		sessionToken: (req) => req.headers.get("x-test-user"),
 		now,
 	});
-	return { h, r2, store, route };
+	/** Counting fake over the sqlite behind D1: every statement prepared. */
+	const queries = { n: 0 };
+	const prepare = h.fresh.sqlite.prepare.bind(h.fresh.sqlite);
+	h.fresh.sqlite.prepare = ((sql: string) => {
+		queries.n++;
+		return prepare(sql);
+	}) as typeof h.fresh.sqlite.prepare;
+	return { h, r2, store, route, clock, getUserId, queries };
 }
 
 type Put = {
@@ -320,5 +331,64 @@ describe("GET /api/blob/<org>/<blob>/<variant>", () => {
 
 	it("serves no variant the Blob hasn't landed", async () => {
 		expect((await get(s, "/api/blob/o1/b-p/thumb", "u-owner")).status).toBe(404);
+	});
+
+	describe("isolate memo", () => {
+		it("a member's second GET inside the TTL makes no D1 query", async () => {
+			expect((await get(s, "/api/blob/o1/b-p/avatar", MEMBER.userId)).status).toBe(200);
+			s.queries.n = 0;
+			s.getUserId.mockClear();
+			s.clock.t += 29_000;
+			const res = await get(s, "/api/blob/o1/b-p/display", MEMBER.userId);
+			expect(res.status).toBe(200);
+			expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes);
+			expect(res.headers.get("content-type")).toBe("image/jpeg");
+			expect(s.queries.n).toBe(0);
+			expect(s.getUserId).not.toHaveBeenCalled();
+		});
+
+		it("reads D1 again once the TTL passes", async () => {
+			await get(s, "/api/blob/o1/b-p/avatar", MEMBER.userId);
+			s.queries.n = 0;
+			s.clock.t += 31_000;
+			expect((await get(s, "/api/blob/o1/b-p/avatar", MEMBER.userId)).status).toBe(200);
+			expect(s.queries.n).toBeGreaterThan(0);
+		});
+
+		it("a restricted Blob still gets the full check on a memo hit", async () => {
+			await attached("b-gone", { ownerId: "gone" });
+			await attached("b-mine", { ownerId: "mine" });
+			await attached("b-orphan", { ownerId: "nobody" });
+			await attached("b-del", { status: "deleted" });
+			for (const user of [MEMBER.userId, "u-other", "u-owner"]) {
+				expect((await get(s, "/api/blob/o1/b-p/avatar", user)).status).toBe(200);
+			}
+			s.queries.n = 0;
+			expect((await get(s, "/api/blob/o1/b-gone/avatar", MEMBER.userId)).status).toBe(404);
+			expect(s.queries.n).toBeGreaterThan(0);
+			expect((await get(s, "/api/blob/o1/b-gone/avatar", "u-owner")).status).toBe(200);
+			expect((await get(s, "/api/blob/o1/b-mine/avatar", MEMBER.userId)).status).toBe(200);
+			expect((await get(s, "/api/blob/o1/b-mine/avatar", "u-other")).status).toBe(404);
+			expect((await get(s, "/api/blob/o1/b-orphan/avatar", "u-owner")).status).toBe(404);
+			expect((await get(s, "/api/blob/o1/b-del/avatar", "u-owner")).status).toBe(404);
+		});
+
+		it("memoised roles are per org: a memo hit never admits a non-member", async () => {
+			await s.h.fresh.sqlite.exec(
+				`INSERT INTO communityProfile (id, firstName, lastName, status, organizationId) VALUES ('p2', 'A', 'B', 'active', 'o2')`
+			);
+			await attached("b-o2", { org: "o2", ownerId: "p2" });
+			expect((await get(s, "/api/blob/o1/b-p/avatar", "u-other")).status).toBe(200);
+			expect((await get(s, "/api/blob/o2/b-o2/avatar", "u-other")).status).toBe(404);
+			expect((await get(s, "/api/blob/o2/b-o2/avatar", MEMBER.userId)).status).toBe(200);
+		});
+
+		it("a pending Blob is never served from the memo", async () => {
+			await get(s, "/api/blob/o1/b-p/avatar", MEMBER.userId);
+			s.clock.t += 31_000;
+			const { blobId } = await s.store.start(MEMBER, { mediaKind: "profilePhoto", size: 1000 });
+			await s.r2.bucket.put(`o1/${blobId}/avatar`, bytes);
+			expect((await get(s, `/api/blob/o1/${blobId}/avatar`, MEMBER.userId)).status).toBe(404);
+		});
 	});
 });

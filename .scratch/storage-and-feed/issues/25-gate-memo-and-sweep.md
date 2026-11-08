@@ -1,6 +1,6 @@
 # Gate memo and sweep
 
-Status: ready-for-agent Blocked by: 24
+Status: resolved Blocked by: 24
 
 ## What to build
 
@@ -27,3 +27,7 @@ Make the read gate cheap and clean up what nothing else does.
 - [ ] Expired `pending` rows are swept. A run stops at the subrequest budget and the rest wait for
   the next.
 - [ ] Nothing else depends on the cron: pending cap still ignores expired rows with the sweep off.
+
+## Comments
+
+Merged fa7c3c6 on feat/storage-integration.
