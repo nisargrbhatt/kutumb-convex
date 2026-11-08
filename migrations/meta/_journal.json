@@ -120,6 +120,13 @@
       "when": 1794120295017,
       "tag": "0016_robust_tusk",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1794137416593,
+      "tag": "0017_big_silver_fox",
+      "breakpoints": true
     }
   ]
 }

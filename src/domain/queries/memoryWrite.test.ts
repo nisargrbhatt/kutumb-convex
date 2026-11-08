@@ -57,13 +57,18 @@ describe("Memory edit and remove", () => {
 		expect(await getMemoryForEdit(db, AUTHOR, postId)).toEqual({
 			title: "New title",
 			description: "**Bold** memory",
+			media: [],
 		});
 	});
 
 	it("an edit may empty the description", async () => {
 		const { postId } = await share(AUTHOR, "T", "something");
 		await edit(AUTHOR, postId, "T", "  ");
-		expect((await getPost(db, AUTHOR, postId)).data).toEqual({ title: "T", descriptionDoc: null });
+		expect((await getPost(db, AUTHOR, postId)).data).toEqual({
+			title: "T",
+			descriptionDoc: null,
+			media: [],
+		});
 	});
 
 	it("blocks an edit whose description fails the rules, changing nothing", async () => {
@@ -71,7 +76,11 @@ describe("Memory edit and remove", () => {
 		await expect(edit(AUTHOR, postId, "X", "- a\n  - b\n    - c\n      - d")).rejects.toMatchObject(
 			{ kind: "Invalid" }
 		);
-		expect(await getMemoryForEdit(db, AUTHOR, postId)).toEqual({ title: "T", description: "keep" });
+		expect(await getMemoryForEdit(db, AUTHOR, postId)).toEqual({
+			title: "T",
+			description: "keep",
+			media: [],
+		});
 		expect((await getPost(db, AUTHOR, postId)).editedAt).toBeNull();
 	});
 
@@ -86,6 +95,7 @@ describe("Memory edit and remove", () => {
 		expect(await getMemoryForEdit(db, AUTHOR, postId)).toEqual({
 			title: "Mine",
 			description: "src",
+			media: [],
 		});
 	});
 

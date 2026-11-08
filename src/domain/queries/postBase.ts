@@ -1,10 +1,28 @@
 import { and, eq } from "drizzle-orm";
-import { post } from "@/db/app-schema";
-import type { PostKind } from "@/db/constants";
+import { mediaBlob, post } from "@/db/app-schema";
+import {
+	BLOB_OWNER_KIND,
+	BLOB_STATUS,
+	type BlobMediaKind,
+	type BlobOwnerKind,
+	type PostKind,
+} from "@/db/constants";
 import { AppError } from "@/domain/errors";
 import { canRemovePost } from "@/domain/feedPolicy";
 import type { Actor } from "@/domain/permission";
+import type { BatchDb } from "@/domain/profileChanges";
 import type { QueryDb } from "./db";
+
+/** Byte deletes of Blobs already marked `deleted` (prod: `waitUntil(purgeBlobs(...))`). */
+export type PurgeBlobs = (
+	organizationId: string,
+	blobs: { id: string; mediaKind: BlobMediaKind }[]
+) => Promise<void>;
+
+/** Owner kind of each Post kind's media, so removal marks it. A new kind fails to compile. */
+const POST_MEDIA_OWNER: Record<PostKind, BlobOwnerKind> = {
+	memory: BLOB_OWNER_KIND.memory,
+};
 
 /**
  * Feed helper for each kind's create function: the `post` base row as a batch statement, so the
@@ -38,15 +56,33 @@ export async function loadPostForWrite(db: QueryDb, actor: Actor, postId: string
 }
 
 /**
- * Remove a Post: author or owner/admin. Hard delete, kind rows (and later likes, comments, media)
- * go by FK cascade. No undo, no Audit Event.
+ * Remove a Post: author or owner/admin. Hard delete: kind rows, likes, comments and gallery rows go
+ * by FK cascade; its Blobs are marked `deleted` in the same batch, then their bytes are purged. No
+ * undo, no Audit Event.
  */
-export async function removePost(db: QueryDb, actor: Actor, postId: string) {
+export async function removePost(
+	db: BatchDb,
+	actor: Actor,
+	postId: string,
+	{ purgeBlobs }: { purgeBlobs?: PurgeBlobs } = {}
+) {
 	const row = await loadPostForWrite(db, actor, postId);
 	if (!canRemovePost(actor, row)) {
 		throw new AppError("Forbidden", "You can't remove this Post");
 	}
-	await db
-		.delete(post)
-		.where(and(eq(post.id, row.id), eq(post.organizationId, actor.organizationId)));
+	const [blobs] = await db.batch([
+		db
+			.update(mediaBlob)
+			.set({ status: BLOB_STATUS.deleted })
+			.where(
+				and(
+					eq(mediaBlob.organizationId, actor.organizationId),
+					eq(mediaBlob.ownerKind, POST_MEDIA_OWNER[row.kind]),
+					eq(mediaBlob.ownerId, row.id)
+				)
+			)
+			.returning({ id: mediaBlob.id, mediaKind: mediaBlob.mediaKind }),
+		db.delete(post).where(and(eq(post.id, row.id), eq(post.organizationId, actor.organizationId))),
+	]);
+	if (blobs.length > 0 && purgeBlobs) await purgeBlobs(actor.organizationId, blobs);
 }

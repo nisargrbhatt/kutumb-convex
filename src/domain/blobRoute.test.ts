@@ -211,13 +211,15 @@ describe("GET /api/blob/<org>/<blob>/<variant>", () => {
 		id: string,
 		{ ownerKind = "profile", ownerId = "p", org = "o1", status = "attached" } = {}
 	) => {
+		const [kind, small] =
+			ownerKind === "memory" ? ["memoryImage", "thumb"] : ["profilePhoto", "avatar"];
 		s.h.fresh.sqlite.exec(`
 			INSERT INTO blob (id, organizationId, mediaKind, status, ownerKind, ownerId, uploadedByUserId,
 				size, variants, createdAt)
-			VALUES ('${id}', '${org}', 'profilePhoto', '${status}', '${ownerKind}', '${ownerId}', 'u-member',
-				${bytes.length * 2}, '{"avatar":${bytes.length},"display":${bytes.length}}', 0);
+			VALUES ('${id}', '${org}', '${kind}', '${status}', '${ownerKind}', '${ownerId}', 'u-member',
+				${bytes.length * 2}, '{"${small}":${bytes.length},"display":${bytes.length}}', 0);
 		`);
-		await s.r2.bucket.put(`${org}/${id}/avatar`, bytes);
+		await s.r2.bucket.put(`${org}/${id}/${small}`, bytes);
 		await s.r2.bucket.put(`${org}/${id}/display`, bytes);
 	};
 
@@ -306,6 +308,23 @@ describe("GET /api/blob/<org>/<blob>/<variant>", () => {
 		expect((await get(s, "/api/blob/o1/b-cr/avatar", "u-other")).status).toBe(404);
 	});
 
+	it("serves a Memory's gallery image to any member of its org only", async () => {
+		s.h.fresh.sqlite.exec(`
+			INSERT INTO post (id, organizationId, kind, authorUserId, authorName, createdAt)
+				VALUES ('m1', 'o1', 'memory', 'u-owner', 'O', 0), ('m2', 'o2', 'memory', 'u-outsider', 'X', 0);
+		`);
+		await attached("b-mem", { ownerKind: "memory", ownerId: "m1" });
+		await attached("b-memgone", { ownerKind: "memory", ownerId: "removed" });
+		// Owner row in another org never vouches for this org's Blob.
+		await attached("b-cross", { ownerKind: "memory", ownerId: "m2" });
+		for (const user of [MEMBER.userId, "u-other", "u-owner"]) {
+			expect((await get(s, "/api/blob/o1/b-mem/thumb", user)).status).toBe(200);
+			expect((await get(s, "/api/blob/o1/b-memgone/thumb", user)).status).toBe(404);
+			expect((await get(s, "/api/blob/o1/b-cross/thumb", user)).status).toBe(404);
+		}
+		expect((await get(s, "/api/blob/o1/b-mem/thumb", "u-outsider")).status).toBe(404);
+	});
+
 	it("404s an attached Blob whose owner row is gone, and a deleted Blob", async () => {
 		await attached("b-orphan", { ownerId: "nobody" });
 		await attached("b-del", { status: "deleted" });
@@ -345,6 +364,18 @@ describe("GET /api/blob/<org>/<blob>/<variant>", () => {
 			expect(res.headers.get("content-type")).toBe("image/jpeg");
 			expect(s.queries.n).toBe(0);
 			expect(s.getUserId).not.toHaveBeenCalled();
+		});
+
+		it("an attached Memory image is unrestricted: a memo hit makes no D1 query", async () => {
+			s.h.fresh.sqlite.exec(`
+				INSERT INTO post (id, organizationId, kind, authorUserId, authorName, createdAt)
+					VALUES ('m1', 'o1', 'memory', 'u-owner', 'O', 0);
+			`);
+			await attached("b-mem", { ownerKind: "memory", ownerId: "m1" });
+			expect((await get(s, "/api/blob/o1/b-p/avatar", "u-other")).status).toBe(200);
+			s.queries.n = 0;
+			expect((await get(s, "/api/blob/o1/b-mem/thumb", "u-other")).status).toBe(200);
+			expect(s.queries.n).toBe(0);
 		});
 
 		it("reads D1 again once the TTL passes", async () => {

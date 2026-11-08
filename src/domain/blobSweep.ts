@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, lt, not, or, sql, type SQL } from "drizzle-orm";
-import { mediaBlob } from "@/db/app-schema";
+import { mediaBlob, post } from "@/db/app-schema";
 import { communityProfile } from "@/db/schema";
 import { BLOB_STATUS, type BlobOwnerKind } from "@/db/constants";
 import { blobKey, pendingCutoff, variantsOf } from "./blob";
@@ -18,9 +18,9 @@ const PAGE_COST = 3;
  */
 const OWNER_EXISTS: Record<BlobOwnerKind, SQL> = {
 	profile: sql`exists (select 1 from ${communityProfile} where ${communityProfile.id} = ${mediaBlob.ownerId} and ${communityProfile.organizationId} = ${mediaBlob.organizationId})`,
-	// Stubs: nothing attaches to these yet. Photo Change Request (27) and Gallery images (34).
+	// Stub: nothing attaches to it yet. Photo Change Request (27).
 	changeRequest: sql`1`,
-	memory: sql`1`,
+	memory: sql`exists (select 1 from ${post} where ${post.id} = ${mediaBlob.ownerId} and ${post.organizationId} = ${mediaBlob.organizationId})`,
 };
 
 type Deps = {
