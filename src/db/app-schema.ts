@@ -209,6 +209,23 @@ export const postLike = sqliteTable(
 	]
 );
 
+// Flat, plain-text comment on a Post. `authorName` is a frozen `user.name` snapshot, no FK to
+// `user`: a comment outlives its author. No editing. Counts are computed at read.
+export const postComment = sqliteTable(
+	"postComment",
+	{
+		id: text("id").primaryKey(),
+		postId: text("postId")
+			.references(() => post.id, { onDelete: "cascade" })
+			.notNull(),
+		authorUserId: text("authorUserId").notNull(),
+		authorName: text("authorName").notNull(),
+		body: text("body").notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [index("postComment_post_created_id_idx").on(table.postId, table.createdAt, table.id)]
+);
+
 // Change Request: a proposed profile change awaiting Review. FK to org only; profile/user are
 // snapshotted so the row survives profile hard-delete (My requests still shows the outcome).
 export const changeRequest = sqliteTable(

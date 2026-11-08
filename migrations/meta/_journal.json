@@ -106,6 +106,13 @@
       "when": 1794119209814,
       "tag": "0014_magical_killer_shrike",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1794119566240,
+      "tag": "0015_tidy_dark_beast",
+      "breakpoints": true
     }
   ]
 }

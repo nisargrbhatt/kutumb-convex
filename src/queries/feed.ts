@@ -11,11 +11,14 @@ import { toast } from "sonner";
 import { isAppError } from "@/domain/errors";
 import { type FeedPage, type FeedPost, type MemoryInput, withLike } from "@/domain/feed";
 import {
+	createComment,
 	createMemory,
 	getFeedPage,
 	getFeedPost,
 	getMemoryForEdit,
+	getPostComments,
 	getPostLikers,
+	removeComment,
 	removePost,
 	setLike,
 	updateMemory,
@@ -110,6 +113,80 @@ export function useSetLike(postId: string) {
 			toastMutationError("Like", "Failed to update like")(error);
 		},
 		onSettled: () => qc.invalidateQueries({ queryKey: feedKeys.likers(orgId, postId) }),
+	});
+}
+
+/** A Post's comments on its detail page: newest first, 20 per page, "Show more". */
+export const postCommentsQuery = (orgId: string, postId: string) =>
+	infiniteQueryOptions({
+		queryKey: feedKeys.comments(orgId, postId),
+		queryFn: ({ pageParam }) =>
+			getPostComments({ data: { postId, cursor: pageParam ?? undefined } }),
+		initialPageParam: null as string | null,
+		getNextPageParam: (last) => last.nextCursor,
+	});
+
+/**
+ * "This Post was removed": say so, drop the Post's cache, refresh list and route (detail falls to
+ * `NotFound`). Returns false for any other error.
+ */
+function usePostRemovedHandler(postId: string) {
+	const qc = useQueryClient();
+	const router = useRouter();
+	const orgId = useOrgId();
+	return async (error: unknown) => {
+		if (!isAppError(error) || error.kind !== "NotFound") return false;
+		toast.error("This Post was removed");
+		qc.removeQueries({ queryKey: feedKeys.post(orgId, postId) });
+		qc.removeQueries({ queryKey: feedKeys.comments(orgId, postId) });
+		await qc.invalidateQueries({ queryKey: feedKeys.list(orgId) });
+		await router.invalidate();
+		return true;
+	};
+}
+
+/** Refetch a Post's comments, its count on the detail page and on Feed cards. */
+function useRefreshComments(postId: string) {
+	const qc = useQueryClient();
+	const orgId = useOrgId();
+	return () =>
+		Promise.all([
+			qc.invalidateQueries({ queryKey: feedKeys.comments(orgId, postId) }),
+			qc.invalidateQueries({ queryKey: feedKeys.post(orgId, postId), exact: true }),
+			qc.invalidateQueries({ queryKey: feedKeys.list(orgId) }),
+		]);
+}
+
+/** Post a comment: waits for the server, then refetches. Caller keeps the text on failure. */
+export function useCreateComment(postId: string) {
+	const posthog = usePostHog();
+	const refresh = useRefreshComments(postId);
+	const postRemoved = usePostRemovedHandler(postId);
+	return useMutation({
+		mutationFn: (body: string) => createComment({ data: { postId, body } }),
+		onSuccess: async () => {
+			posthog.capture("comment_posted");
+			await refresh();
+		},
+		onError: async (error) => {
+			if (await postRemoved(error)) return;
+			toastMutationError("Comment", "Failed to post comment")(error);
+		},
+	});
+}
+
+/** Remove a comment (author or owner/admin). Already removed counts as success. */
+export function useRemoveComment(postId: string) {
+	const posthog = usePostHog();
+	const refresh = useRefreshComments(postId);
+	return useMutation({
+		mutationFn: (commentId: string) => removeComment({ data: { commentId } }),
+		onSuccess: async () => {
+			toast.success("Comment removed");
+			posthog.capture("comment_removed");
+			await refresh();
+		},
+		onError: toastMutationError("Comment", "Failed to remove comment"),
 	});
 }
 
