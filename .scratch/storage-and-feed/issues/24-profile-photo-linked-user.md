@@ -1,6 +1,6 @@
 # Profile Photo for the linked user
 
-Status: ready-for-agent Blocked by: 23
+Status: resolved Blocked by: 23
 
 ## What to build
 
@@ -32,3 +32,7 @@ change seam, Crop editor), Unconfirmed defaults.
 - [ ] Replacing a photo deletes the old bytes. Audit Event holds metadata, no bytes.
 - [ ] A HEIC file on Chrome shows the HEIC message, not a crash.
 - [ ] Plan tests in the existing `profileChanges` harness.
+
+## Comments
+
+Merged 387cdcb on feat/storage-integration.
