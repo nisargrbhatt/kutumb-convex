@@ -1,6 +1,6 @@
 # Gallery images
 
-Status: ready-for-agent Blocked by: 25, 30
+Status: resolved Blocked by: 25, 30
 
 ## What to build
 
@@ -35,3 +35,7 @@ Photos on Memories, from Drawer to lightbox.
 - [ ] Removing a Memory deletes all its bytes. Sweep catches a Memory lost to org delete.
 - [ ] Mosaic holds its layouts from 1 to 5 at phone, tablet, desktop, ultrawide.
 - [ ] Image load error shows a placeholder.
+
+## Comments
+
+Merged 5c9ea8d on feat/storage-integration.
