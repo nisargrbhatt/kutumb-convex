@@ -1,6 +1,6 @@
 # Image upload and gated read
 
-Status: ready-for-agent Blocked by: 22
+Status: resolved Blocked by: 22
 
 ## What to build
 
@@ -40,3 +40,7 @@ Serving (Gate without memo, Response).
 - [ ] A Change Request owned Blob is readable by submitter and owner/admin only.
 - [ ] `304` turns to `404` once the object is gone.
 - [ ] Pending cap throws `LimitError`; expired rows don't count; discard frees it at once.
+
+## Comments
+
+Merged 957f067 on feat/storage-integration.
