@@ -250,7 +250,7 @@ export default function MemoryDrawer({
 				) : null}
 			</div>
 			<div className="grid gap-2">
-				<Label>Photos</Label>
+				<Label>Photos and videos</Label>
 				<GalleryField draft={draft} error={galleryError} />
 			</div>
 		</FormDrawer>
