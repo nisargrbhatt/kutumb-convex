@@ -1,12 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@/db";
 import {
+	commentIdInput,
+	commentsPageInput,
+	createCommentInput,
 	feedPageInput,
 	likersPageInput,
 	memoryInput,
 	postIdInput,
 	setLikeInput,
 } from "@/domain/feed";
+import {
+	createComment as createCommentRow,
+	listComments,
+	removeComment as removeCommentRow,
+} from "@/domain/queries/comments";
 import { getPost, listFeed } from "@/domain/queries/feed";
 import { listLikers, setLike as setLikeRow } from "@/domain/queries/likes";
 import {
@@ -90,3 +98,23 @@ export const removePost = createServerFn({ method: "POST" })
 	.middleware([orgMiddleware])
 	.validator(postIdInput)
 	.handler(({ context, data }) => removePostRow(db, context.actor, data.postId));
+
+/** A Post's comments, newest first, 20 per page. */
+export const getPostComments = createServerFn({ method: "GET" })
+	.middleware([orgMiddleware])
+	.validator(commentsPageInput)
+	.handler(({ context, data }) => listComments(db, context.actor, data));
+
+/** Any Org Member comments. Name is the `user.name` snapshot. */
+export const createComment = createServerFn({ method: "POST" })
+	.middleware([orgMiddleware])
+	.validator(createCommentInput)
+	.handler(({ context, data }) =>
+		createCommentRow({ db }, context.actor, context.session.user.name, data)
+	);
+
+/** Comment author or owner/admin. Hard delete; an already-removed comment succeeds. */
+export const removeComment = createServerFn({ method: "POST" })
+	.middleware([orgMiddleware])
+	.validator(commentIdInput)
+	.handler(({ context, data }) => removeCommentRow(db, context.actor, data));

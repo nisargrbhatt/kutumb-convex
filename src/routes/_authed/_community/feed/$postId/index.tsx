@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { NotFound } from "@/components/NotFound";
+import { Comments } from "@/components/feed/Comments";
 import { PostDetail } from "@/components/feed/kinds";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isAppError } from "@/domain/errors";
@@ -80,6 +81,7 @@ function PostView() {
 			<PageHeader crumbs={[{ label: "Feed", to: "/feed" }, { label: post.data.title }]} />
 			<div className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-4">
 				<PostDetail post={post} />
+				<Comments postId={post.id} />
 			</div>
 		</div>
 	);

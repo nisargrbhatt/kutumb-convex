@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import type { FeedPost } from "@/domain/feed";
 import { AuthorLine } from "./AuthorLine";
+import { CommentAction } from "./CommentAction";
 import { DescriptionView } from "./DescriptionView";
 import { LikeAction } from "./LikeAction";
 import { PostActions } from "./PostActions";
@@ -31,7 +32,10 @@ export function MemoryCard({ post }: { post: FeedPost<"card", "memory"> }) {
 					) : null}
 				</div>
 				<div className="-mx-2 -mb-2 flex items-center justify-between gap-1">
-					<LikeAction post={post} />
+					<div className="flex items-center gap-1">
+						<LikeAction post={post} />
+						<CommentAction post={post} />
+					</div>
 					<ShareButton postId={post.id} />
 				</div>
 			</CardContent>

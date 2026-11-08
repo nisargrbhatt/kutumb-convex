@@ -38,6 +38,8 @@ export const MEMORY_DESCRIPTION_MAX = 5000;
 export const MEMORY_DESCRIPTION_TEXT_MAX = 300;
 /** List nesting allowed in a Memory description. */
 export const MEMORY_LIST_DEPTH_MAX = 3;
+/** Comment body, trimmed, not empty. */
+export const COMMENT_MAX = 1000;
 
 export const canJoinOrganization = (membershipCount: number) => membershipCount < ORG_LIMIT;
 export const canInviteMember = (membersPlusPending: number) => membersPlusPending < MEMBER_LIMIT;
