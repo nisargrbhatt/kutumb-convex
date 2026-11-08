@@ -1,6 +1,6 @@
 # Memory edit and remove
 
-Status: ready-for-agent Blocked by: 29
+Status: resolved Blocked by: 29
 
 ## What to build
 
@@ -25,3 +25,7 @@ Authors edit; authors and owner/admin remove.
   Post.
 - [ ] Removing a Post leaves no rows behind, by FK cascade.
 - [ ] Menu is absent when there's nothing to show.
+
+## Comments
+
+Merged 1285252 on feat/storage-integration.
