@@ -12,6 +12,7 @@ const customStatements = {
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
 	orgSetting: ["update"],
+	post: ["moderate"],
 } as const;
 
 const expected: Record<Role, Record<string, readonly string[]>> = {
@@ -25,6 +26,7 @@ const expected: Record<Role, Record<string, readonly string[]>> = {
 		customFields: ["read"],
 		changeRequest: ["create", "review"],
 		auditEvent: ["read"],
+		post: ["moderate"],
 	},
 	owner: {
 		communityProfile: ["create", "delete", "reassign"],
@@ -32,6 +34,7 @@ const expected: Record<Role, Record<string, readonly string[]>> = {
 		changeRequest: ["create", "review"],
 		auditEvent: ["read"],
 		orgSetting: ["update"],
+		post: ["moderate"],
 	},
 };
 

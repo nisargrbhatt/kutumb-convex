@@ -44,6 +44,8 @@ export function withLike(likes: PostLikes, liked: boolean): PostLikes {
 export type PostBase = {
 	id: string;
 	author: AuthorDisplay;
+	/** For the Feed policy (`src/domain/feedPolicy.ts`) on the client. */
+	authorUserId: string;
 	createdAt: Date;
 	editedAt: Date | null;
 	likes: PostLikes;

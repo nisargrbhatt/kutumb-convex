@@ -1,4 +1,5 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { Bold, Heading, Italic, Link2, List, ListOrdered } from "lucide-react";
@@ -13,12 +14,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { memoryInput } from "@/domain/feed";
 import { MEMORY_DESCRIPTION_MAX } from "@/domain/limits";
 import { parseDescription } from "@/domain/memoryDescription";
-import { useCreateMemory } from "@/queries/feed";
+import { memoryEditQuery, useCreateMemory, useUpdateMemory } from "@/queries/feed";
+import { useOrgId } from "@/queries/mutation";
 import { DescriptionView } from "./DescriptionView";
 
 /**
- * Create Memory Drawer. Loaded lazily (it pulls in `marked` through the description module).
- * Closing it any way discards the form. Text-only for now; the gallery lands with its slice.
+ * Create / edit Memory Drawer. Loaded lazily (it pulls in `marked` through the description
+ * module). Closing it any way discards the form. Text-only for now; the gallery lands with its
+ * slice.
  */
 
 const formSchema = z.object({
@@ -70,12 +73,26 @@ function Preview({ source }: { source: string }) {
 export default function MemoryDrawer({
 	open,
 	onOpenChange,
+	postId,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	/** Edit this Memory (author only) instead of creating one. */
+	postId?: string;
 }) {
+	const isEdit = postId !== undefined;
+	const orgId = useOrgId();
 	const create = useCreateMemory();
+	const update = useUpdateMemory(postId ?? "");
+	const save = isEdit ? update : create;
+	const source = useQuery({ ...memoryEditQuery(orgId, postId ?? ""), enabled: isEdit && open });
 	const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: EMPTY });
+	// Edit loads the source of truth (`description`), never the derived tree.
+	const loaded = source.data;
+	useEffect(() => {
+		if (open && loaded) form.reset(loaded);
+	}, [open, loaded, form]);
+	const loading = isEdit && !loaded;
 	const textarea = useRef<HTMLTextAreaElement | null>(null);
 	const description = useWatch({ control: form.control, name: "description" });
 	const { ref: registerRef, ...descriptionField } = form.register("description");
@@ -90,7 +107,7 @@ export default function MemoryDrawer({
 
 	const onSubmit = async (values: FormValues) => {
 		try {
-			await create.mutateAsync(values);
+			await save.mutateAsync(values);
 		} catch {
 			return; // toast shown; text stays
 		}
@@ -102,14 +119,23 @@ export default function MemoryDrawer({
 		<FormDrawer
 			open={open}
 			onOpenChange={onOpenChange}
-			title="Share a memory"
-			description="Posted to your community's Feed at once."
+			title={isEdit ? "Edit memory" : "Share a memory"}
+			description={
+				isEdit
+					? "Changes show at once, marked as edited."
+					: "Posted to your community's Feed at once."
+			}
 			form={form}
 			onSubmit={onSubmit}
-			submitLabel="Post"
-			isPending={create.isPending}
+			submitLabel={isEdit ? "Save" : "Post"}
+			isPending={save.isPending || loading}
 			size="lg"
 		>
+			{source.isError ? (
+				<p role="alert" className="text-sm text-destructive">
+					{source.error.message || "Couldn't load this memory."}
+				</p>
+			) : null}
 			<FormField
 				control={form.control}
 				name="title"

@@ -91,6 +91,7 @@ async function hydrate<V extends FeedView>(
 			id: r.id,
 			kind: r.kind,
 			author: author(r.authorUserId, r.authorName),
+			authorUserId: r.authorUserId,
 			createdAt: r.createdAt,
 			editedAt: r.editedAt ?? null,
 			likes: { count: counts.get(r.id) ?? 0, viewerLiked: liked.has(r.id) },
