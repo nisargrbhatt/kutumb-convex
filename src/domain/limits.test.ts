@@ -3,6 +3,7 @@ import {
 	ORG_LIMIT,
 	MEMBER_LIMIT,
 	PROFILE_LIMIT,
+	PENDING_UPLOAD_BYTES_LIMIT,
 	canJoinOrganization,
 	canInviteMember,
 	canCreateProfile,
@@ -84,6 +85,7 @@ const fakeCounters = (n: number): Counters => ({
 	userMemberships: async () => n,
 	orgMembersAndPending: async () => n,
 	orgProfiles: async () => n,
+	memberPendingBytes: async () => n,
 });
 
 describe("makeLimits", () => {
@@ -146,5 +148,39 @@ describe("makeLimits", () => {
 
 	it("pending request limit code maps to its toast copy", () => {
 		expect(limitMessage(new LimitError("pendingRequest"))).toBe(LIMIT_COPY.pendingRequest);
+	});
+});
+
+describe("assertPendingUploadSlot", () => {
+	const now = new Date(1_000_000_000_000);
+
+	it("allows a reservation that lands exactly on the cap, blocks one byte over", async () => {
+		const limits = makeLimits(fakeCounters(PENDING_UPLOAD_BYTES_LIMIT - 100), vi.fn());
+		await expect(limits.assertPendingUploadSlot("o1", "u1", 100, now)).resolves.toBeUndefined();
+		const err = await limits.assertPendingUploadSlot("o1", "u1", 101, now).catch((e) => e);
+		expect(err).toBeInstanceOf(LimitError);
+		expect(err.code).toBe(LIMIT_ERROR_CODES.pendingUpload);
+		expect(limitMessage(err)).toBe(LIMIT_COPY.pendingUpload);
+	});
+
+	it("counts only rows newer than 24h and reports the hit", async () => {
+		const memberPendingBytes = vi.fn(async () => PENDING_UPLOAD_BYTES_LIMIT);
+		const onReached = vi.fn();
+		const limits = makeLimits({ ...fakeCounters(0), memberPendingBytes }, onReached);
+		await expect(limits.assertPendingUploadSlot("o1", "u1", 1, now)).rejects.toThrow(LimitError);
+		expect(memberPendingBytes).toHaveBeenCalledWith(
+			"o1",
+			"u1",
+			new Date(now.getTime() - 24 * 60 * 60 * 1000)
+		);
+		expect(onReached).toHaveBeenCalledWith({
+			limit: "pendingUpload",
+			organizationId: "o1",
+			userId: "u1",
+		});
+	});
+
+	it("copy states the cap in MB", () => {
+		expect(LIMIT_COPY.pendingUpload.description).toContain("500 MB");
 	});
 });
