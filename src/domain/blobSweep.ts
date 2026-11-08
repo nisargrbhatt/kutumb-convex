@@ -1,8 +1,8 @@
-import { and, asc, eq, inArray, lt, not, or, sql, type SQL } from "drizzle-orm";
-import { mediaBlob, post } from "@/db/app-schema";
-import { changeRequest, communityProfile } from "@/db/schema";
-import { BLOB_STATUS, CHANGE_REQUEST_STATUS, type BlobOwnerKind } from "@/db/constants";
+import { and, asc, eq, inArray, lt, not, or, type SQL } from "drizzle-orm";
+import { mediaBlob } from "@/db/app-schema";
+import { BLOB_STATUS, type BlobOwnerKind } from "@/db/constants";
 import { blobKey, pendingCutoff, variantsOf } from "./blob";
+import { BLOB_OWNER_SQL } from "./blobOwner";
 import type { BlobBucket } from "./blobStore";
 import { IN_LIST_CHUNK, type QueryDb } from "./queries/db";
 
@@ -12,17 +12,8 @@ export const SWEEP_SUBREQUEST_BUDGET = 40;
 /** Subrequests one byte-delete page costs: select, R2 bulk delete, row delete. */
 const PAGE_COST = 3;
 
-/**
- * "Owner row still exists", per owner kind, as SQL over the `blob` row. A `Record` so a new kind
- * fails to compile until it says when its Blobs are orphaned.
- */
-const OWNER_EXISTS: Record<BlobOwnerKind, SQL> = {
-	profile: sql`exists (select 1 from ${communityProfile} where ${communityProfile.id} = ${mediaBlob.ownerId} and ${communityProfile.organizationId} = ${mediaBlob.organizationId})`,
-	// A `photo` request's proposed Blob: only while the request is pending (approve moves it to the
-	// profile; every other close marks it deleted, so a closed owner means a missed mark).
-	changeRequest: sql`exists (select 1 from ${changeRequest} where ${changeRequest.id} = ${mediaBlob.ownerId} and ${changeRequest.organizationId} = ${mediaBlob.organizationId} and ${changeRequest.status} = ${CHANGE_REQUEST_STATUS.pending})`,
-	memory: sql`exists (select 1 from ${post} where ${post.id} = ${mediaBlob.ownerId} and ${post.organizationId} = ${mediaBlob.organizationId})`,
-};
+/** Rows each mark step (expire, orphan) may change per run; the rest wait for the next run. */
+export const SWEEP_MARK_LIMIT = 500;
 
 type Deps = {
 	db: QueryDb;
@@ -31,6 +22,8 @@ type Deps = {
 	budget?: number;
 	/** Blobs per byte-delete page; ids go in one `IN` list, so within D1's param cap. */
 	pageSize?: number;
+	/** Rows each mark step may change per run. */
+	markLimit?: number;
 };
 
 /**
@@ -44,43 +37,47 @@ export function makeBlobSweep({
 	now,
 	budget = SWEEP_SUBREQUEST_BUDGET,
 	pageSize = IN_LIST_CHUNK,
+	markLimit = SWEEP_MARK_LIMIT,
 }: Deps) {
+	/** Mark up to `markLimit` matching rows `deleted` (D1 has no `UPDATE … LIMIT`). */
+	const markDeleted = async (where: SQL) =>
+		(
+			await db
+				.update(mediaBlob)
+				.set({ status: BLOB_STATUS.deleted })
+				.where(
+					inArray(
+						mediaBlob.id,
+						db.select({ id: mediaBlob.id }).from(mediaBlob).where(where).limit(markLimit)
+					)
+				)
+				.returning({ id: mediaBlob.id })
+		).length;
+
 	return {
 		async run() {
 			let spent = 0;
 			const result = { expired: 0, orphaned: 0, purged: 0, subrequests: 0 };
 			try {
 				spent++;
-				result.expired = (
-					await db
-						.update(mediaBlob)
-						.set({ status: BLOB_STATUS.deleted })
-						.where(
-							and(
-								eq(mediaBlob.status, BLOB_STATUS.pending),
-								lt(mediaBlob.createdAt, pendingCutoff(now()))
-							)
-						)
-						.returning({ id: mediaBlob.id })
-				).length;
+				result.expired = await markDeleted(
+					and(
+						eq(mediaBlob.status, BLOB_STATUS.pending),
+						lt(mediaBlob.createdAt, pendingCutoff(now()))
+					)!
+				);
 
 				spent++;
-				result.orphaned = (
-					await db
-						.update(mediaBlob)
-						.set({ status: BLOB_STATUS.deleted })
-						.where(
-							and(
-								eq(mediaBlob.status, BLOB_STATUS.attached),
-								or(
-									...Object.entries(OWNER_EXISTS).map(([kind, exists]) =>
-										and(eq(mediaBlob.ownerKind, kind as BlobOwnerKind), not(exists))
-									)
-								)
+				result.orphaned = await markDeleted(
+					and(
+						eq(mediaBlob.status, BLOB_STATUS.attached),
+						or(
+							...Object.entries(BLOB_OWNER_SQL).map(([kind, { exists }]) =>
+								and(eq(mediaBlob.ownerKind, kind as BlobOwnerKind), not(exists))
 							)
 						)
-						.returning({ id: mediaBlob.id })
-				).length;
+					)!
+				);
 
 				while (spent + PAGE_COST <= budget) {
 					spent++;

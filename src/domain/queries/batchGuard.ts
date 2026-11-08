@@ -4,7 +4,7 @@ import type { QueryDb } from "./db";
 /**
  * In-batch guard: errors the `db.batch` (rolling it back) unless the previous DML touched exactly
  * `n` rows. Param-less on purpose: raw `sql` with params inside `db.batch` breaks drizzle on D1.
- * Same trick as `makeProfileChanges`' guard.
+ * Shared by Feed writes and `makeProfileChanges`.
  */
 export const batchGuard = (db: QueryDb, n: number) => {
 	if (!Number.isInteger(n) || n < 0) throw new Error(`bad guard count ${n}`);

@@ -110,6 +110,7 @@ inline. `db` (`src/db/index.ts`) is the Drizzle client bound to the `D1` Cloudfl
 - For list data, always use Table format. If data is limited then use Simple Table from Shadcn, if
   data has pagination, filter or sort then go for DataTable/DataGrid using Tanstack Table and Shadcn
   components.
+  - Exception: Feed cards, comments and likers are not Table data; they render as cards/lists.
 
 ## Form handling
 

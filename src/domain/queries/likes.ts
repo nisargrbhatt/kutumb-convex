@@ -1,6 +1,7 @@
 import { and, count, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { post, postLike } from "@/db/app-schema";
 import { AppError } from "@/domain/errors";
+import { generatePrimaryKey } from "@/lib/generate";
 import {
 	LIKERS_PAGE_SIZE,
 	decodeFeedCursor,
@@ -45,7 +46,7 @@ export type LikeDeps = { db: BatchDb; now?: () => Date; newId?: () => string };
  * write and the Post check share one batch, so a Post removed mid-action is `NotFound`.
  */
 export async function setLike(
-	{ db, now = () => new Date(), newId = () => crypto.randomUUID().replaceAll("-", "") }: LikeDeps,
+	{ db, now = () => new Date(), newId = generatePrimaryKey }: LikeDeps,
 	actor: Actor,
 	userName: string,
 	{ postId, liked }: SetLikeInput

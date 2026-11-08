@@ -100,8 +100,11 @@ async function walk(
 	let visited = 0;
 	const metadataAt: number[] = [];
 
-	/** Children of `[from, to)`; stops early when `visit` returns true. */
-	async function children(from: number, to: number, visit: (b: Box) => Promise<boolean | void>) {
+	/**
+	 * Children of `[from, to)`, all of them: a `udta` / `meta` after the boxes we read must still be
+	 * found. Headers only for boxes we don't descend into; the read and box caps bound the cost.
+	 */
+	async function children(from: number, to: number, visit: (b: Box) => Promise<void>) {
 		let pos = from;
 		while (pos + 8 <= to) {
 			if (++visited > MAX_BOXES) throw new Malformed();
@@ -119,7 +122,7 @@ async function walk(
 			if (boxSize < header || pos + boxSize > to) throw new Malformed();
 			const b = { type, offset: pos, header, end: pos + boxSize };
 			if (METADATA.has(type)) metadataAt.push(pos);
-			else if (await visit(b)) return;
+			else await visit(b);
 			pos = b.end;
 		}
 		if (pos !== to && to - pos >= 8) throw new Malformed();
@@ -159,11 +162,8 @@ async function walk(
 						const d = await read(s.offset + s.header, 16);
 						if (view(d).getUint32(4) < 1) throw new Malformed();
 						track.codec = text(d, 12);
-						return true;
 					});
-					return true;
 				});
-				return track.handler !== undefined;
 			});
 		});
 		return track;

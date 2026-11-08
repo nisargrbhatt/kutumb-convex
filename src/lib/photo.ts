@@ -1,5 +1,5 @@
 import type { Area } from "react-easy-crop";
-import { BLOB_MEDIA_KIND } from "@/db/constants";
+import { BLOB_MEDIA_KIND, BLOB_VARIANT } from "@/db/constants";
 import { blobUrl } from "@/domain/blob";
 import { stripJpeg } from "@/domain/jpeg";
 import {
@@ -112,10 +112,10 @@ export async function exportJpeg(c: HTMLCanvasElement) {
 /** `avatar` (≤128 px) and `display` (≤1024 px), never upscaled past the crop. */
 export async function exportProfilePhoto(photo: DecodedPhoto, area: Area, rotation: number) {
 	const avatar = await exportJpeg(
-		renderCrop(photo.full, area, rotation, outputEdge("avatar", area.width))
+		renderCrop(photo.full, area, rotation, outputEdge(BLOB_VARIANT.avatar, area.width))
 	);
 	const display = await exportJpeg(
-		renderCrop(photo.full, area, rotation, outputEdge("display", area.width))
+		renderCrop(photo.full, area, rotation, outputEdge(BLOB_VARIANT.display, area.width))
 	);
 	return { avatar, display };
 }
@@ -150,9 +150,14 @@ export async function uploadProfilePhoto(
 		},
 	});
 	try {
-		await putVariant(blobUrl(organizationId, blobId, "avatar"), variants.avatar, {}, signal);
 		await putVariant(
-			blobUrl(organizationId, blobId, "display"),
+			blobUrl(organizationId, blobId, BLOB_VARIANT.avatar),
+			variants.avatar,
+			{},
+			signal
+		);
+		await putVariant(
+			blobUrl(organizationId, blobId, BLOB_VARIANT.display),
 			variants.display,
 			{ "x-blob-sha256": await sha256Hex(variants.display) },
 			signal

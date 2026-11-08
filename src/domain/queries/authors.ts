@@ -1,7 +1,8 @@
 import { and, inArray } from "drizzle-orm";
 import { communityProfile } from "@/db/app-schema";
 import { fullName, initials } from "@/domain/communityProfile";
-import { nameInitials, type AuthorDisplay } from "@/domain/feed";
+import { nameInitials } from "@/domain/communityProfile";
+import type { AuthorDisplay } from "@/domain/feed";
 import type { Actor } from "@/domain/permission";
 import type { QueryDb } from "./db";
 import { visibleProfileWhere } from "./profiles";

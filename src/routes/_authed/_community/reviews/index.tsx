@@ -17,7 +17,7 @@ import {
 	EmptyTitle,
 } from "@/components/ui/empty";
 import { PhotoAvatar } from "@/components/profile/ProfileName";
-import { nameInitials } from "@/domain/feed";
+import { nameInitials } from "@/domain/communityProfile";
 import { can } from "@/domain/permission";
 import { reviewQueueQuery } from "@/queries/changeRequest";
 import type { ReviewGroup } from "./-components/ReviewDrawer";

@@ -72,6 +72,18 @@ describe("verifyVideo", () => {
 		expect(await verify({ topExtra: [metaLocation()] })).toEqual(reason);
 	});
 
+	it("finds location data later in mdia, minf or stbl, still within the read cap", async () => {
+		const reason = { ok: false, reason: "metadata" };
+		for (const where of ["mdiaExtra", "minfExtra", "stblExtra"] as const) {
+			for (const loc of [udtaLocation(), metaLocation()]) {
+				const file = movie({ moovAtEnd: true, mdatSize: 90_000_000, [where]: [loc] });
+				const r = sparseReader(file);
+				expect(await verifyVideo(r.read, file.size)).toEqual(reason);
+				expect(r.stats.reads).toBeLessThanOrEqual(12);
+			}
+		}
+	});
+
 	it("rejects 121 s; 120 s passes", async () => {
 		expect(await verify({ durationMs: 121_000 })).toEqual({ ok: false, reason: "duration" });
 		expect(await verify({ durationMs: 120_000 })).toMatchObject({ ok: true });

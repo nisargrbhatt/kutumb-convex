@@ -3,9 +3,7 @@ import { mediaBlob } from "@/db/app-schema";
 import { changeRequest, communityProfile, post } from "@/db/schema";
 import {
 	BLOB_MEDIA_KIND,
-	BLOB_OWNER_KIND,
 	BLOB_STATUS,
-	COMMUNITY_PROFILE_STATUS,
 	BLOB_VARIANT,
 	BLOB_VIDEO_CONTENT_TYPE,
 	ORGANIZATION_ROLES,
@@ -22,6 +20,7 @@ import {
 	variantMaxEdge,
 } from "./blob";
 import { variantMaxBytes, type BlobBucket, type BlobObject, type BlobRange } from "./blobStore";
+import { BLOB_OWNER_SQL } from "./blobOwner";
 import { verifyJpeg, type ReadRange } from "./jpeg";
 import { verifyVideo } from "./video";
 import type { Actor, Role } from "./permission";
@@ -106,13 +105,10 @@ async function restrictedBlobIds(db: QueryDb, organizationId: string) {
 					and(
 						eq(mediaBlob.status, BLOB_STATUS.attached),
 						or(
-							and(
-								eq(mediaBlob.ownerKind, BLOB_OWNER_KIND.profile),
-								sql`exists (select 1 from ${communityProfile} where ${communityProfile.id} = ${mediaBlob.ownerId} and ${communityProfile.organizationId} = ${mediaBlob.organizationId} and ${communityProfile.status} = ${COMMUNITY_PROFILE_STATUS.active})`
-							),
-							and(
-								eq(mediaBlob.ownerKind, BLOB_OWNER_KIND.memory),
-								sql`exists (select 1 from ${post} where ${post.id} = ${mediaBlob.ownerId} and ${post.organizationId} = ${mediaBlob.organizationId})`
+							...Object.entries(BLOB_OWNER_SQL).flatMap(([kind, { memberVisible }]) =>
+								memberVisible
+									? [and(eq(mediaBlob.ownerKind, kind as BlobOwnerKind), memberVisible)]
+									: []
 							)
 						)
 					)!
@@ -299,7 +295,8 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 		const allowance = row.size - landedElsewhere;
 		if (length > allowance) return plain(413, "Larger than declared");
 
-		const needsSha = row.mediaKind === BLOB_MEDIA_KIND.profilePhoto && variant === "display";
+		const needsSha =
+			row.mediaKind === BLOB_MEDIA_KIND.profilePhoto && variant === BLOB_VARIANT.display;
 		const sha256 = request.headers.get(SHA256_HEADER)?.toLowerCase();
 		if (needsSha && (!sha256 || !SHA256_RE.test(sha256))) return plain(400, "sha256 required");
 
