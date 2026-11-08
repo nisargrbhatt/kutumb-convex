@@ -1,6 +1,6 @@
 # Video in the gallery
 
-Status: ready-for-agent Blocked by: 34
+Status: resolved Blocked by: 34
 
 ## What to build
 
@@ -29,3 +29,7 @@ Serving > Range, Feed UI (Video).
 - [ ] `error` and zero `videoWidth` both show the failure slide with a working download.
 - [ ] A `.mov` plays in local Chrome served as `video/quicktime`.
 - [ ] No poster: placeholder tile, play still offered.
+
+## Comments
+
+Merged 36cfbbc on feat/storage-integration.
