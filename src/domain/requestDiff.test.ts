@@ -81,6 +81,23 @@ describe("requestDiff", () => {
 	});
 });
 
+describe("requestDiff photo", () => {
+	it("text only, never a thumbnail: current → proposed, or removal", () => {
+		expect(requestDiff({ kind: "photo", payload: { base: "b0", proposed: "b1" } })).toEqual({
+			tone: "change",
+			rows: [{ label: "Photo", before: "Current photo", after: "Photo proposed" }],
+		});
+		expect(requestDiff({ kind: "photo", payload: { base: null, proposed: "b1" } })).toEqual({
+			tone: "change",
+			rows: [{ label: "Photo", before: null, after: "Photo proposed" }],
+		});
+		expect(requestDiff({ kind: "photo", payload: { base: "b0", proposed: null } })).toEqual({
+			tone: "change",
+			rows: [{ label: "Photo", before: "Current photo", after: "Removal proposed" }],
+		});
+	});
+});
+
 describe("requestKindLabel", () => {
 	it("labels every kind", () => {
 		expect(requestKindLabel("create")).toBe("New profile");
@@ -90,5 +107,6 @@ describe("requestKindLabel", () => {
 		expect(requestKindLabel("address_add")).toBe("Add address");
 		expect(requestKindLabel("address_edit")).toBe("Edit address");
 		expect(requestKindLabel("address_remove")).toBe("Remove address");
+		expect(requestKindLabel("photo")).toBe("Photo");
 	});
 });

@@ -1,6 +1,6 @@
 # Userless Profile photos and moderation
 
-Status: ready-for-agent Blocked by: 24
+Status: resolved Blocked by: 24
 
 ## What to build
 
@@ -26,3 +26,7 @@ Everyone else who may change a photo directly, and bytes following the profile o
 - [ ] Reassigning a profile keeps `photoBlobId`.
 - [ ] A plain member on an `active` Userless Profile sees no direct action: [`photo` Change
   Request](27-photo-change-request.md) gives them the request.
+
+## Comments
+
+Merged 0e621bc on feat/storage-integration.

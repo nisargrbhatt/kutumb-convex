@@ -2,6 +2,8 @@ import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ChangeRequestKind, TypedPayload } from "@/domain/changeRequest";
 import { formatAuditValue } from "@/domain/audit";
+import { blobUrl } from "@/domain/blob";
+import { useActor } from "@/hooks/useActor";
 import { requestDiff, requestKindLabel } from "@/domain/requestDiff";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +25,28 @@ export function StaleBadge() {
 
 const TONE_HEADING = { add: "Adds", remove: "Removes" } as const;
 
+/** One square photo (`display`), or a "No photo" placeholder. */
+function PhotoTile({ label, blobId }: { label: string; blobId: string | null }) {
+	const organizationId = useActor()?.organizationId;
+	return (
+		<figure className="flex min-w-0 flex-col gap-1.5">
+			<figcaption className="text-xs font-medium text-muted-foreground">{label}</figcaption>
+			<div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-md border bg-muted">
+				{blobId && organizationId ? (
+					<img
+						src={blobUrl(organizationId, blobId, "display")}
+						alt={label}
+						className="size-full object-cover"
+						loading="lazy"
+					/>
+				) : (
+					<span className="text-sm text-muted-foreground">No photo</span>
+				)}
+			</div>
+		</figure>
+	);
+}
+
 /**
  * Before → after of one Change Request (shared by Reviews + My requests). `info` / `address_edit`
  * → Field / Current / Proposed table; add / remove → snapshot list; `create` → `emptyText`.
@@ -30,10 +54,26 @@ const TONE_HEADING = { add: "Adds", remove: "Removes" } as const;
 export function RequestDiff({
 	request,
 	emptyText = "New profile: review the draft itself.",
+	currentPhotoBlobId,
 }: {
 	request: TypedPayload;
 	emptyText?: string;
+	/**
+	 * `photo` and pending only: the photo to compare against, shown beside the proposed one.
+	 * Absent (closed request) → text, never a thumbnail.
+	 */
+	currentPhotoBlobId?: string | null;
 }) {
+	if (request.kind === "photo" && currentPhotoBlobId !== undefined)
+		return (
+			<div className="grid grid-cols-2 gap-3 sm:gap-4">
+				<PhotoTile label="Current" blobId={currentPhotoBlobId} />
+				<PhotoTile
+					label={request.payload.proposed ? "Proposed" : "Proposed: remove photo"}
+					blobId={request.payload.proposed}
+				/>
+			</div>
+		);
 	const { tone, rows } = requestDiff(request);
 	if (tone === "none" || rows.length === 0)
 		return <p className="text-sm text-muted-foreground">{emptyText}</p>;

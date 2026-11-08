@@ -1,7 +1,7 @@
 import type { CommunityProfileInput, MemberFilter } from "@/domain/communityProfile";
 import { LIMIT_COPY } from "@/domain/limits";
-import { addMemberFeedback } from "@/domain/memberRequests";
-import { queryOptions, useMutation } from "@tanstack/react-query";
+import { addMemberFeedback, submitFeedback } from "@/domain/memberRequests";
+import { queryOptions, useMutation, useQuery } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import {
@@ -35,6 +35,12 @@ export const myProfileQuery = (orgId: string) =>
 		queryKey: profileKeys.mine(orgId),
 		queryFn: () => getMyCommunityProfile(),
 	});
+
+/** Active org's linked profile photo, null when none (or not loaded). Keyed by org, so it follows org switches. */
+export function useMyPhotoBlobId(orgId: string | undefined): string | null {
+	const { data } = useQuery({ ...myProfileQuery(orgId ?? ""), enabled: !!orgId });
+	return data?.photoBlobId ?? null;
+}
 
 export const activeMemberCountQuery = (orgId: string) =>
 	queryOptions({
@@ -218,7 +224,8 @@ export const useDeleteProfile = (profileId: string, onDeleted: () => unknown) =>
 	);
 
 /**
- * Own linked profile's photo. `variants` set → upload, then attach (replacing any current one);
+ * A profile's photo (own linked, or a Userless one edited directly; owner/admin remove on linked).
+ * `variants` set → upload, then attach (replacing any current one);
  * absent → remove. A failed attach discards the upload.
  */
 export function useSetMyProfilePhoto() {
@@ -245,9 +252,18 @@ export function useSetMyProfilePhoto() {
 			}
 		},
 		onSuccess: async (result, { variants }) => {
-			if (result.outcome === "unchanged") return;
-			toast.success(variants ? "Photo saved" : "Photo removed");
-			posthog.capture(variants ? "profile_photo_saved" : "profile_photo_removed");
+			if (result.outcome === "unchanged") {
+				if (result.changeRequestId) toast.info("Already sent for review");
+				return;
+			}
+			if (result.outcome === "requested") {
+				const fb = submitFeedback("requested", "");
+				toast.success(fb.title, { description: fb.description });
+				posthog.capture("profile_photo_requested", { remove: !variants });
+			} else {
+				toast.success(variants ? "Photo saved" : "Photo removed");
+				posthog.capture(variants ? "profile_photo_saved" : "profile_photo_removed");
+			}
 			await invalidate();
 		},
 		onError: (error) => {

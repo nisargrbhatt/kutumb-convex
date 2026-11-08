@@ -10,33 +10,37 @@ export function ProfileName({ profile, className }: { profile: NamedProfile; cla
 	return <span className={className}>{fullName(profile)}</span>;
 }
 
-/**
- * Profile Photo or initials. `photoBlobId` is a Blob of the active org (profile reads are
- * org-scoped); lists use `avatar`, the profile header `display`. Initials show while loading and
- * on any load error.
- */
-export function ProfileAvatar({
-	profile,
-	photoBlobId,
-	variant = "avatar",
-	className,
-	fallbackClassName,
-}: {
-	profile: NamedProfile;
+type PhotoProps = {
 	photoBlobId?: string | null;
 	variant?: "avatar" | "display";
 	className?: string;
 	fallbackClassName?: string;
-}) {
+};
+
+/**
+ * Profile Photo or `initials`. `photoBlobId` is a Blob of the active org (profile reads are
+ * org-scoped); lists use `avatar`, the profile header `display`. Initials show while loading and
+ * on any load error.
+ */
+export function PhotoAvatar({
+	initials: text,
+	photoBlobId,
+	variant = "avatar",
+	className,
+	fallbackClassName,
+}: PhotoProps & { initials: string }) {
 	const organizationId = useActor()?.organizationId;
 	return (
 		<Avatar className={className}>
 			{photoBlobId && organizationId ? (
 				<AvatarImage src={blobUrl(organizationId, photoBlobId, variant)} alt="" />
 			) : null}
-			<AvatarFallback className={cn("font-medium", fallbackClassName)}>
-				{initials(profile)}
-			</AvatarFallback>
+			<AvatarFallback className={cn("font-medium", fallbackClassName)}>{text}</AvatarFallback>
 		</Avatar>
 	);
+}
+
+/** `PhotoAvatar` with the profile's initials. */
+export function ProfileAvatar({ profile, ...props }: PhotoProps & { profile: NamedProfile }) {
+	return <PhotoAvatar initials={initials(profile)} {...props} />;
 }

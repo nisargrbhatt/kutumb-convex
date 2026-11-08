@@ -75,6 +75,21 @@ describe("Change Request read fns", () => {
 			]);
 		});
 
+		it("group carries the profile's photoBlobId for its avatar", async () => {
+			await h.db
+				.update(communityProfile)
+				.set({ photoBlobId: "blob-p" })
+				.where(eq(communityProfile.id, "p"));
+			await info(MEMBER, "p", { nickName: "Pee" });
+			await info(MEMBER, "q", { nickName: "Kay" });
+
+			const groups = await listPendingByProfile(h.db, ADMIN);
+			expect(Object.fromEntries(groups.map((g) => [g.profileId, g.photoBlobId]))).toEqual({
+				p: "blob-p",
+				q: null,
+			});
+		});
+
 		it("includes pending create requests of drafts; skips closed requests", async () => {
 			const draft = await h.changes.submit(MEMBER, { kind: "create", profile: input() });
 			const w = id(await info(MEMBER, "p", { nickName: "Pee" }));

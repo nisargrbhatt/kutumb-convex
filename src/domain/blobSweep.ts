@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, lt, not, or, sql, type SQL } from "drizzle-orm";
 import { mediaBlob, post } from "@/db/app-schema";
-import { communityProfile } from "@/db/schema";
-import { BLOB_STATUS, type BlobOwnerKind } from "@/db/constants";
+import { changeRequest, communityProfile } from "@/db/schema";
+import { BLOB_STATUS, CHANGE_REQUEST_STATUS, type BlobOwnerKind } from "@/db/constants";
 import { blobKey, pendingCutoff, variantsOf } from "./blob";
 import type { BlobBucket } from "./blobStore";
 import { IN_LIST_CHUNK, type QueryDb } from "./queries/db";
@@ -18,8 +18,9 @@ const PAGE_COST = 3;
  */
 const OWNER_EXISTS: Record<BlobOwnerKind, SQL> = {
 	profile: sql`exists (select 1 from ${communityProfile} where ${communityProfile.id} = ${mediaBlob.ownerId} and ${communityProfile.organizationId} = ${mediaBlob.organizationId})`,
-	// Stub: nothing attaches to it yet. Photo Change Request (27).
-	changeRequest: sql`1`,
+	// A `photo` request's proposed Blob: only while the request is pending (approve moves it to the
+	// profile; every other close marks it deleted, so a closed owner means a missed mark).
+	changeRequest: sql`exists (select 1 from ${changeRequest} where ${changeRequest.id} = ${mediaBlob.ownerId} and ${changeRequest.organizationId} = ${mediaBlob.organizationId} and ${changeRequest.status} = ${CHANGE_REQUEST_STATUS.pending})`,
 	memory: sql`exists (select 1 from ${post} where ${post.id} = ${mediaBlob.ownerId} and ${post.organizationId} = ${mediaBlob.organizationId})`,
 };
 

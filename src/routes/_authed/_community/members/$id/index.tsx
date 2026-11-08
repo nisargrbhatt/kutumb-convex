@@ -5,12 +5,13 @@ import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { PendingReviewBanner } from "@/components/changeRequest/PendingReviewBanner";
 import { AddAddressButton, AddressActions } from "@/components/address/AddressActions";
 import { ProfileIdentityHeader } from "@/components/profile/ProfileIdentityHeader";
+import { ProfilePhotoActions } from "@/components/profile/photo/ProfilePhotoActions";
 import { ProfileInfoView } from "@/components/profile/ProfileInfoView";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileRequestBanner } from "@/components/changeRequest/ProfileRequestBanner";
 import { fullName } from "@/domain/communityProfile";
-import { profileEditMode } from "@/domain/memberRequests";
+import { photoEditMode, profileEditMode } from "@/domain/memberRequests";
 import { isAppError } from "@/domain/errors";
 import { useCan } from "@/hooks/useCan";
 import { safeAsync } from "@/lib/safe";
@@ -48,6 +49,8 @@ function RouteComponent() {
 	const canEditUserless = editMode !== "none";
 	const suggest = editMode === "suggest";
 	const canAudit = useCan({ auditEvent: ["read"] });
+	const canRemovePhoto = useCan({ communityProfile: ["removePhoto"] });
+	const photoMode = photoEditMode({ canReview, canRemovePhoto }, profile);
 	const name = fullName(profile);
 
 	return (
@@ -59,15 +62,20 @@ function RouteComponent() {
 					profile={profile}
 					headingLevel="h1"
 					actions={
-						canReview ? (
-							<MemberActions profile={profile} customFieldDefs={customFieldDefs} />
-						) : canEditUserless ? (
-							<MemberInfoEditButton
-								profile={profile}
-								customFieldDefs={customFieldDefs}
-								suggest={suggest}
-							/>
-						) : null
+						<div className="flex shrink-0 flex-wrap gap-2">
+							{photoMode !== "none" ? (
+								<ProfilePhotoActions profile={profile} mode={photoMode} own={false} />
+							) : null}
+							{canReview ? (
+								<MemberActions profile={profile} customFieldDefs={customFieldDefs} />
+							) : canEditUserless ? (
+								<MemberInfoEditButton
+									profile={profile}
+									customFieldDefs={customFieldDefs}
+									suggest={suggest}
+								/>
+							) : null}
+						</div>
 					}
 				/>
 

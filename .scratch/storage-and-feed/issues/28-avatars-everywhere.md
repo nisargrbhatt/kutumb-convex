@@ -1,6 +1,6 @@
 # Avatars everywhere
 
-Status: ready-for-agent Blocked by: 24
+Status: resolved Blocked by: 24
 
 ## What to build
 
@@ -23,3 +23,7 @@ The photo shows wherever a Community Profile's avatar appears.
 - [ ] A photo change shows in the tree at once: `orgDataVersion` bumped.
 - [ ] Switching org changes the sidebar photo.
 - [ ] MCP tests assert no `photoBlobId` in any output.
+
+## Comments
+
+Merged 15c711a on feat/storage-integration.

@@ -75,6 +75,9 @@ export type RelationRemovePayload = {
 	bloodRelation: boolean;
 };
 
+/** `photo`: Profile Photo set / replace (`proposed` = a Blob owned by the request) / remove (null). */
+export type PhotoPayload = { base: string | null; proposed: string | null };
+
 export type ChangeRequestPayload = {
 	create: null;
 	info: InfoPayload;
@@ -83,6 +86,7 @@ export type ChangeRequestPayload = {
 	address_add: AddressPayload;
 	address_edit: AddressEditPayload;
 	address_remove: AddressRemovePayload;
+	photo: PhotoPayload;
 };
 
 /** A request row with `payload` typed by `kind` (narrow on `kind`). */
@@ -105,7 +109,7 @@ export type StaleReason =
 	/** `relation_add`: the pair is now related in either direction. */
 	| { code: "already_related" };
 
-const FIELD_LABEL: Record<InfoField | AddressField, string> = {
+const FIELD_LABEL: Record<InfoField | AddressField | "photo", string> = {
 	firstName: "First name",
 	middleName: "Middle name",
 	lastName: "Last name",
@@ -125,6 +129,7 @@ const FIELD_LABEL: Record<InfoField | AddressField, string> = {
 	type: "Type",
 	note: "Note",
 	digipin: "DIGIPIN",
+	photo: "Photo",
 };
 
 const CUSTOM_FIELD_PREFIX = "customFieldData.";
@@ -210,6 +215,11 @@ export function staleReason(
 		case "relation_add":
 			if (ctx.counterpartStatus !== "active") return { code: "counterpart_not_active" };
 			return ctx.pairRelated ? { code: "already_related" } : null;
+		case "photo":
+			if (!ctx.profile) return { code: "target_gone" };
+			return (ctx.profile.photoBlobId ?? null) !== (payload as PhotoPayload).base
+				? { code: "fields_changed", fields: ["photo"] }
+				: null;
 	}
 }
 
@@ -232,5 +242,7 @@ export function touchedKeys(kind: ChangeRequestKind, targetId: string | null, pa
 			return [`relation:${targetId}`, `pair:${(payload as RelationRemovePayload).toId}`];
 		case "relation_add":
 			return [`pair:${(payload as RelationAddPayload).toId}`];
+		case "photo":
+			return ["photo"];
 	}
 }

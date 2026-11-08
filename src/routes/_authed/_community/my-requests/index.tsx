@@ -229,6 +229,11 @@ function RequestDrawer({ request, onClose }: { request: MyRequest | null; onClos
 									<RequestDiff
 										request={request}
 										emptyText="A new profile, saved as a draft until reviewed."
+										currentPhotoBlobId={
+											request.kind === "photo" && request.status === "pending"
+												? request.payload.base
+												: undefined
+										}
 									/>
 								</section>
 							</div>

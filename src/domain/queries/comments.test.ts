@@ -78,6 +78,7 @@ describe("Comments", () => {
 			name: "Old Name",
 			initials: "ON",
 			profileId: null,
+			photoBlobId: null,
 		});
 		const second = await listComments(db, OTHER, { postId, cursor: first.nextCursor! });
 		expect(second.comments.map((c) => c.body)).toEqual(["n1", "n0"]);
