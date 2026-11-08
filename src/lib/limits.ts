@@ -1,5 +1,10 @@
 import { makeLimits } from "@/domain/limits";
-import { countUserMemberships, countOrgMembersAndPending, countOrgProfiles } from "./limits-db";
+import {
+	countUserMemberships,
+	countOrgMembersAndPending,
+	countOrgProfiles,
+	countMemberPendingBytes,
+} from "./limits-db";
 import { captureLimitReached } from "./posthog-server";
 
 export const limits = makeLimits(
@@ -7,6 +12,7 @@ export const limits = makeLimits(
 		userMemberships: countUserMemberships,
 		orgMembersAndPending: countOrgMembersAndPending,
 		orgProfiles: countOrgProfiles,
+		memberPendingBytes: countMemberPendingBytes,
 	},
 	// Resolved at call time, so importing this module doesn't need the PostHog client.
 	(e) => captureLimitReached(e)
