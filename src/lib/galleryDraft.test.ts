@@ -17,7 +17,8 @@ function setup(attached: { blobId: string }[] = []) {
 		new Promise((resolve, reject) => {
 			const p: Pending = {
 				file: (file as unknown as { name: string }).name,
-				resolve: (blobId) => resolve({ blobId, previewUrl: `blob:${blobId}` }),
+				resolve: (blobId) =>
+					resolve({ blobId, previewUrl: `blob:${blobId}`, mediaKind: "memoryImage" }),
 				reject,
 				progress: onProgress,
 				signal,
@@ -37,6 +38,8 @@ function setup(attached: { blobId: string }[] = []) {
 			width: 10,
 			height: 10,
 			durationMs: null,
+			contentType: null,
+			hasPoster: false,
 		}))
 	);
 	const file = (name: string) => ({ name }) as unknown as File;

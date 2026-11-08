@@ -85,6 +85,40 @@ describe("Memory gallery", () => {
 		expect(b3?.size).toBe(1000);
 	});
 
+	it("attaches videos with or without a poster; the card carries duration, type, poster flag", async () => {
+		const video = {
+			mediaKind: "memoryVideo" as const,
+			contentType: "video/quicktime" as const,
+			durationMs: 61_000,
+			width: 1080,
+			height: 1920,
+		};
+		await blob("v1", { ...video, variants: { video: 5000, poster: 300 } });
+		await blob("v2", { ...video, contentType: "video/mp4", variants: { video: 4000 } });
+		await blob("i1");
+		await blob("v3", { ...video, variants: { poster: 300 } });
+		await expect(share(AUTHOR, ["v3"])).rejects.toMatchObject({ kind: "Invalid" });
+
+		await share(AUTHOR, ["v1", "i1", "v2"]);
+		const [card] = (await listFeed(db, OTHER, {})).posts;
+		expect(card?.data).toMatchObject({
+			media: [
+				{
+					blobId: "v1",
+					mediaKind: "memoryVideo",
+					durationMs: 61_000,
+					width: 1080,
+					height: 1920,
+					contentType: "video/quicktime",
+					hasPoster: true,
+				},
+				{ blobId: "i1", mediaKind: "memoryImage", hasPoster: false },
+				{ blobId: "v2", contentType: "video/mp4", hasPoster: false },
+			],
+		});
+		expect((await row("v1"))?.size).toBe(5300);
+	});
+
 	it("refuses 6 images and a repeated id", () => {
 		expect(() =>
 			memoryInput.parse({ title: "T", media: ["a", "b", "c", "d", "e", "f"] })

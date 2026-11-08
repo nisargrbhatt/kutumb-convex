@@ -73,9 +73,32 @@ describe("blob store", () => {
 			).rejects.toBeInstanceOf(AppError);
 		});
 
-		it("refuses video until video uploads exist", async () => {
+		it("video reserves with its declared, allow-listed content type", async () => {
+			const { blobId } = await s.store.start(MEMBER, {
+				mediaKind: "memoryVideo",
+				size: 90_000_000,
+				contentType: "video/quicktime",
+			});
+			expect(await s.h.blob(blobId)).toMatchObject({
+				mediaKind: "memoryVideo",
+				contentType: "video/quicktime",
+				size: 90_000_000,
+			});
+		});
+
+		it("video needs a content type and fits video plus poster caps; images take none", async () => {
 			await expect(
 				s.store.start(MEMBER, { mediaKind: "memoryVideo", size: MB })
+			).rejects.toBeInstanceOf(AppError);
+			await expect(
+				s.store.start(MEMBER, {
+					mediaKind: "memoryVideo",
+					size: 95_000_000 + 5 * 1024 * 1024 + 1,
+					contentType: "video/mp4",
+				})
+			).rejects.toBeInstanceOf(AppError);
+			await expect(
+				s.store.start(MEMBER, { mediaKind: "memoryImage", size: MB, contentType: "video/mp4" })
 			).rejects.toBeInstanceOf(AppError);
 		});
 

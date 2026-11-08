@@ -27,6 +27,14 @@ export const PICKED_PHOTO_TYPES = [
 	"image/heic",
 	"image/heif",
 ];
+/** Video file (`video` variant), checked in the browser and by the Worker on `PUT`. */
+export const VIDEO_MAX_BYTES = 95_000_000;
+/** Video duration, from `mvhd`. */
+export const VIDEO_MAX_DURATION_MS = 120_000;
+/** Video longest edge after `tkhd` rotation. */
+export const VIDEO_MAX_EDGE = 4096;
+/** Video sample entries (`stsd`) accepted. HEVC stays accepted: iPhones record it by default. */
+export const VIDEO_CODECS = ["avc1", "hvc1", "hev1"] as const;
 /** Reserved bytes in unexpired `pending` Blobs per Org Member. */
 export const PENDING_UPLOAD_BYTES_LIMIT = 500_000_000;
 

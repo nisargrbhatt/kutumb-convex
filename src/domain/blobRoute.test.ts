@@ -4,6 +4,7 @@ import { makeLimits } from "@/domain/limits";
 import { memberPendingBytes } from "@/domain/queries/blobs";
 import { fakeR2 } from "@/test/fakeR2";
 import { jpeg } from "@/test/jpegFixture";
+import { materialize, movie, udtaLocation, type MovieOptions } from "@/test/mp4Fixture";
 import { MEMBER, OTHER, profileChangesHarness } from "@/test/profileChangesHarness";
 import { IMAGE_VARIANT_MAX_BYTES } from "./limits";
 import { makeBlobRoute } from "./blobRoute";
@@ -420,6 +421,150 @@ describe("GET /api/blob/<org>/<blob>/<variant>", () => {
 			const { blobId } = await s.store.start(MEMBER, { mediaKind: "profilePhoto", size: 1000 });
 			await s.r2.bucket.put(`o1/${blobId}/avatar`, bytes);
 			expect((await get(s, `/api/blob/o1/${blobId}/avatar`, MEMBER.userId)).status).toBe(404);
+		});
+	});
+});
+
+describe("video", () => {
+	let s: ReturnType<typeof setup>;
+	const clip = (opts: MovieOptions = {}) =>
+		materialize(movie({ mdatSize: 5000, ...opts })) as Uint8Array<ArrayBuffer>;
+	const startVideo = async (contentType: "video/mp4" | "video/quicktime" = "video/quicktime") =>
+		(await s.store.start(MEMBER, { mediaKind: "memoryVideo", size: 2_000_000, contentType }))
+			.blobId;
+
+	beforeEach(() => {
+		s = setup();
+	});
+
+	describe("PUT", () => {
+		it("lands a verified video; stores duration, rotated size, and its type as R2 metadata", async () => {
+			const id = await startVideo();
+			const body = clip({ brand: "qt  ", codec: "hvc1", rotation: 90, durationMs: 30_000 });
+			const res = await put(s, `/api/blob/o1/${id}/video`, { body });
+			expect(res.status).toBe(200);
+			expect(await row(s, id)).toMatchObject({
+				variants: { video: body.length },
+				durationMs: 30_000,
+				width: 1080,
+				height: 1920,
+				contentType: "video/quicktime",
+			});
+			expect(s.r2.objects.get(`o1/${id}/video`)?.contentType).toBe("video/quicktime");
+		});
+
+		it("deletes and rejects leftover location data, or a type other than declared", async () => {
+			const id = await startVideo();
+			const located = clip({ brand: "qt  ", moovExtra: [udtaLocation()] });
+			expect((await put(s, `/api/blob/o1/${id}/video`, { body: located })).status).toBe(422);
+			const mp4 = clip({ brand: "isom" });
+			expect((await put(s, `/api/blob/o1/${id}/video`, { body: mp4 })).status).toBe(422);
+			expect(s.r2.objects.size).toBe(0);
+			expect((await row(s, id))?.variants).toEqual({});
+		});
+
+		it("rejects a video over 95,000,000 bytes before put()", async () => {
+			const id = await startVideo();
+			const res = await put(s, `/api/blob/o1/${id}/video`, { length: "95000001" });
+			expect(res.status).toBe(413);
+			expect(s.r2.objects.size).toBe(0);
+		});
+
+		it("lands a JPEG poster up to 1280 px without touching the video's size", async () => {
+			const id = await startVideo();
+			await put(s, `/api/blob/o1/${id}/video`, { body: clip({ brand: "qt  " }) });
+			const poster = jpeg({ extra: [], width: 1280, height: 720 });
+			expect((await put(s, `/api/blob/o1/${id}/poster`, { body: poster })).status).toBe(200);
+			expect(await row(s, id)).toMatchObject({ width: 1920, height: 1080 });
+			const big = jpeg({ extra: [], width: 1281, height: 720 });
+			expect((await put(s, `/api/blob/o1/${id}/poster`, { body: big })).status).toBe(422);
+		});
+	});
+
+	describe("GET", () => {
+		const bytes = Uint8Array.from({ length: 1000 }, (_, i) => i % 251);
+
+		beforeEach(async () => {
+			s.h.fresh.sqlite.exec(`
+				INSERT INTO post (id, organizationId, kind, authorUserId, authorName, createdAt)
+					VALUES ('m1', 'o1', 'memory', 'u-owner', 'O', 0);
+				INSERT INTO blob (id, organizationId, mediaKind, status, ownerKind, ownerId,
+					uploadedByUserId, size, variants, contentType, createdAt)
+				VALUES ('v1', 'o1', 'memoryVideo', 'attached', 'memory', 'm1', 'u-member', 1000,
+					'{"video":1000}', 'video/quicktime', 0);
+			`);
+			await s.r2.bucket.put("o1/v1/video", bytes, {
+				httpMetadata: { contentType: "video/quicktime" },
+			});
+		});
+
+		const range = (value: string, extra: Record<string, string> = {}) =>
+			get(s, "/api/blob/o1/v1/video", MEMBER.userId, { range: value, ...extra });
+
+		it("an attached Memory video is unrestricted: memo hit, no D1, stored type", async () => {
+			expect((await range("bytes=0-1")).status).toBe(206);
+			s.queries.n = 0;
+			const res = await get(s, "/api/blob/o1/v1/video", MEMBER.userId);
+			expect(res.status).toBe(200);
+			expect(s.queries.n).toBe(0);
+			expect(res.headers.get("content-type")).toBe("video/quicktime");
+			expect(res.headers.get("accept-ranges")).toBe("bytes");
+			expect(res.headers.get("content-length")).toBe("1000");
+		});
+
+		it("a Memory video whose Memory is gone is 404", async () => {
+			s.h.fresh.sqlite.exec(`DELETE FROM post WHERE id = 'm1'`);
+			expect((await range("bytes=0-1")).status).toBe(404);
+		});
+
+		it("0-1 probe gets a hand-built 206", async () => {
+			const res = await range("bytes=0-1");
+			expect(res.status).toBe(206);
+			expect(res.headers.get("content-range")).toBe("bytes 0-1/1000");
+			expect(res.headers.get("content-length")).toBe("2");
+			expect(res.headers.get("content-type")).toBe("video/quicktime");
+			expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes.slice(0, 2));
+		});
+
+		it("open-ended and past-the-end ranges run to the last byte", async () => {
+			const res = await range("bytes=990-");
+			expect(res.status).toBe(206);
+			expect(res.headers.get("content-range")).toBe("bytes 990-999/1000");
+			expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes.slice(990));
+			const past = await range("bytes=995-5000");
+			expect(past.headers.get("content-range")).toBe("bytes 995-999/1000");
+			expect((await past.arrayBuffer()).byteLength).toBe(5);
+		});
+
+		it("suffix range serves the last n bytes", async () => {
+			const res = await range("bytes=-10");
+			expect(res.status).toBe(206);
+			expect(res.headers.get("content-range")).toBe("bytes 990-999/1000");
+			expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes.slice(990));
+		});
+
+		it("multi-range and junk get the whole file as 200", async () => {
+			for (const value of ["bytes=0-1,5-9", "items=0-1", "bytes=5-2"]) {
+				const res = await range(value);
+				expect(res.status).toBe(200);
+				expect((await res.arrayBuffer()).byteLength).toBe(1000);
+			}
+		});
+
+		it("a start past the end is 416 with the size", async () => {
+			const res = await range("bytes=1000-");
+			expect(res.status).toBe(416);
+			expect(res.headers.get("content-range")).toBe("bytes */1000");
+		});
+
+		it("If-Range: matching ETag gets 206, stale ETag the whole file", async () => {
+			const etag = (await get(s, "/api/blob/o1/v1/video", MEMBER.userId)).headers.get("etag")!;
+			const fresh = await range("bytes=0-1", { "if-range": etag });
+			expect(fresh.status).toBe(206);
+			const stale = await range("bytes=0-1", { "if-range": '"old"' });
+			expect(stale.status).toBe(200);
+			expect((await stale.arrayBuffer()).byteLength).toBe(1000);
+			expect(stale.headers.get("etag")).toBe(etag);
 		});
 	});
 });

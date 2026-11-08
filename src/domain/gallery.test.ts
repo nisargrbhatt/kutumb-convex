@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { mediaLabel, mosaicLayout, moveItem, parseGallery, singleRatio } from "./gallery";
+import {
+	formatDuration,
+	mediaLabel,
+	mosaicLayout,
+	moveItem,
+	parseGallery,
+	singleRatio,
+	videoDownloadName,
+} from "./gallery";
 
 describe("gallery rules", () => {
 	it("reads the JSON gallery column in position order; junk reads as empty", () => {
@@ -14,10 +22,21 @@ describe("gallery rules", () => {
 			width: 3,
 			height: 4,
 			durationMs: null,
+			contentType: null,
+			hasPoster: false,
 		});
 		expect(parseGallery("[]")).toEqual([]);
 		expect(parseGallery("nope")).toEqual([]);
 		expect(parseGallery(null)).toEqual([]);
+	});
+
+	it("video badge reads m:ss; download is named <title>-<n>.<ext>", () => {
+		expect(formatDuration(0)).toBe("0:00");
+		expect(formatDuration(61_900)).toBe("1:01");
+		expect(formatDuration(120_000)).toBe("2:00");
+		expect(videoDownloadName("Diwali", 1, "video/quicktime")).toBe("Diwali-2.mov");
+		expect(videoDownloadName("Trip", 0, "video/mp4")).toBe("Trip-1.mp4");
+		expect(videoDownloadName("a/b", 0, null)).toBe("a b-1.mov");
 	});
 
 	it("a single item keeps its shape between 4:5 and 1.9:1", () => {

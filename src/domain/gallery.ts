@@ -1,10 +1,13 @@
-import { BLOB_MEDIA_KIND, type BlobMediaKind } from "@/db/constants";
+import { BLOB_MEDIA_KIND, BLOB_VIDEO_CONTENT_TYPE, type BlobMediaKind } from "@/db/constants";
 import type { GalleryItem } from "./feed";
 
 /** Memory gallery rules (spec: Feed UI > Card, Lightbox). Pure and client-safe. */
 
-/** `mediaKind`s a gallery slot accepts. Video joins with its slice (ticket 35). */
-export const GALLERY_MEDIA_KINDS: readonly BlobMediaKind[] = [BLOB_MEDIA_KIND.memoryImage];
+/** `mediaKind`s a gallery slot accepts. */
+export const GALLERY_MEDIA_KINDS: readonly BlobMediaKind[] = [
+	BLOB_MEDIA_KIND.memoryImage,
+	BLOB_MEDIA_KIND.memoryVideo,
+];
 
 export const isGalleryMediaKind = (kind: BlobMediaKind) => GALLERY_MEDIA_KINDS.includes(kind);
 
@@ -24,13 +27,29 @@ export function parseGallery(value: unknown): GalleryItem[] {
 	return (rows as (GalleryItem & { position: number })[])
 		.filter((r) => r && typeof r.blobId === "string")
 		.sort((a, b) => a.position - b.position)
-		.map(({ blobId, mediaKind, width, height, durationMs }) => ({
+		.map(({ blobId, mediaKind, width, height, durationMs, contentType, hasPoster }) => ({
 			blobId,
 			mediaKind,
 			width: width ?? null,
 			height: height ?? null,
 			durationMs: durationMs ?? null,
+			contentType: contentType ?? null,
+			// SQLite's JSON gives the flag as 0 / 1.
+			hasPoster: Boolean(hasPoster),
 		}));
+}
+
+/** Video badge duration: `m:ss`, rounded down. */
+export function formatDuration(ms: number) {
+	const s = Math.max(0, Math.floor(ms / 1000));
+	return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/** Download name for a video (spec: Feed UI > Video): `<title>-2.mov`. */
+export function videoDownloadName(title: string, index: number, contentType: string | null) {
+	const ext = contentType === BLOB_VIDEO_CONTENT_TYPE.mp4 ? "mp4" : "mov";
+	const base = title.replace(/[\\/:*?"<>|]+/g, " ").trim() || "video";
+	return `${base}-${index + 1}.${ext}`;
 }
 
 /** Single-item mosaic keeps its shape, held between 4:5 and 1.9:1. Unknown size reads as 4:3. */

@@ -36,6 +36,10 @@ export type GalleryItem = {
 	width: number | null;
 	height: number | null;
 	durationMs: number | null;
+	/** Video only: stored `video/mp4` or `video/quicktime`, names the download. */
+	contentType: string | null;
+	/** Video only: a `poster` landed. False: placeholder tile, play still offered. */
+	hasPoster: boolean;
 };
 
 /** Per kind, what each view carries. Adding a `PostKind` without an entry fails to compile. */

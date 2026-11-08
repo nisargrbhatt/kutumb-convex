@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { memoryInput } from "@/domain/feed";
 import { MEMORY_DESCRIPTION_MAX } from "@/domain/limits";
 import { parseDescription } from "@/domain/memoryDescription";
-import { discardGalleryUploads, uploadMemoryImage } from "@/lib/gallery";
+import { discardGalleryUploads, uploadGalleryMedia } from "@/lib/gallery";
 import { makeGalleryDraft } from "@/lib/galleryDraft";
 import { memoryEditQuery, useCreateMemory, useUpdateMemory } from "@/queries/feed";
 import { useOrgId } from "@/queries/mutation";
@@ -99,7 +99,7 @@ export default function MemoryDrawer({
 	const draft = useMemo(
 		() =>
 			makeGalleryDraft({
-				upload: uploadMemoryImage(orgId),
+				upload: uploadGalleryMedia(orgId),
 				discard: discardGalleryUploads,
 				releasePreview: (url) => URL.revokeObjectURL(url),
 			}),
@@ -144,7 +144,7 @@ export default function MemoryDrawer({
 		// Submit waits for uploads; a rejected file blocks posting until removed.
 		const gallery = await draft.settle();
 		if (!gallery.ok) {
-			setGalleryError("Remove the photos that couldn't be uploaded, then try again.");
+			setGalleryError("Remove the files that couldn't be uploaded, then try again.");
 			return;
 		}
 		try {
@@ -250,7 +250,7 @@ export default function MemoryDrawer({
 				) : null}
 			</div>
 			<div className="grid gap-2">
-				<Label>Photos</Label>
+				<Label>Photos and videos</Label>
 				<GalleryField draft={draft} error={galleryError} />
 			</div>
 		</FormDrawer>
