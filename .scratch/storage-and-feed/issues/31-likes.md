@@ -1,6 +1,6 @@
 # Likes
 
-Status: ready-for-agent Blocked by: 29
+Status: resolved Blocked by: 29
 
 ## What to build
 
@@ -21,3 +21,7 @@ Status: ready-for-agent Blocked by: 29
 - [ ] A like outlives its member, shown by snapshot name.
 - [ ] Like on a removed Post shows "This Post was removed" and refreshes.
 - [ ] Counts come from `COUNT … GROUP BY`, no counter column.
+
+## Comments
+
+Merged e185e57 on feat/storage-integration.

@@ -1,6 +1,6 @@
 # Comments
 
-Status: ready-for-agent Blocked by: 30
+Status: resolved Blocked by: 30
 
 ## What to build
 
@@ -22,3 +22,7 @@ Status: ready-for-agent Blocked by: 30
 - [ ] Removing a removed comment succeeds.
 - [ ] Text stays in the box on failure.
 - [ ] A comment on a removed Post shows "This Post was removed" and refreshes.
+
+## Comments
+
+Merged efa91ee on feat/storage-integration.

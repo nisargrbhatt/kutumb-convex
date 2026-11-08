@@ -59,6 +59,12 @@ export const feedKeys = {
 	all: (orgId: string) => ["feed", orgId] as const,
 	list: (orgId: string) => [...feedKeys.all(orgId), "list"] as const,
 	post: (orgId: string, postId: string) => [...feedKeys.all(orgId), "post", postId] as const,
+	likers: (orgId: string, postId: string) => [...feedKeys.all(orgId), "likers", postId] as const,
+	comments: (orgId: string, postId: string) =>
+		[...feedKeys.all(orgId), "comments", postId] as const,
+	/** A Memory's editable source (title + description), for the edit Drawer. */
+	memoryEdit: (orgId: string, postId: string) =>
+		[...feedKeys.post(orgId, postId), "memoryEdit"] as const,
 };
 
 export const orgKeys = {

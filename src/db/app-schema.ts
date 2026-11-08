@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, blob, index } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, blob, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import {
 	AUDIT_ACTION,
 	BLOB_MEDIA_KIND,
@@ -191,6 +191,42 @@ export const postMemory = sqliteTable("postMemory", {
 	descriptionDoc: text("descriptionDoc", { mode: "json" }).$type<DescriptionDoc>(),
 	descriptionText: text("descriptionText"),
 });
+
+// One like per Org Member per Post. `userName` is a frozen `user.name` snapshot, no FK to `user`:
+// a like outlives its member. Counts are computed at read (no counter column).
+export const postLike = sqliteTable(
+	"postLike",
+	{
+		id: text("id").primaryKey(),
+		postId: text("postId")
+			.references(() => post.id, { onDelete: "cascade" })
+			.notNull(),
+		userId: text("userId").notNull(),
+		userName: text("userName").notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [
+		uniqueIndex("postLike_post_user_uidx").on(table.postId, table.userId),
+		index("postLike_post_created_id_idx").on(table.postId, table.createdAt, table.id),
+	]
+);
+
+// Flat, plain-text comment on a Post. `authorName` is a frozen `user.name` snapshot, no FK to
+// `user`: a comment outlives its author. No editing. Counts are computed at read.
+export const postComment = sqliteTable(
+	"postComment",
+	{
+		id: text("id").primaryKey(),
+		postId: text("postId")
+			.references(() => post.id, { onDelete: "cascade" })
+			.notNull(),
+		authorUserId: text("authorUserId").notNull(),
+		authorName: text("authorName").notNull(),
+		body: text("body").notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [index("postComment_post_created_id_idx").on(table.postId, table.createdAt, table.id)]
+);
 
 // Change Request: a proposed profile change awaiting Review. FK to org only; profile/user are
 // snapshotted so the row survives profile hard-delete (My requests still shows the outcome).

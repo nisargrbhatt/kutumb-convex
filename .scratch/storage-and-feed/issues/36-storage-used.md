@@ -1,6 +1,6 @@
 # Storage used on settings overview
 
-Status: ready-for-agent Blocked by: 23
+Status: resolved Blocked by: 23
 
 ## What to build
 
@@ -15,3 +15,7 @@ plain number, no limit bar.
 
 - [ ] Number matches attached Blobs only: `pending` and `deleted` don't count.
 - [ ] An org with no Blobs shows zero.
+
+## Comments
+
+Merged c122c95 on feat/storage-integration.

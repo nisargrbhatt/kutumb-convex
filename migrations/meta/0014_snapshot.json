@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "684a7927-d3c4-4e55-9535-f1c2fb5f1bf9",
+  "id": "ac60fb5c-af30-495d-b47a-0843faaf0e7f",
   "prevId": "b6d26d93-74ee-4e84-853d-f8d423395c35",
   "tables": {
     "account": {
@@ -1215,13 +1215,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "photoBlobId": {
-          "name": "photoBlobId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "version": {
           "name": "version",
           "type": "integer",
@@ -1735,6 +1728,83 @@
           "tableTo": "organization",
           "columnsFrom": [
             "organizationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "postLike": {
+      "name": "postLike",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "postId": {
+          "name": "postId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "userName": {
+          "name": "userName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "postLike_post_user_uidx": {
+          "name": "postLike_post_user_uidx",
+          "columns": [
+            "postId",
+            "userId"
+          ],
+          "isUnique": true
+        },
+        "postLike_post_created_id_idx": {
+          "name": "postLike_post_created_id_idx",
+          "columns": [
+            "postId",
+            "createdAt",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "postLike_postId_post_id_fk": {
+          "name": "postLike_postId_post_id_fk",
+          "tableFrom": "postLike",
+          "tableTo": "post",
+          "columnsFrom": [
+            "postId"
           ],
           "columnsTo": [
             "id"
