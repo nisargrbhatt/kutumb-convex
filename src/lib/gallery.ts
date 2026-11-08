@@ -1,11 +1,14 @@
-import { BLOB_MEDIA_KIND } from "@/db/constants";
+import { BLOB_MEDIA_KIND, type BlobVariant } from "@/db/constants";
 import { blobUrl, variantMaxEdge } from "@/domain/blob";
+import type { StartUploadInput } from "@/domain/blobStore";
 import { isAppError } from "@/domain/errors";
 import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/domain/limits";
 import { PHOTO_COPY, checkPickedPhoto, isHeic } from "@/domain/photo";
+import { VIDEO_COPY, isVideoFile } from "@/domain/video";
 import { discardUploads, startUpload } from "@/server/blob";
 import type { GalleryUpload } from "./galleryDraft";
 import { PhotoError, exportJpeg, scaledCopy } from "./photo";
+import { prepareVideo } from "./video";
 
 /**
  * Browser pipeline for Memory gallery photos (spec: Upload > Photos in the browser): decode once
@@ -38,12 +41,20 @@ async function exportMemoryImage(file: File) {
 	}
 }
 
+type PutCopy = { tooLarge: string; unreadable: string };
+const PHOTO_PUT: PutCopy = {
+	tooLarge: "This photo is too large. Try a smaller one.",
+	unreadable: PHOTO_COPY.unreadable,
+};
+const VIDEO_PUT: PutCopy = { tooLarge: VIDEO_COPY.tooLarge, unreadable: VIDEO_COPY.malformed };
+
 /** One `PUT` with upload progress (fetch has none). Rejects with a member-facing message. */
 function putVariant(
 	url: string,
 	body: Blob,
 	onProgress: (bytes: number) => void,
-	signal: AbortSignal
+	signal: AbortSignal,
+	copy: PutCopy = PHOTO_PUT
 ) {
 	return new Promise<void>((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
@@ -57,13 +68,8 @@ function putVariant(
 		xhr.onload = () =>
 			done(() => {
 				if (xhr.status >= 200 && xhr.status < 300) return resolve();
-				reject(
-					new PhotoError(
-						xhr.status === 413
-							? "This photo is too large. Try a smaller one."
-							: PHOTO_COPY.unreadable
-					)
-				);
+				// A Cloudflare 413 at the edge shows the same size message.
+				reject(new PhotoError(xhr.status === 413 ? copy.tooLarge : copy.unreadable));
 			});
 		xhr.onerror = () =>
 			done(() => reject(new PhotoError("Upload failed. Check your connection and try again.")));
@@ -80,42 +86,109 @@ const startMessage = (error: unknown) => {
 	return error instanceof Error && error.message ? error.message : PHOTO_COPY.unreadable;
 };
 
-/** Gallery upload for the active org: a `pending` Blob id plus a local preview of `thumb`. */
+/**
+ * Start, then `PUT` each part in order with overall progress. Returns the `pending` Blob id; on any
+ * failure (abort included) the Blob is discarded before rethrowing.
+ */
+async function startAndPut(
+	organizationId: string,
+	start: StartUploadInput,
+	parts: [BlobVariant, Blob][],
+	copy: PutCopy,
+	onProgress: (fraction: number) => void,
+	signal: AbortSignal
+) {
+	signal.throwIfAborted();
+	let blobId: string;
+	try {
+		({ blobId } = await startUpload({ data: start }));
+	} catch (error) {
+		throw new PhotoError(startMessage(error));
+	}
+	try {
+		signal.throwIfAborted();
+		onProgress(0.02);
+		let sent = 0;
+		for (const [variant, body] of parts) {
+			await putVariant(
+				blobUrl(organizationId, blobId, variant),
+				body,
+				(bytes) => onProgress(0.02 + (0.98 * (sent + bytes)) / start.size),
+				signal,
+				copy
+			);
+			sent += body.size;
+		}
+		onProgress(1);
+		return blobId;
+	} catch (error) {
+		await discardGalleryUploads([blobId]);
+		throw error;
+	}
+}
+
+/** Gallery photo for the active org: a `pending` Blob id plus a local preview of `thumb`. */
 export const uploadMemoryImage =
 	(organizationId: string): GalleryUpload =>
 	async (file, onProgress, signal) => {
 		const variants = await exportMemoryImage(file);
-		signal.throwIfAborted();
-		const total = variants.thumb.size + variants.display.size;
-		let blobId: string;
-		try {
-			({ blobId } = await startUpload({
-				data: { mediaKind: BLOB_MEDIA_KIND.memoryImage, size: total },
-			}));
-		} catch (error) {
-			throw new PhotoError(startMessage(error));
-		}
-		try {
-			signal.throwIfAborted();
-			onProgress(0.02);
-			let sent = 0;
-			for (const variant of ["thumb", "display"] as const) {
-				const body = variants[variant];
-				await putVariant(
-					blobUrl(organizationId, blobId, variant),
-					body,
-					(bytes) => onProgress(0.02 + (0.98 * (sent + bytes)) / total),
-					signal
-				);
-				sent += body.size;
-			}
-			onProgress(1);
-			return { blobId, previewUrl: URL.createObjectURL(variants.thumb) };
-		} catch (error) {
-			await discardGalleryUploads([blobId]);
-			throw error;
-		}
+		const blobId = await startAndPut(
+			organizationId,
+			{
+				mediaKind: BLOB_MEDIA_KIND.memoryImage,
+				size: variants.thumb.size + variants.display.size,
+			},
+			[
+				["thumb", variants.thumb],
+				["display", variants.display],
+			],
+			PHOTO_PUT,
+			onProgress,
+			signal
+		);
+		return {
+			blobId,
+			previewUrl: URL.createObjectURL(variants.thumb),
+			mediaKind: BLOB_MEDIA_KIND.memoryImage,
+		};
 	};
+
+/**
+ * Gallery video for the active org: checked and stripped in the browser, `video` then the optional
+ * `poster`. Preview is the poster, or none.
+ */
+export const uploadMemoryVideo =
+	(organizationId: string): GalleryUpload =>
+	async (file, onProgress, signal) => {
+		const { video, poster, contentType } = await prepareVideo(file);
+		const parts: [BlobVariant, Blob][] = [["video", video]];
+		if (poster) parts.push(["poster", poster]);
+		const blobId = await startAndPut(
+			organizationId,
+			{
+				mediaKind: BLOB_MEDIA_KIND.memoryVideo,
+				size: video.size + (poster?.size ?? 0),
+				contentType,
+			},
+			parts,
+			VIDEO_PUT,
+			onProgress,
+			signal
+		);
+		return {
+			blobId,
+			previewUrl: poster ? URL.createObjectURL(poster) : null,
+			mediaKind: BLOB_MEDIA_KIND.memoryVideo,
+		};
+	};
+
+/** Photo or video by the picked file's type or extension. */
+export const uploadGalleryMedia = (organizationId: string): GalleryUpload => {
+	const image = uploadMemoryImage(organizationId);
+	const video = uploadMemoryVideo(organizationId);
+	return (file, onProgress, signal) =>
+		(isVideoFile(file) ? video : image)(file, onProgress, signal);
+};
 
 /** Best effort: a missed discard falls to the 24h expiry. */
 export const discardGalleryUploads = (blobIds: string[]) =>

@@ -20,7 +20,7 @@ import { insertPostBase, loadPostForWrite, type PurgeBlobs } from "./postBase";
  */
 const galleryColumn = sql
 	.raw(
-		`(select json_group_array(json_object('blobId', b."id", 'mediaKind', b."mediaKind", 'width', b."width", 'height', b."height", 'durationMs', b."durationMs", 'position', m."position")) from "postMemoryMedia" m join "blob" b on b."id" = m."blobId" where m."postId" = "postMemory"."postId" and b."status" = '${BLOB_STATUS.attached}')`
+		`(select json_group_array(json_object('blobId', b."id", 'mediaKind', b."mediaKind", 'width', b."width", 'height', b."height", 'durationMs', b."durationMs", 'contentType', b."contentType", 'hasPoster', json_extract(b."variants", '$.poster') is not null, 'position', m."position")) from "postMemoryMedia" m join "blob" b on b."id" = m."blobId" where m."postId" = "postMemory"."postId" and b."status" = '${BLOB_STATUS.attached}')`
 	)
 	.mapWith(parseGallery);
 
@@ -56,7 +56,7 @@ export type MemoryDeps = {
 	purgeBlobs?: PurgeBlobs;
 };
 
-const INVALID_UPLOAD = "A photo upload is no longer valid. Remove it and add it again.";
+const INVALID_UPLOAD = "An upload is no longer valid. Remove it and add it again.";
 const CONFLICT = "This memory changed since you opened it. Close and try again.";
 
 /**

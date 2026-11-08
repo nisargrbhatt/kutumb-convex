@@ -1,15 +1,29 @@
 import { and, eq, inArray } from "drizzle-orm";
 import * as z from "zod";
 import { mediaBlob } from "@/db/app-schema";
-import { BLOB_MEDIA_KIND, BLOB_STATUS, enumValues, type BlobMediaKind } from "@/db/constants";
+import {
+	BLOB_MEDIA_KIND,
+	BLOB_STATUS,
+	BLOB_VARIANT,
+	BLOB_VIDEO_CONTENT_TYPE,
+	enumValues,
+	type BlobMediaKind,
+	type BlobVariant,
+} from "@/db/constants";
 import { blobKey, variantsOf } from "./blob";
 import { AppError } from "./errors";
-import { IMAGE_VARIANT_MAX_BYTES, type makeLimits } from "./limits";
+import { IMAGE_VARIANT_MAX_BYTES, VIDEO_MAX_BYTES, type makeLimits } from "./limits";
 import type { Actor } from "./permission";
 import type { QueryDb } from "./queries/db";
 
 /** R2 object metadata the blob code reads. */
-export type BlobObject = { size: number; httpEtag: string };
+export type BlobObject = {
+	size: number;
+	httpEtag: string;
+	httpMetadata?: { contentType?: string };
+};
+/** R2's `R2Range`. */
+export type BlobRange = { offset: number; length?: number } | { suffix: number };
 export type BlobObjectBody = BlobObject & {
 	body: ReadableStream;
 	arrayBuffer(): Promise<ArrayBuffer>;
@@ -22,21 +36,24 @@ export interface BlobBucket {
 		value: ReadableStream | ArrayBuffer | ArrayBufferView,
 		options?: { httpMetadata?: { contentType?: string }; sha256?: string }
 	): Promise<BlobObject | null>;
-	get(
-		key: string,
-		options?: { range?: { offset: number; length: number } }
-	): Promise<BlobObjectBody | null>;
+	get(key: string, options?: { range?: BlobRange }): Promise<BlobObjectBody | null>;
 	head(key: string): Promise<BlobObject | null>;
 	delete(keys: string | string[]): Promise<void>;
 }
 
+/** Body cap of one variant `PUT`. */
+export const variantMaxBytes = (variant: BlobVariant) =>
+	variant === BLOB_VARIANT.video ? VIDEO_MAX_BYTES : IMAGE_VARIANT_MAX_BYTES;
+
 /** Most a Blob of `kind` may declare: every variant at its cap. */
 export const maxDeclaredBytes = (kind: BlobMediaKind) =>
-	variantsOf(kind).length * IMAGE_VARIANT_MAX_BYTES;
+	variantsOf(kind).reduce((n, v) => n + variantMaxBytes(v), 0);
 
 export const startUploadInput = z.object({
 	mediaKind: z.enum(enumValues(BLOB_MEDIA_KIND)),
 	size: z.number().int().positive(),
+	/** Video only: the type the browser's atom walk read. The Worker checks it on `PUT`. */
+	contentType: z.enum(enumValues(BLOB_VIDEO_CONTENT_TYPE)).optional(),
 });
 export type StartUploadInput = z.infer<typeof startUploadInput>;
 
@@ -59,9 +76,10 @@ type Deps = {
 export function makeBlobStore({ db, bucket, limits, now, newId }: Deps) {
 	return {
 		/** Reserves `size` in a new `pending` Blob; the browser then `PUT`s each variant. */
-		async start(actor: Actor, { mediaKind, size }: StartUploadInput) {
-			if (mediaKind === BLOB_MEDIA_KIND.memoryVideo) {
-				throw new AppError("Invalid", "Video uploads aren't supported yet");
+		async start(actor: Actor, { mediaKind, size, contentType }: StartUploadInput) {
+			// Video's type is fixed at start, so `put()` can store it as `httpMetadata`.
+			if ((mediaKind === BLOB_MEDIA_KIND.memoryVideo) !== (contentType !== undefined)) {
+				throw new AppError("Invalid", "Only .mov and .mp4 videos can be added");
 			}
 			if (size > maxDeclaredBytes(mediaKind)) {
 				throw new AppError("Invalid", "This file is too large");
@@ -77,6 +95,7 @@ export function makeBlobStore({ db, bucket, limits, now, newId }: Deps) {
 				uploadedByUserId: actor.userId,
 				size,
 				variants: {},
+				contentType: contentType ?? null,
 				createdAt: at,
 			});
 			return { blobId };

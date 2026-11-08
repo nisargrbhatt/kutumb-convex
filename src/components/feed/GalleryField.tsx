@@ -6,11 +6,13 @@ import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { blobUrl } from "@/domain/blob";
 import { GALLERY_MAX } from "@/domain/limits";
+import { BLOB_MEDIA_KIND } from "@/db/constants";
 import { PHOTO_ACCEPT } from "@/domain/photo";
+import { VIDEO_ACCEPT } from "@/domain/video";
 import type { DraftItem, GalleryDraft } from "@/lib/galleryDraft";
 import { cn } from "@/lib/utils";
 import { useOrgId } from "@/queries/mutation";
-import { MediaImage } from "./Gallery";
+import { MediaImage, VideoPlaceholder } from "./Gallery";
 
 /**
  * Drawer gallery grid (spec: Feed UI > Create and edit Drawer): per-file progress and inline error,
@@ -20,9 +22,22 @@ import { MediaImage } from "./Gallery";
 function Thumb({ item }: { item: DraftItem }) {
 	const orgId = useOrgId();
 	if (item.state === "attached") {
+		if (item.mediaKind === BLOB_MEDIA_KIND.memoryVideo) {
+			return item.hasPoster ? (
+				<MediaImage src={blobUrl(orgId, item.blobId, "poster")} label={item.name} />
+			) : (
+				<VideoPlaceholder label={item.name} />
+			);
+		}
 		return <MediaImage src={blobUrl(orgId, item.blobId, "thumb")} label={item.name} />;
 	}
-	if (item.state === "uploaded") return <MediaImage src={item.previewUrl} label={item.name} />;
+	if (item.state === "uploaded") {
+		return item.previewUrl ? (
+			<MediaImage src={item.previewUrl} label={item.name} />
+		) : (
+			<VideoPlaceholder label={item.name} />
+		);
+	}
 	if (item.state === "uploading") {
 		return (
 			<span className="flex size-full items-center justify-center bg-muted text-muted-foreground">
@@ -41,7 +56,7 @@ export function GalleryField({ draft, error }: { draft: GalleryDraft; error?: st
 
 	return (
 		<div className="flex flex-col gap-2">
-			<ul className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Photos">
+			<ul className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Photos and videos">
 				{items.map((d, i) => (
 					<li key={d.key} className="flex min-w-0 flex-col gap-1">
 						<div
@@ -108,13 +123,13 @@ export function GalleryField({ draft, error }: { draft: GalleryDraft; error?: st
 							onClick={() => input.current?.click()}
 						>
 							<ImagePlus className="size-5" aria-hidden />
-							Add photos
+							Add photos or videos
 						</button>
 					</li>
 				) : null}
 			</ul>
 			<p className="text-sm text-muted-foreground">
-				{items.length} of {GALLERY_MAX} photos. Optional.
+				{items.length} of {GALLERY_MAX} photos or videos. Optional.
 			</p>
 			{error ? (
 				<p role="alert" className="text-sm text-destructive">
@@ -126,14 +141,14 @@ export function GalleryField({ draft, error }: { draft: GalleryDraft; error?: st
 				type="file"
 				multiple
 				hidden
-				accept={PHOTO_ACCEPT}
+				accept={`${PHOTO_ACCEPT},${VIDEO_ACCEPT}`}
 				onChange={(e) => {
 					const files = Array.from(e.target.files ?? []);
 					e.target.value = "";
 					const left = draft.add(files);
 					if (left > 0) {
-						toast.error(`Up to ${GALLERY_MAX} photos`, {
-							description: `${left} ${left === 1 ? "photo was" : "photos were"} left out.`,
+						toast.error(`Up to ${GALLERY_MAX} photos or videos`, {
+							description: `${left} ${left === 1 ? "file was" : "files were"} left out.`,
 						});
 					}
 				}}

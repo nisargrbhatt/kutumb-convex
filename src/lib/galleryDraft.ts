@@ -1,3 +1,4 @@
+import { BLOB_MEDIA_KIND, type BlobMediaKind } from "@/db/constants";
 import type { GalleryItem } from "@/domain/feed";
 import { moveItem } from "@/domain/gallery";
 import { GALLERY_MAX } from "@/domain/limits";
@@ -17,12 +18,15 @@ export type GalleryUpload = (
 	file: File,
 	onProgress: (fraction: number) => void,
 	signal: AbortSignal
-) => Promise<{ blobId: string; previewUrl: string }>;
+) => Promise<Uploaded>;
+
+/** A landed upload: its `pending` Blob, plus a local preview (null: a video with no poster). */
+export type Uploaded = { blobId: string; previewUrl: string | null; mediaKind: BlobMediaKind };
 
 export type DraftItem = { key: string; name: string } & (
 	| ({ state: "attached" } & GalleryItem)
 	| { state: "uploading"; progress: number }
-	| { state: "uploaded"; blobId: string; previewUrl: string }
+	| ({ state: "uploaded" } & Uploaded)
 	| { state: "error"; error: string }
 );
 
@@ -58,8 +62,11 @@ export function makeGalleryDraft({ upload, discard, releasePreview }: Deps) {
 		for (const id of ids) unsaved.delete(id);
 		if (ids.length > 0) void discard(ids).catch(() => undefined);
 	};
+	const release = (url: string | null) => {
+		if (url) releasePreview(url);
+	};
 	const releaseAll = () => {
-		for (const i of items) if (i.state === "uploaded") releasePreview(i.previewUrl);
+		for (const i of items) if (i.state === "uploaded") release(i.previewUrl);
 	};
 	const abortAll = () => {
 		for (const r of running.values()) r.abort.abort();
@@ -79,16 +86,16 @@ export function makeGalleryDraft({ upload, discard, releasePreview }: Deps) {
 			},
 			abort.signal
 		).then(
-			({ blobId, previewUrl }) => {
+			(uploaded) => {
 				const live = mine === session && running.get(key)?.abort === abort;
 				running.delete(key);
 				if (!live) {
-					releasePreview(previewUrl);
-					drop([blobId]);
+					release(uploaded.previewUrl);
+					drop([uploaded.blobId]);
 					return;
 				}
-				unsaved.add(blobId);
-				patch(key, { key, name, state: "uploaded", blobId, previewUrl });
+				unsaved.add(uploaded.blobId);
+				patch(key, { key, name, state: "uploaded", ...uploaded });
 			},
 			(error) => {
 				const live = mine === session && running.get(key)?.abort === abort;
@@ -116,7 +123,7 @@ export function makeGalleryDraft({ upload, discard, releasePreview }: Deps) {
 				attached.map((m, i) => ({
 					...m,
 					key: `a${++seq}`,
-					name: `Photo ${i + 1}`,
+					name: `${m.mediaKind === BLOB_MEDIA_KIND.memoryVideo ? "Video" : "Photo"} ${i + 1}`,
 					state: "attached" as const,
 				}))
 			);
@@ -147,7 +154,7 @@ export function makeGalleryDraft({ upload, discard, releasePreview }: Deps) {
 				run.abort.abort();
 			}
 			if (item.state === "uploaded") {
-				releasePreview(item.previewUrl);
+				release(item.previewUrl);
 				drop([item.blobId]);
 			}
 			set(items.filter((i) => i.key !== key));

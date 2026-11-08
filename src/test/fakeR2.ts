@@ -13,7 +13,13 @@ export function fakeR2() {
 
 	const meta = (key: string) => {
 		const o = objects.get(key)!;
-		return { key, size: o.bytes.length, httpEtag: `"${o.etag}"`, etag: o.etag };
+		return {
+			key,
+			size: o.bytes.length,
+			httpEtag: `"${o.etag}"`,
+			etag: o.etag,
+			httpMetadata: o.contentType ? { contentType: o.contentType } : {},
+		};
 	};
 
 	const bucket: BlobBucket = {
@@ -37,10 +43,21 @@ export function fakeR2() {
 		async get(key, options) {
 			const o = objects.get(key);
 			if (!o) return null;
+			// Like R2 (checked on Miniflare): a range normalises to `{ offset, length }`, clamped to
+			// the object; a start at or past the end throws.
 			const r = options?.range;
-			const bytes = r ? o.bytes.slice(r.offset, r.offset + r.length) : o.bytes;
+			let range: { offset: number; length: number } | undefined;
+			if (r) {
+				const size = o.bytes.length;
+				const offset = "suffix" in r ? Math.max(0, size - r.suffix) : r.offset;
+				if (offset >= size) throw new Error("get: The requested range is not satisfiable (10039)");
+				const length = "suffix" in r ? size - offset : Math.min(r.length ?? size, size - offset);
+				range = { offset, length };
+			}
+			const bytes = range ? o.bytes.slice(range.offset, range.offset + range.length) : o.bytes;
 			return {
 				...meta(key),
+				...(range ? { range } : {}),
 				body: new Response(bytes as Uint8Array<ArrayBuffer>).body!,
 				arrayBuffer: async () => bytes.slice().buffer,
 			};

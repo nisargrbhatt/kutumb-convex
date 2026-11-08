@@ -7,6 +7,7 @@ import {
 	BLOB_STATUS,
 	COMMUNITY_PROFILE_STATUS,
 	BLOB_VARIANT,
+	BLOB_VIDEO_CONTENT_TYPE,
 	ORGANIZATION_ROLES,
 	type BlobOwnerKind,
 	type BlobVariant,
@@ -20,9 +21,9 @@ import {
 	pendingCutoff,
 	variantMaxEdge,
 } from "./blob";
-import type { BlobBucket } from "./blobStore";
-import { verifyJpeg } from "./jpeg";
-import { IMAGE_VARIANT_MAX_BYTES } from "./limits";
+import { variantMaxBytes, type BlobBucket, type BlobObject, type BlobRange } from "./blobStore";
+import { verifyJpeg, type ReadRange } from "./jpeg";
+import { verifyVideo } from "./video";
 import type { Actor, Role } from "./permission";
 import { visibleProfileWhere } from "./queries/profiles";
 import type { QueryDb } from "./queries/db";
@@ -90,9 +91,9 @@ const sha256Hex = async (text: string) =>
 
 /**
  * Restricted Blobs of an org: everything but the cases any member may see, an `attached` photo on
- * an `active` profile and an `attached` Memory image whose Memory is in the same org. Covers
- * `pending`, `deleted`, Change Request owned, photos on `inactive` or `draft` profiles, orphans,
- * and kinds without a memo rule yet.
+ * an `active` profile and `attached` Memory media (image or video) whose Memory is in the same org.
+ * Covers `pending`, `deleted`, Change Request owned, photos on `inactive` or `draft` profiles, and
+ * orphans. Video range requests then hit the memo with no D1 read.
  */
 async function restrictedBlobIds(db: QueryDb, organizationId: string) {
 	const rows = await db
@@ -111,7 +112,6 @@ async function restrictedBlobIds(db: QueryDb, organizationId: string) {
 							),
 							and(
 								eq(mediaBlob.ownerKind, BLOB_OWNER_KIND.memory),
-								eq(mediaBlob.mediaKind, BLOB_MEDIA_KIND.memoryImage),
 								sql`exists (select 1 from ${post} where ${post.id} = ${mediaBlob.ownerId} and ${post.organizationId} = ${mediaBlob.organizationId})`
 							)
 						)
@@ -165,6 +165,48 @@ const etagMatches = (ifNoneMatch: string, etag: string) =>
 		.split(",")
 		.map((t) => t.trim().replace(/^W\//, ""))
 		.some((t) => t === "*" || t === etag);
+
+/**
+ * One `Range: bytes=…` as an R2 range (spec: Serving > Range). Multi-range, other units and junk
+ * read as null: the whole file with `200`.
+ */
+export function parseRange(header: string | null): BlobRange | null {
+	const m = header?.trim().match(/^bytes=(\d*)-(\d*)$/);
+	if (!m) return null;
+	const [, from, to] = m as unknown as [string, string, string];
+	if (from === "") {
+		const suffix = Number(to);
+		return to !== "" && suffix > 0 && Number.isSafeInteger(suffix) ? { suffix } : null;
+	}
+	const offset = Number(from);
+	if (!Number.isSafeInteger(offset)) return null;
+	if (to === "") return { offset };
+	const end = Number(to);
+	if (!Number.isSafeInteger(end) || end < offset) return null;
+	return { offset, length: end - offset + 1 };
+}
+
+/** First and last byte served of an object of `size`, as R2 clamps `range`. */
+const servedRange = (range: BlobRange, size: number) => {
+	const offset = "suffix" in range ? Math.max(0, size - range.suffix) : range.offset;
+	const length = "suffix" in range ? size - offset : Math.min(range.length ?? size, size - offset);
+	return { first: offset, last: offset + length - 1, length };
+};
+
+/** `If-Range` holds when it names the current ETag (strong compare). A date never holds. */
+const ifRangeHolds = (ifRange: string, etag: string) => ifRange.trim() === etag;
+
+const VIDEO_TYPES: readonly string[] = Object.values(BLOB_VIDEO_CONTENT_TYPE);
+
+/**
+ * `Content-Type` from the allow-list, never a client's raw value: `image/jpeg` for image variants,
+ * the type stored in `put()`'s `httpMetadata` (from the row) for `video`.
+ */
+const servedType = (variant: BlobVariant, object: BlobObject) => {
+	if (isImageVariant(variant)) return "image/jpeg";
+	const stored = object.httpMetadata?.contentType;
+	return stored && VIDEO_TYPES.includes(stored) ? stored : null;
+};
 
 /**
  * `/api/blob/<orgId>/<blobId>/<variant>`, ahead of TanStack (spec: Upload, Serving). `PUT` lands
@@ -239,17 +281,18 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 		if (row.status !== BLOB_STATUS.pending || isPendingExpired(row.createdAt, now())) {
 			return plain(409, "Upload no longer open");
 		}
-		// Video verification lands with video (ticket 35).
-		if (!isAllowedVariant(row.mediaKind, variant) || !isImageVariant(variant)) {
-			return plain(400, "Unknown variant");
-		}
+		if (!isAllowedVariant(row.mediaKind, variant)) return plain(400, "Unknown variant");
+		const isVideo = variant === BLOB_VARIANT.video;
+		// Declared at start; stored as `httpMetadata` so serving needs no D1.
+		const contentType = isVideo ? row.contentType : "image/jpeg";
+		if (!contentType) return plain(400, "Unknown video type");
 
 		const lengthHeader = request.headers.get("content-length");
 		const length = lengthHeader === null ? NaN : Number(lengthHeader);
 		if (!Number.isSafeInteger(length) || length <= 0 || !request.body) {
 			return plain(411, "Content-Length required");
 		}
-		if (length > IMAGE_VARIANT_MAX_BYTES) return plain(413, "File too large");
+		if (length > variantMaxBytes(variant)) return plain(413, "File too large");
 		const landedElsewhere = Object.entries(row.variants)
 			.filter(([v]) => v !== variant)
 			.reduce((n, [, size]) => n + (size ?? 0), 0);
@@ -265,7 +308,7 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 		try {
 			// R2 checks `sha256` against the bytes, so the Worker never hashes.
 			object = await bucket.put(key, request.body, {
-				httpMetadata: { contentType: "image/jpeg" },
+				httpMetadata: { contentType },
 				...(needsSha ? { sha256 } : {}),
 			});
 		} catch {
@@ -279,24 +322,35 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 		// put()'s result is R2's own metadata for the landed object: the head() size check.
 		if (object.size > allowance) return reject(413, "Larger than declared");
 
-		const verdict = await verifyJpeg(
-			async (offset, len) => {
-				const part = await bucket.get(key, { range: { offset, length: len } });
-				return part ? new Uint8Array(await part.arrayBuffer()) : new Uint8Array(0);
-			},
-			object.size,
-			{ maxEdge: variantMaxEdge(row.mediaKind, variant) ?? 0 }
-		);
-		if (!verdict.ok) return reject(422, "This photo couldn't be read. Try a different file.");
+		const readRange: ReadRange = async (offset, len) => {
+			const part = await bucket.get(key, { range: { offset, length: len } });
+			return part ? new Uint8Array(await part.arrayBuffer()) : new Uint8Array(0);
+		};
+		let measured: { width: number; height: number; durationMs?: number } | null = null;
+		if (isVideo) {
+			const verdict = await verifyVideo(readRange, object.size);
+			// The walk's type must be the one declared at start, which `put()` stored.
+			if (!verdict.ok || verdict.contentType !== contentType) {
+				return reject(422, "This video couldn't be read. Try a different file.");
+			}
+			measured = verdict;
+		} else {
+			const verdict = await verifyJpeg(readRange, object.size, {
+				maxEdge: variantMaxEdge(row.mediaKind, variant) ?? 0,
+			});
+			if (!verdict.ok) return reject(422, "This photo couldn't be read. Try a different file.");
+			// `display` sizes an image Blob; `poster` never overrides the video's own size.
+			if (variant === BLOB_VARIANT.display) measured = verdict;
+		}
 
 		// Re-read the row as a conditional write: a Blob discarded (or expired) mid-put must not keep
 		// bytes, or they'd sit with no row for the sweep to find.
-		const isDisplay = variant === BLOB_VARIANT.display;
 		const updated = await db
 			.update(mediaBlob)
 			.set({
 				variants: sql`json_set(${mediaBlob.variants}, ${`$.${variant}`}, ${object.size})`,
-				...(isDisplay ? { width: verdict.width, height: verdict.height } : {}),
+				...(measured ? { width: measured.width, height: measured.height } : {}),
+				...(measured?.durationMs !== undefined ? { durationMs: measured.durationMs } : {}),
 				...(needsSha ? { sha256 } : {}),
 			})
 			.where(
@@ -310,7 +364,7 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 		if (updated.length === 0) return reject(409, "Upload no longer open");
 
 		return Response.json(
-			{ variant, size: object.size, width: verdict.width, height: verdict.height },
+			{ variant, size: object.size },
 			{ headers: { ...BASE_HEADERS, "Cache-Control": "no-store" } }
 		);
 	}
@@ -325,9 +379,8 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 		const actor = await memoActor(request, organizationId);
 		if (!actor) return notFound();
 
-		// Unrestricted plus member: no D1. Image variants only: `video` reads its type from the row.
-		let contentType: string | null = "image/jpeg";
-		if (!isImageVariant(variant) || (await isRestricted(organizationId, blobId))) {
+		// Unrestricted plus member: no D1. Content type comes from the object's `httpMetadata`.
+		if (await isRestricted(organizationId, blobId)) {
 			const row = await db.query.mediaBlob.findFirst({
 				where: (f, o) => o.and(o.eq(f.id, blobId), o.eq(f.organizationId, organizationId)),
 			});
@@ -336,32 +389,65 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 			}
 			if (row.variants[variant] === undefined) return notFound();
 			if (!(await OWNER_CHECKS[row.ownerKind](db, actor, row.ownerId))) return notFound();
-			contentType = isImageVariant(variant) ? "image/jpeg" : row.contentType;
-			if (!contentType) return notFound();
 		}
 
 		const key = blobKey(organizationId, blobId, variant);
-		const headers: Record<string, string> = {
-			...BASE_HEADERS,
-			"Content-Type": contentType,
-			"Cache-Control": "private, max-age=86400, immutable",
+		const headersFor = (object: BlobObject) => {
+			const contentType = servedType(variant, object);
+			if (!contentType) return null;
+			const headers: Record<string, string> = {
+				...BASE_HEADERS,
+				"Content-Type": contentType,
+				"Cache-Control": "private, max-age=86400, immutable",
+				"Accept-Ranges": "bytes",
+				ETag: object.httpEtag,
+			};
+			if (url.searchParams.get("download") === "1") headers["Content-Disposition"] = "attachment";
+			return headers;
 		};
-		if (url.searchParams.get("download") === "1") headers["Content-Disposition"] = "attachment";
 
 		// Never 304 from the ETag alone: once the object is gone a member must get 404.
 		const ifNoneMatch = request.headers.get("if-none-match");
-		if (ifNoneMatch) {
+		let range = parseRange(request.headers.get("range"));
+		const ifRange = request.headers.get("if-range");
+		if (ifNoneMatch || (range && ifRange)) {
 			const head = await bucket.head(key);
-			if (!head) return notFound();
-			if (etagMatches(ifNoneMatch, head.httpEtag)) {
-				return new Response(null, { status: 304, headers: { ...headers, ETag: head.httpEtag } });
+			const headers = head && headersFor(head);
+			if (!head || !headers) return notFound();
+			if (ifNoneMatch && etagMatches(ifNoneMatch, head.httpEtag)) {
+				return new Response(null, { status: 304, headers });
 			}
+			// A stale `If-Range` gets the whole, current file.
+			if (ifRange && !ifRangeHolds(ifRange, head.httpEtag)) range = null;
 		}
 
-		const object = await bucket.get(key);
+		// WebKit opens with a `0-1` probe and needs a real `206` (spec: Serving > Range).
+		let object;
+		try {
+			object = await bucket.get(key, range ? { range } : {});
+		} catch (error) {
+			if (!range) throw error;
+			// R2 throws on a start at or past the end.
+			const head = await bucket.head(key);
+			if (!head) return notFound();
+			return plain(416, "Range not satisfiable", { "Content-Range": `bytes */${head.size}` });
+		}
 		if (!object) return notFound();
+		const headers = headersFor(object);
+		if (!headers) return notFound();
+		if (!range) {
+			return new Response(object.body, {
+				headers: { ...headers, "Content-Length": String(object.size) },
+			});
+		}
+		const served = servedRange(range, object.size);
 		return new Response(object.body, {
-			headers: { ...headers, ETag: object.httpEtag, "Content-Length": String(object.size) },
+			status: 206,
+			headers: {
+				...headers,
+				"Content-Length": String(served.length),
+				"Content-Range": `bytes ${served.first}-${served.last}/${object.size}`,
+			},
 		});
 	}
 
