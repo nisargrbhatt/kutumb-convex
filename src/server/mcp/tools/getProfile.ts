@@ -103,7 +103,8 @@ type MyPending = Awaited<ReturnType<typeof listMyPendingForProfile>>;
 
 export function toProfileView(detail: Detail, myPending: MyPending = []): View {
 	const { profile, addresses, customFieldDefs, outgoingRelations, incomingRelations } = detail;
-	const { customFieldData, ...columns } = profile;
+	// AI Clients get no photo (spec: Profile Photo > Who).
+	const { customFieldData, photoBlobId: _photo, ...columns } = profile;
 
 	const toCounterpart = (
 		p: NonNullable<Detail["outgoingRelations"][number]["toCommunityProfile"]>

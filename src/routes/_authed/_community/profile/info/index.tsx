@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/CommunityLayout/PageHeader";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { ProfileIdentityHeader } from "@/components/profile/ProfileIdentityHeader";
 import { ProfileInfoView } from "@/components/profile/ProfileInfoView";
+import { ProfilePhotoActions } from "@/components/profile/photo/ProfilePhotoActions";
 import { Button } from "@/components/ui/button";
 import {
 	Empty,
@@ -58,7 +59,14 @@ function RouteComponent() {
 			<div className="flex w-full flex-col gap-6 pb-12">
 				{profile ? (
 					<>
-						<ProfileIdentityHeader profile={profile} />
+						<ProfileIdentityHeader
+							profile={profile}
+							actions={
+								<div className="flex shrink-0 gap-2">
+									<ProfilePhotoActions profile={profile} />
+								</div>
+							}
+						/>
 						<ProfileInfoView profile={profile} customFieldDefs={customFieldDefs} />
 					</>
 				) : (

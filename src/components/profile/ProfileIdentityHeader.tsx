@@ -9,6 +9,7 @@ type IdentityProfile = Parameters<typeof fullName>[0] & {
 	nickName: string | null;
 	email: string | null;
 	mobileNumber: string | null;
+	photoBlobId?: string | null;
 };
 
 /** Avatar, name, status, nickname and contact line; `actions` sits right on sm+. */
@@ -26,6 +27,8 @@ export function ProfileIdentityHeader({
 			<div className="flex min-w-0 items-center gap-4">
 				<ProfileAvatar
 					profile={profile}
+					photoBlobId={profile.photoBlobId}
+					variant="display"
 					className="size-16 shrink-0 sm:size-20"
 					fallbackClassName="text-xl"
 				/>

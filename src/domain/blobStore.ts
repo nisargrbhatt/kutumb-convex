@@ -102,16 +102,35 @@ export function makeBlobStore({ db, bucket, limits, now, newId }: Deps) {
 					)
 				)
 				.returning({ id: mediaBlob.id, mediaKind: mediaBlob.mediaKind });
-			const ids = rows.map((r) => r.id);
-			if (ids.length === 0) return { discarded: ids };
-			try {
-				await bucket.delete(rows.flatMap((r) => allKeys(actor.organizationId, r.id, r.mediaKind)));
-			} catch (error) {
-				console.error("Blob byte delete failed; left for the sweep", error);
-				return { discarded: ids };
-			}
-			await db.delete(mediaBlob).where(inArray(mediaBlob.id, ids));
-			return { discarded: ids };
+			await purgeBlobs({ db, bucket }, actor.organizationId, rows);
+			return { discarded: rows.map((r) => r.id) };
 		},
 	};
+}
+
+/**
+ * Bytes of Blobs already marked `deleted`, then their rows (spec: Blobs > Lifecycle > Delete).
+ * Never throws: a failed byte delete leaves the `deleted` rows for the sweep's retry.
+ */
+export async function purgeBlobs(
+	{ db, bucket }: { db: QueryDb; bucket: BlobBucket },
+	organizationId: string,
+	blobs: { id: string; mediaKind: BlobMediaKind }[]
+) {
+	if (blobs.length === 0) return;
+	try {
+		await bucket.delete(blobs.flatMap((b) => allKeys(organizationId, b.id, b.mediaKind)));
+		await db.delete(mediaBlob).where(
+			and(
+				inArray(
+					mediaBlob.id,
+					blobs.map((b) => b.id)
+				),
+				eq(mediaBlob.organizationId, organizationId),
+				eq(mediaBlob.status, BLOB_STATUS.deleted)
+			)
+		);
+	} catch (error) {
+		console.error("Blob byte delete failed; left for the sweep", error);
+	}
 }
