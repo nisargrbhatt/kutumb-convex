@@ -112,6 +112,11 @@ export function diffRows(payload: unknown): DiffRow[] {
 			}
 			continue;
 		}
+		// `profile.deleted` snapshot's photo metadata.
+		if (key === "photo") {
+			if (isRecord(v)) rows.push({ label: "Photo", value: photoLabel(v) });
+			continue;
+		}
 		// Nested snapshot (e.g. submitted create `{ kind, profile }`): flatten one level.
 		if (isRecord(v)) rows.push(...diffRows(v));
 		else if (isPair(v)) rows.push({ label: humanize(key), before: v[0], after: v[1] });

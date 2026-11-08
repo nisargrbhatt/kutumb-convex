@@ -346,6 +346,24 @@ export function makeProfileChanges({
 		}
 	}
 
+	/**
+	 * Photo on top of `route`: owner/admin may only remove a linked profile's photo
+	 * (`communityProfile: ["removePhoto"]`). `photo` Change Requests aren't built yet.
+	 */
+	async function photoRoute(
+		actor: Actor,
+		subject: ProfileRow,
+		change: Extract<ProfileChange, { kind: "photo" }>
+	): Promise<void> {
+		if (subject.userId && subject.userId !== actor.userId) {
+			if (change.blobId === null && can(actor, { communityProfile: ["removePhoto"] })) return;
+			throw new AppError("Forbidden", "Only its linked user can change this photo");
+		}
+		if ((await route(actor, subject)) === "request") {
+			throw new AppError("Forbidden", "You do not have permission to perform this action");
+		}
+	}
+
 	/** What a pending request for this change stores: payload + target (from its would-be event). */
 	function requestShape(change: RequestableChange, applied: Plan) {
 		const main = applied.events[0]!;
@@ -1047,10 +1065,30 @@ export function makeProfileChanges({
 				),
 			customFieldLabels(actor.organizationId),
 		]);
+		const photoId = subject.photoBlobId;
+		const photo = photoId ? await loadBlob(actor, photoId) : undefined;
 		// Relations + addresses go by FK cascade; only events are written for them.
 		const removals = await relationRemovals(subject, relations, { deleteRows: false });
 		return {
-			statements: [db.delete(communityProfile).where(eq(communityProfile.id, subject.id)), guard()],
+			statements: [
+				db.delete(communityProfile).where(eq(communityProfile.id, subject.id)),
+				guard(),
+				// No guard: a Blob already gone still lets the profile go.
+				...(photoId
+					? [
+							db
+								.update(mediaBlob)
+								.set({ status: BLOB_STATUS.deleted })
+								.where(
+									and(
+										eq(mediaBlob.id, photoId),
+										eq(mediaBlob.ownerKind, BLOB_OWNER_KIND.profile),
+										eq(mediaBlob.ownerId, subject.id)
+									)
+								),
+						]
+					: []),
+			],
 			events: [
 				{
 					action: "profile.deleted",
@@ -1059,12 +1097,16 @@ export function makeProfileChanges({
 					payload: {
 						...profileSnapshot(subject, labels),
 						addresses: addresses.map(addressSnapshot),
+						photo: photo ? photoSnapshot(photo) : photoId ? { blobId: photoId } : null,
 					},
 				},
 				...removals.events,
 			],
 			applied: true,
 			onGuardTrip: "Conflict",
+			deletedBlobs: photoId
+				? [{ id: photoId, mediaKind: photo?.mediaKind ?? BLOB_MEDIA_KIND.profilePhoto }]
+				: [],
 		};
 	}
 
@@ -1242,11 +1284,7 @@ export function makeProfileChanges({
 
 			const subject = await loadProfile(actor, change.profileId);
 			if (change.kind === "photo") {
-				// Linked rows only for now; the Userless reviewer path and `photo` requests come later.
-				if (!subject.userId) {
-					throw new AppError("Forbidden", "Only its linked user can change this photo");
-				}
-				await route(actor, subject);
+				await photoRoute(actor, subject, change);
 				const plan = await planPhoto(actor, subject, change);
 				if (!plan) return { outcome: "unchanged", profileId: subject.id };
 				await commit(actor, name, plan, via);
@@ -1344,6 +1382,7 @@ export function makeProfileChanges({
 					...applied.events.map((e) => ({ ...e, changeRequestId: req.id })),
 				],
 				applied: applied.applied,
+				deletedBlobs: applied.deletedBlobs,
 				onGuardTrip: async () => {
 					const current = await db.query.changeRequest.findFirst({
 						where: (f, o) => o.eq(f.id, req.id),
@@ -1378,6 +1417,7 @@ export function makeProfileChanges({
 					...applied.events.map((e) => ({ ...e, changeRequestId: req.id })),
 				],
 				applied: applied.applied,
+				deletedBlobs: applied.deletedBlobs,
 				onGuardTrip: "Conflict",
 			});
 			return { kind: req.kind, profileId: subject.id };

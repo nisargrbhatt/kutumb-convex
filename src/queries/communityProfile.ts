@@ -218,7 +218,8 @@ export const useDeleteProfile = (profileId: string, onDeleted: () => unknown) =>
 	);
 
 /**
- * Own linked profile's photo. `variants` set → upload, then attach (replacing any current one);
+ * A profile's photo (own linked, or a Userless one edited directly; owner/admin remove on linked).
+ * `variants` set → upload, then attach (replacing any current one);
  * absent → remove. A failed attach discards the upload.
  */
 export function useSetMyProfilePhoto() {
