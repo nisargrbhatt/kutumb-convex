@@ -73,6 +73,17 @@ const isPair = (v: unknown): v is [unknown, unknown] => Array.isArray(v) && v.le
 /** Payload keys that are references, not displayable values. */
 const HIDDEN_KEYS = new Set(["id", "userId", "fromId", "toId", "kind"]);
 
+/** Photo metadata → "1024×1024, 92 KB"; null when there was no photo. */
+function photoLabel(meta: unknown): string | null {
+	if (!isRecord(meta)) return null;
+	const { width, height, size } = meta;
+	const parts = [
+		typeof width === "number" && typeof height === "number" ? `${width}×${height}` : null,
+		typeof size === "number" ? `${Math.round(size / 1024)} KB` : null,
+	].filter((p): p is string => p !== null);
+	return parts.length ? parts.join(", ") : "Photo";
+}
+
 export type DiffRow =
 	| { label: string; before: unknown; after: unknown }
 	| { label: string; value: unknown };
@@ -83,6 +94,10 @@ export type DiffRow =
  * snapshot.
  */
 export function diffRows(payload: unknown): DiffRow[] {
+	// `profile.photo_changed`: `[before, after]` photo metadata, never bytes.
+	if (isPair(payload)) {
+		return [{ label: "Photo", before: photoLabel(payload[0]), after: photoLabel(payload[1]) }];
+	}
 	if (!isRecord(payload)) return [];
 	const rows: DiffRow[] = [];
 	for (const [key, v] of Object.entries(payload)) {
@@ -123,6 +138,7 @@ const ACTION_VERB: Record<AuditAction, (p: string, c: string | null) => string> 
 	"profile.reactivated": (p) => `Reactivated ${p}`,
 	"profile.reassigned": (p) => `Reassigned ${p}`,
 	"profile.deleted": (p) => `Deleted ${p}`,
+	"profile.photo_changed": (p) => `Changed photo of ${p}`,
 	"relation.added": (p, c) => `Added relation ${p} → ${c ?? "?"}`,
 	"relation.removed": (p, c) => `Removed relation ${p} → ${c ?? "?"}`,
 	"address.added": (p) => `Added address to ${p}`,

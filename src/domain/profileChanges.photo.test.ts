@@ -1,0 +1,147 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { AppError } from "@/domain/errors";
+import { PENDING_TTL_MS } from "@/domain/blob";
+import { MEMBER, OTHER, OWNER, profileChangesHarness } from "@/test/profileChangesHarness";
+
+async function expectError(p: Promise<unknown>, kind: AppError["kind"]) {
+	const e = await p.then(
+		() => null,
+		(err: unknown) => err
+	);
+	expect(e).toBeInstanceOf(AppError);
+	expect((e as AppError).kind).toBe(kind);
+}
+
+const meta = (blobId: string, sha = "ab") => ({
+	blobId,
+	sha256: sha.repeat(32),
+	size: 94_000,
+	width: 1024,
+	height: 1024,
+});
+
+describe("Profile Photo on the linked user's own profile", () => {
+	let h: ReturnType<typeof profileChangesHarness>;
+
+	beforeEach(async () => {
+		h = profileChangesHarness();
+		await h.seed({ id: "me", userId: "u-member" }, { id: "them", userId: "u-other" }, { id: "ul" });
+	});
+
+	const photo = (blobId: string | null, actor = MEMBER, profileId = "me") =>
+		h.changes.submit(actor, { kind: "photo", profileId, blobId });
+	const photoEvents = async () =>
+		(await h.events()).filter((e) => e.action === "profile.photo_changed");
+
+	it("set: attaches the Blob, bumps both versions, audits metadata only", async () => {
+		await h.seedBlob({ id: "b1" });
+		const res = await photo("b1");
+		expect(res).toEqual({ outcome: "applied", profileId: "me", version: 1 });
+
+		const p = await h.profile("me");
+		expect(p?.photoBlobId).toBe("b1");
+		expect(p?.version).toBe(1);
+		expect(await h.version()).toBe(1);
+
+		const b = await h.blob("b1");
+		expect(b).toMatchObject({ status: "attached", ownerKind: "profile", ownerId: "me" });
+		// Reservation becomes the real sum of landed variants.
+		expect(b?.size).toBe(94_000);
+
+		const [ev] = await photoEvents();
+		expect(ev).toMatchObject({ profileId: "me", actorUserId: "u-member" });
+		expect(ev?.payload).toEqual([null, meta("b1")]);
+		expect(h.purged).toEqual([]);
+	});
+
+	it("replace: old Blob marked deleted in the batch, bytes purged after", async () => {
+		await h.seedBlob({ id: "b1" }, { id: "b2", sha256: "cd".repeat(32) });
+		await photo("b1");
+		await photo("b2");
+
+		expect((await h.profile("me"))?.photoBlobId).toBe("b2");
+		expect((await h.blob("b1"))?.status).toBe("deleted");
+		expect((await h.blob("b2"))?.status).toBe("attached");
+		expect(await h.version()).toBe(2);
+		const evs = await photoEvents();
+		expect(evs[1]?.payload).toEqual([meta("b1"), meta("b2", "cd")]);
+		expect(h.purged).toEqual([
+			{ organizationId: "o1", blobs: [{ id: "b1", mediaKind: "profilePhoto" }] },
+		]);
+	});
+
+	it("remove: clears the column, old Blob deleted and purged", async () => {
+		await h.seedBlob({ id: "b1" });
+		await photo("b1");
+		const res = await photo(null);
+		expect(res).toEqual({ outcome: "applied", profileId: "me", version: 2 });
+
+		expect((await h.profile("me"))?.photoBlobId).toBeNull();
+		expect((await h.blob("b1"))?.status).toBe("deleted");
+		expect((await photoEvents())[1]?.payload).toEqual([meta("b1"), null]);
+		expect(h.purged).toHaveLength(1);
+	});
+
+	it("no change (remove with none, same Blob again) → unchanged, nothing written", async () => {
+		expect(await photo(null)).toEqual({ outcome: "unchanged", profileId: "me" });
+		await h.seedBlob({ id: "b1" });
+		await photo("b1");
+		expect(await photo("b1")).toEqual({ outcome: "unchanged", profileId: "me" });
+		expect(await photoEvents()).toHaveLength(1);
+		expect(await h.version()).toBe(1);
+	});
+
+	it("someone else's linked profile → Forbidden", async () => {
+		await h.seedBlob({ id: "b1" });
+		await expectError(photo("b1", MEMBER, "them"), "Forbidden");
+		expect((await h.blob("b1"))?.status).toBe("pending");
+	});
+
+	it("Userless Profile → Forbidden, even for owner/admin (reviewer path not built yet)", async () => {
+		await h.seedBlob({ id: "b1", uploadedByUserId: "u-owner" });
+		await expectError(photo("b1", OWNER, "ul"), "Forbidden");
+	});
+
+	it.each([
+		["uploaded by someone else", { uploadedByUserId: "u-other" }],
+		["not pending", { status: "attached" as const }],
+		["expired", { createdAt: new Date(1000 - PENDING_TTL_MS - 1) }],
+		["wrong media kind", { mediaKind: "memoryImage" as const }],
+		["required variant missing", { variants: { avatar: 4000 } }],
+	])("Blob %s → Invalid, nothing written", async (_label, over) => {
+		await h.seedBlob({ id: "b1", ...over });
+		await expectError(photo("b1"), "Invalid");
+		expect((await h.profile("me"))?.photoBlobId).toBeNull();
+		expect(await h.version()).toBe(0);
+	});
+
+	it("Blob of another org → Invalid", async () => {
+		h.fresh.sqlite.exec(
+			"INSERT INTO organization (id, name, slug, created_at) VALUES ('o2', 'Org 2', 'o2', 0)"
+		);
+		await h.seedBlob({ id: "b1", organizationId: "o2" });
+		await expectError(photo("b1"), "Invalid");
+	});
+
+	it("Blob discarded mid-change → batch rolls back as Conflict", async () => {
+		await h.seedBlob({ id: "b1" });
+		h.beforeNextBatch("UPDATE blob SET status = 'deleted' WHERE id = 'b1'");
+		await expectError(photo("b1"), "Conflict");
+		expect((await h.profile("me"))?.photoBlobId).toBeNull();
+		expect(await h.version()).toBe(0);
+		expect(await photoEvents()).toHaveLength(0);
+	});
+
+	it("photo changed concurrently → Conflict, the other change stands", async () => {
+		await h.seedBlob({ id: "b1" }, { id: "b2" });
+		h.beforeNextBatch("UPDATE communityProfile SET photoBlobId = 'b2' WHERE id = 'me'");
+		await expectError(photo("b1"), "Conflict");
+		expect((await h.profile("me"))?.photoBlobId).toBe("b2");
+		expect((await h.blob("b1"))?.status).toBe("pending");
+	});
+
+	it("the other linked user can still set their own", async () => {
+		await h.seedBlob({ id: "b9", uploadedByUserId: "u-other" });
+		expect((await photo("b9", OTHER, "them")).outcome).toBe("applied");
+	});
+});

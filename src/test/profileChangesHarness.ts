@@ -1,8 +1,13 @@
 import { asc } from "drizzle-orm";
-import { auditEvent, communityProfile } from "@/db/schema";
+import { auditEvent, communityProfile, mediaBlob } from "@/db/schema";
 import type { CommunityProfileInput } from "@/domain/communityProfile";
 import type { Actor, Role } from "@/domain/permission";
-import { makeProfileChanges, type AddressInput, type Via } from "@/domain/profileChanges";
+import {
+	makeProfileChanges,
+	type AddressInput,
+	type PurgedBlob,
+	type Via,
+} from "@/domain/profileChanges";
 import { freshDb } from "./sqliteDb";
 
 export const actor = (role: Role, userId = `u-${role}`): Actor => ({
@@ -62,17 +67,24 @@ export function profileChangesHarness() {
 	let t = 1000;
 	let n = 0;
 	const now = () => new Date(t++);
+	/** Every `purgeBlobs` call the seam made after a commit. */
+	const purged: { organizationId: string; blobs: PurgedBlob[] }[] = [];
 	const seamDeps = {
 		db,
 		limits: { assertProfileSlot: async () => {} },
+		purgeBlobs: async (organizationId: string, blobs: PurgedBlob[]) => {
+			purged.push({ organizationId, blobs });
+		},
 		now,
 		newId: () => `id${++n}`,
 	};
 	const changes = makeProfileChanges(seamDeps);
 
 	type Seed = Partial<typeof communityProfile.$inferInsert> & { id: string };
+	type BlobSeed = Partial<typeof mediaBlob.$inferInsert> & { id: string };
 	return {
 		fresh,
+		purged,
 		db,
 		changes,
 		/** Same seam, as seen through an AI Client Connection. */
@@ -100,6 +112,24 @@ export function profileChangesHarness() {
 					...r,
 				}))
 			),
+		/** `profilePhoto` Blobs, by default `pending`, fully landed, uploaded by `u-member` just now. */
+		seedBlob: (...rows: BlobSeed[]) =>
+			db.insert(mediaBlob).values(
+				rows.map((r) => ({
+					organizationId: "o1",
+					mediaKind: "profilePhoto" as const,
+					status: "pending" as const,
+					uploadedByUserId: "u-member",
+					size: 10_000_000,
+					variants: { avatar: 4000, display: 90_000 },
+					width: 1024,
+					height: 1024,
+					sha256: "ab".repeat(32),
+					createdAt: new Date(t),
+					...r,
+				}))
+			),
+		blob: (id: string) => db.query.mediaBlob.findFirst({ where: (f, o) => o.eq(f.id, id) }),
 		/** Runs `sql` right before the next batch (a concurrent write landing mid-Review). */
 		beforeNextBatch(sql: string) {
 			const realBatch = db.batch.bind(db);

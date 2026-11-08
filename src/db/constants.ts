@@ -92,6 +92,7 @@ export const AUDIT_ACTION = {
 	"profile.reactivated": "profile.reactivated",
 	"profile.reassigned": "profile.reassigned",
 	"profile.deleted": "profile.deleted",
+	"profile.photo_changed": "profile.photo_changed",
 	"relation.added": "relation.added",
 	"relation.removed": "relation.removed",
 	"address.added": "address.added",

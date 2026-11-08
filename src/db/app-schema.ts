@@ -73,6 +73,8 @@ export const communityProfile = sqliteTable(
 			})
 			.notNull(),
 		customFieldData: blob({ mode: "json" }).$type<CustomFieldValues>(),
+		/** Current Profile Photo (`blob.id`, `profilePhoto`). No FK: the Blob row outlives it. */
+		photoBlobId: text("photoBlobId"),
 		/** Optimistic-concurrency counter, bumped on every write. */
 		version: integer("version").notNull().default(0),
 	},

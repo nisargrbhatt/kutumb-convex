@@ -1,7 +1,8 @@
 import type { BatchItem, BatchResponse } from "drizzle-orm/batch";
-import { and, count, eq, isNull, or, sql } from "drizzle-orm";
+import { and, count, eq, gte, isNull, or, sql } from "drizzle-orm";
 import {
 	auditEvent,
+	mediaBlob,
 	changeRequest,
 	communityAddress,
 	communityProfile,
@@ -9,11 +10,16 @@ import {
 	orgDataVersion,
 } from "@/db/app-schema";
 import {
+	BLOB_MEDIA_KIND,
+	BLOB_OWNER_KIND,
+	BLOB_STATUS,
 	CHANGE_REQUEST_KIND,
 	CHANGE_REQUEST_STATUS,
 	COMMUNITY_PROFILE_STATUS,
 	type AuditAction,
+	type BlobMediaKind,
 } from "@/db/constants";
+import { canAttach, pendingCutoff } from "@/domain/blob";
 import type {
 	AddressEditPayload,
 	ChangeRequestKind,
@@ -40,9 +46,17 @@ export type BatchDb = QueryDb & {
 /** The AI Client Connection a change came through; name is stored as a snapshot. */
 export type Via = { clientId: string; clientName: string };
 
+/** A Blob a committed change marked `deleted`: its bytes, then its row, go after the batch. */
+export type PurgedBlob = { id: string; mediaKind: BlobMediaKind };
+
 export type ProfileChangesDeps = {
 	db: BatchDb;
 	limits: { assertProfileSlot(organizationId: string, userId: string): Promise<void> };
+	/**
+	 * Byte delete after a committed batch (production: `waitUntil`, so it never fails the change).
+	 * Absent: rows stay `deleted` for the sweep.
+	 */
+	purgeBlobs?: (organizationId: string, blobs: PurgedBlob[]) => Promise<void>;
 	/** Stamped on the Audit Events + Change Requests this seam's `submit` writes. */
 	via?: Via;
 	now?: () => Date;
@@ -83,7 +97,12 @@ export type ProfileChange =
 			expectedVersion: number;
 			address: AddressInput;
 	  }
-	| { kind: "address_remove"; profileId: string; addressId: string };
+	| { kind: "address_remove"; profileId: string; addressId: string }
+	/** Set, replace (`blobId` = a `pending` `profilePhoto` Blob) or remove (`null`) the photo. */
+	| { kind: "photo"; profileId: string; blobId: string | null };
+
+/** Changes a member may file as a Change Request (`photo` requests aren't built yet). */
+type RequestableChange = Exclude<ProfileChange, { kind: "create" | "photo" }>;
 
 /**
  * What an applied change created/touched: `version` = the new version of the profile (create,
@@ -127,7 +146,11 @@ type Plan = {
 	applied: boolean;
 	/** Domain error when an in-batch guard trips (a fn re-reads to classify it). */
 	onGuardTrip: AppErrorKind | (() => Promise<AppErrorKind>);
+	/** Blobs the plan marks `deleted`; bytes are purged once the batch commits. */
+	deletedBlobs?: PurgedBlob[];
 };
+
+type BlobRow = typeof mediaBlob.$inferSelect;
 
 const INFO_FIELDS = [
 	"firstName",
@@ -169,6 +192,10 @@ function diffFields<K extends string>(
 	return out;
 }
 
+/** Real bytes of a Blob's landed variants. */
+const landedSize = (row: Pick<BlobRow, "variants">) =>
+	Object.values(row.variants).reduce<number>((n, size) => n + (size ?? 0), 0);
+
 const STALE_GUARD_MESSAGE = "malformed JSON";
 
 /** True when `e` is the `json('stale')` guard firing (node:sqlite or D1 wording). */
@@ -188,6 +215,7 @@ const stableJson = (v: unknown): string =>
 export function makeProfileChanges({
 	db,
 	limits,
+	purgeBlobs,
 	via,
 	now = () => new Date(),
 	newId = () => crypto.randomUUID(),
@@ -259,6 +287,15 @@ export function makeProfileChanges({
 		customFieldData: labelledValues(row.customFieldData, labels),
 	});
 
+	/** Audit copy of a Profile Photo: metadata only, never bytes or URLs. */
+	const photoSnapshot = (row: BlobRow) => ({
+		blobId: row.id,
+		sha256: row.sha256,
+		size: landedSize(row),
+		width: row.width,
+		height: row.height,
+	});
+
 	const addressSnapshot = (row: AddressRow) => ({
 		id: row.id,
 		...Object.fromEntries(ADDRESS_FIELDS.map((k) => [k, row[k] ?? null])),
@@ -310,7 +347,7 @@ export function makeProfileChanges({
 	}
 
 	/** What a pending request for this change stores: payload + target (from its would-be event). */
-	function requestShape(change: Exclude<ProfileChange, { kind: "create" }>, applied: Plan) {
+	function requestShape(change: RequestableChange, applied: Plan) {
 		const main = applied.events[0]!;
 		let payload: unknown = main.payload;
 		let targetId: string | null = null;
@@ -350,7 +387,7 @@ export function makeProfileChanges({
 	async function findPendingRepeat(
 		actor: Actor,
 		profileId: string,
-		kind: ProfileChange["kind"],
+		kind: RequestableChange["kind"],
 		shape: { payload: unknown; targetId: string | null }
 	) {
 		const rows = await db
@@ -380,7 +417,7 @@ export function makeProfileChanges({
 		actor: Actor,
 		name: string,
 		subject: ProfileRow,
-		change: Exclude<ProfileChange, { kind: "create" }>,
+		change: RequestableChange,
 		applied: Plan
 	) {
 		const { main, payload, targetId } = requestShape(change, applied);
@@ -511,6 +548,9 @@ export function makeProfileChanges({
 				throw e;
 			}
 		}
+		if (plan.deletedBlobs?.length && purgeBlobs) {
+			await purgeBlobs(actor.organizationId, plan.deletedBlobs);
+		}
 	}
 
 	const emptyPlan = (): Plan => ({
@@ -549,6 +589,7 @@ export function makeProfileChanges({
 			userId: change.self ? userId : null,
 			status,
 			comment: change.self ? null : `Added by ${name}`,
+			photoBlobId: null,
 			version: 0,
 		};
 		const plan = emptyPlan();
@@ -846,6 +887,105 @@ export function makeProfileChanges({
 		};
 	}
 
+	async function loadBlob(actor: Actor, blobId: string) {
+		return db.query.mediaBlob.findFirst({
+			where: (f, o) => o.and(o.eq(f.id, blobId), o.eq(f.organizationId, actor.organizationId)),
+		});
+	}
+
+	/**
+	 * Set / replace / remove: attaches the new Blob and marks the old one `deleted` in the same batch
+	 * as the profile write (spec: Profile Photo > Through the change seam).
+	 */
+	async function planPhoto(
+		actor: Actor,
+		subject: ProfileRow,
+		change: Extract<ProfileChange, { kind: "photo" }>
+	): Promise<Plan | null> {
+		const before = subject.photoBlobId;
+		const after = change.blobId;
+		if (before === after) return null;
+
+		const next = after ? await loadBlob(actor, after) : undefined;
+		if (
+			after &&
+			(!next || !canAttach(next, { actor, mediaKind: BLOB_MEDIA_KIND.profilePhoto, now: now() }))
+		) {
+			throw new AppError("Invalid", "This photo upload is no longer valid. Try again.");
+		}
+		const prev = before ? await loadBlob(actor, before) : undefined;
+
+		const statements: BatchItem<"sqlite">[] = [];
+		if (next) {
+			statements.push(
+				db
+					.update(mediaBlob)
+					.set({
+						status: BLOB_STATUS.attached,
+						ownerKind: BLOB_OWNER_KIND.profile,
+						ownerId: subject.id,
+						size: landedSize(next),
+					})
+					.where(
+						and(
+							eq(mediaBlob.id, next.id),
+							eq(mediaBlob.status, BLOB_STATUS.pending),
+							gte(mediaBlob.createdAt, pendingCutoff(now()))
+						)
+					),
+				guard()
+			);
+		}
+		statements.push(
+			db
+				.update(communityProfile)
+				.set({ photoBlobId: after, version: sql`${communityProfile.version} + 1` })
+				.where(
+					and(
+						eq(communityProfile.id, subject.id),
+						before === null
+							? isNull(communityProfile.photoBlobId)
+							: eq(communityProfile.photoBlobId, before)
+					)
+				),
+			guard()
+		);
+		if (before) {
+			statements.push(
+				db
+					.update(mediaBlob)
+					.set({ status: BLOB_STATUS.deleted })
+					.where(
+						and(
+							eq(mediaBlob.id, before),
+							eq(mediaBlob.ownerKind, BLOB_OWNER_KIND.profile),
+							eq(mediaBlob.ownerId, subject.id)
+						)
+					)
+			);
+		}
+		return {
+			statements,
+			events: [
+				{
+					action: "profile.photo_changed",
+					profileId: subject.id,
+					profileName: fullName(subject),
+					payload: [
+						prev ? photoSnapshot(prev) : before ? { blobId: before } : null,
+						next ? photoSnapshot(next) : null,
+					],
+				},
+			],
+			result: { version: subject.version + 1 },
+			applied: true,
+			onGuardTrip: "Conflict",
+			deletedBlobs: before
+				? [{ id: before, mediaKind: prev?.mediaKind ?? BLOB_MEDIA_KIND.profilePhoto }]
+				: [],
+		};
+	}
+
 	const staleError = () =>
 		new AppError("Stale", "This record changed since you loaded it. Reload and try again.");
 
@@ -1101,6 +1241,17 @@ export function makeProfileChanges({
 			}
 
 			const subject = await loadProfile(actor, change.profileId);
+			if (change.kind === "photo") {
+				// Linked rows only for now; the Userless reviewer path and `photo` requests come later.
+				if (!subject.userId) {
+					throw new AppError("Forbidden", "Only its linked user can change this photo");
+				}
+				await route(actor, subject);
+				const plan = await planPhoto(actor, subject, change);
+				if (!plan) return { outcome: "unchanged", profileId: subject.id };
+				await commit(actor, name, plan, via);
+				return { outcome: "applied", profileId: subject.id, ...plan.result };
+			}
 			const how = await route(actor, subject);
 
 			let plan: Plan | null;

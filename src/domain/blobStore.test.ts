@@ -5,7 +5,7 @@ import { memberPendingBytes } from "@/domain/queries/blobs";
 import { fakeR2 } from "@/test/fakeR2";
 import { MEMBER, OTHER, profileChangesHarness } from "@/test/profileChangesHarness";
 import { PENDING_TTL_MS } from "./blob";
-import { makeBlobStore } from "./blobStore";
+import { makeBlobStore, purgeBlobs } from "./blobStore";
 
 const MB = 1_000_000;
 
@@ -130,6 +130,36 @@ describe("blob store", () => {
 			expect(s.r2.objects.size).toBe(1);
 			const rows = await s.h.db.query.mediaBlob.findMany();
 			expect(rows.map((r) => r.status).sort()).toEqual(["attached", "pending"]);
+		});
+	});
+
+	describe("purgeBlobs (after a change marked them deleted)", () => {
+		const purge = (blobs: { id: string; mediaKind: "profilePhoto" }[]) =>
+			purgeBlobs({ db: s.h.db, bucket: s.r2.bucket }, "o1", blobs);
+
+		it("deletes bytes, then the deleted row", async () => {
+			await s.h.seedBlob({ id: "old", status: "deleted" });
+			await s.r2.bucket.put("o1/old/avatar", new Uint8Array([1]));
+			await s.r2.bucket.put("o1/old/display", new Uint8Array([2]));
+			await purge([{ id: "old", mediaKind: "profilePhoto" }]);
+			expect(s.r2.objects.size).toBe(0);
+			expect(await s.h.blob("old")).toBeUndefined();
+		});
+
+		it("never removes a row that isn't deleted", async () => {
+			await s.h.seedBlob({ id: "live", status: "attached" });
+			await purge([{ id: "live", mediaKind: "profilePhoto" }]);
+			expect((await s.h.blob("live"))?.status).toBe("attached");
+		});
+
+		it("byte delete failure keeps the row for the sweep, never throws", async () => {
+			await s.h.seedBlob({ id: "old", status: "deleted" });
+			s.r2.bucket.delete = async () => {
+				throw new Error("r2 down");
+			};
+			vi.spyOn(console, "error").mockImplementation(() => {});
+			await expect(purge([{ id: "old", mediaKind: "profilePhoto" }])).resolves.toBeUndefined();
+			expect((await s.h.blob("old"))?.status).toBe("deleted");
 		});
 	});
 });

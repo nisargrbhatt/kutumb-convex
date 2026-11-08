@@ -18,10 +18,17 @@ import {
 	reactivateProfile,
 	reassignProfile,
 	searchCommunityProfilesLite,
+	setProfilePhoto,
 	updateProfileInfo,
 } from "@/server/communityProfile";
+import { discardPhotoUpload, uploadProfilePhoto } from "@/lib/photo";
 import { changeRequestKeys, profileKeys } from "./keys";
-import { toastMutationError, useInvalidateProfileChange, useSubmitMutation } from "./mutation";
+import {
+	toastMutationError,
+	useInvalidateProfileChange,
+	useOrgId,
+	useSubmitMutation,
+} from "./mutation";
 
 export const myProfileQuery = (orgId: string) =>
 	queryOptions({
@@ -209,3 +216,43 @@ export const useDeleteProfile = (profileId: string, onDeleted: () => unknown) =>
 		},
 		onDeleted
 	);
+
+/**
+ * Own linked profile's photo. `variants` set → upload, then attach (replacing any current one);
+ * absent → remove. A failed attach discards the upload.
+ */
+export function useSetMyProfilePhoto() {
+	const invalidate = useInvalidateProfileChange();
+	const posthog = usePostHog();
+	const orgId = useOrgId();
+	return useMutation({
+		mutationFn: async ({
+			profileId,
+			variants,
+			signal,
+		}: {
+			profileId: string;
+			variants?: { avatar: Blob; display: Blob };
+			signal?: AbortSignal;
+		}) => {
+			if (!variants) return setProfilePhoto({ data: { profileId, blobId: null } });
+			const blobId = await uploadProfilePhoto(orgId, variants, signal);
+			try {
+				return await setProfilePhoto({ data: { profileId, blobId } });
+			} catch (error) {
+				await discardPhotoUpload(blobId);
+				throw error;
+			}
+		},
+		onSuccess: async (result, { variants }) => {
+			if (result.outcome === "unchanged") return;
+			toast.success(variants ? "Photo saved" : "Photo removed");
+			posthog.capture(variants ? "profile_photo_saved" : "profile_photo_removed");
+			await invalidate();
+		},
+		onError: (error) => {
+			if (error instanceof DOMException && error.name === "AbortError") return;
+			toastMutationError("Profile photo", "Failed to save photo")(error);
+		},
+	});
+}
