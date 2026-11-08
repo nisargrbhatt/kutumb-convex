@@ -170,6 +170,13 @@ export const BLOB_VIDEO_CONTENT_TYPE = {
 	quicktime: "video/quicktime",
 } as const;
 
+/** Kind of a Feed Post, fixed at posting (ADR 0010). A new kind is a new table plus a value here. */
+export const POST_KIND = {
+	memory: "memory",
+} as const;
+
+export type PostKind = (typeof POST_KIND)[keyof typeof POST_KIND];
+
 /** Non-empty tuple of an enum-like const's values, for Drizzle `text({ enum })`. */
 export const enumValues = <T extends Record<string, string>>(o: T) =>
 	Object.values(o) as [T[keyof T], ...T[keyof T][]];

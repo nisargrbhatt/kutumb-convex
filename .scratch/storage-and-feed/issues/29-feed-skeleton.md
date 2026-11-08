@@ -1,6 +1,6 @@
 # Feed skeleton with text-only Memory
 
-Status: ready-for-agent Blocked by:
+Status: resolved Blocked by:
 
 ## What to build
 
@@ -44,3 +44,7 @@ Routes), Feed UI (Feed, Card, Detail, Drawer), Unconfirmed defaults.
 ## Human step
 
 Before deploy: confirm `communityMemory` is empty on prod.
+
+## Comments
+
+Merged c634fa2 on feat/storage-integration.

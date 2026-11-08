@@ -30,6 +30,15 @@ export const PICKED_PHOTO_TYPES = [
 /** Reserved bytes in unexpired `pending` Blobs per Org Member. */
 export const PENDING_UPLOAD_BYTES_LIMIT = 500_000_000;
 
+/** Memory title, required (unconfirmed default). */
+export const MEMORY_TITLE_MAX = 120;
+/** Memory description, on the Markdown source. */
+export const MEMORY_DESCRIPTION_MAX = 5000;
+/** Stripped description shown on Feed cards. */
+export const MEMORY_DESCRIPTION_TEXT_MAX = 300;
+/** List nesting allowed in a Memory description. */
+export const MEMORY_LIST_DEPTH_MAX = 3;
+
 export const canJoinOrganization = (membershipCount: number) => membershipCount < ORG_LIMIT;
 export const canInviteMember = (membersPlusPending: number) => membersPlusPending < MEMBER_LIMIT;
 export const canCreateProfile = (profileCount: number) => profileCount < PROFILE_LIMIT;

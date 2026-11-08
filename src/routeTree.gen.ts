@@ -31,8 +31,8 @@ import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
 import { Route as AuthedCommunityReviewsIndexRouteImport } from './routes/_authed/_community/reviews/index'
 import { Route as AuthedCommunityMyRequestsIndexRouteImport } from './routes/_authed/_community/my-requests/index'
-import { Route as AuthedCommunityMemoriesIndexRouteImport } from './routes/_authed/_community/memories/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
+import { Route as AuthedCommunityFeedIndexRouteImport } from './routes/_authed/_community/feed/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
 import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
 import { Route as AuthedCommunityAuditLogIndexRouteImport } from './routes/_authed/_community/audit-log/index'
@@ -49,6 +49,7 @@ import { Route as AuthedCommunityProfileInfoIndexRouteImport } from './routes/_a
 import { Route as AuthedCommunityProfileAiIndexRouteImport } from './routes/_authed/_community/profile/ai/index'
 import { Route as AuthedCommunityProfileAddressesIndexRouteImport } from './routes/_authed/_community/profile/addresses/index'
 import { Route as AuthedCommunityMembersIdIndexRouteImport } from './routes/_authed/_community/members/$id/index'
+import { Route as AuthedCommunityFeedPostIdIndexRouteImport } from './routes/_authed/_community/feed/$postId/index'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -164,16 +165,16 @@ const AuthedCommunityMyRequestsIndexRoute =
     path: '/my-requests/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunityMemoriesIndexRoute =
-  AuthedCommunityMemoriesIndexRouteImport.update({
-    id: '/memories/',
-    path: '/memories/',
-    getParentRoute: () => AuthedCommunityRoute,
-  } as any)
 const AuthedCommunityMembersIndexRoute =
   AuthedCommunityMembersIndexRouteImport.update({
     id: '/members/',
     path: '/members/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
+const AuthedCommunityFeedIndexRoute =
+  AuthedCommunityFeedIndexRouteImport.update({
+    id: '/feed/',
+    path: '/feed/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
 const AuthedCommunityDashboardIndexRoute =
@@ -271,6 +272,12 @@ const AuthedCommunityMembersIdIndexRoute =
     path: '/members/$id/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
+const AuthedCommunityFeedPostIdIndexRoute =
+  AuthedCommunityFeedPostIdIndexRouteImport.update({
+    id: '/feed/$postId/',
+    path: '/feed/$postId/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -295,12 +302,13 @@ export interface FileRoutesByFullPath {
   '/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
+  '/feed/': typeof AuthedCommunityFeedIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
-  '/memories/': typeof AuthedCommunityMemoriesIndexRoute
   '/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
   '/reviews/': typeof AuthedCommunityReviewsIndexRoute
   '/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
+  '/feed/$postId/': typeof AuthedCommunityFeedPostIdIndexRoute
   '/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
   '/profile/ai/': typeof AuthedCommunityProfileAiIndexRoute
@@ -334,12 +342,13 @@ export interface FileRoutesByTo {
   '/audit-log': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
+  '/feed': typeof AuthedCommunityFeedIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
-  '/memories': typeof AuthedCommunityMemoriesIndexRoute
   '/my-requests': typeof AuthedCommunityMyRequestsIndexRoute
   '/reviews': typeof AuthedCommunityReviewsIndexRoute
   '/onboarding/create': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
+  '/feed/$postId': typeof AuthedCommunityFeedPostIdIndexRoute
   '/members/$id': typeof AuthedCommunityMembersIdIndexRoute
   '/profile/addresses': typeof AuthedCommunityProfileAddressesIndexRoute
   '/profile/ai': typeof AuthedCommunityProfileAiIndexRoute
@@ -377,12 +386,13 @@ export interface FileRoutesById {
   '/_authed/_community/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
+  '/_authed/_community/feed/': typeof AuthedCommunityFeedIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
-  '/_authed/_community/memories/': typeof AuthedCommunityMemoriesIndexRoute
   '/_authed/_community/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
   '/_authed/_community/reviews/': typeof AuthedCommunityReviewsIndexRoute
   '/_authed/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
+  '/_authed/_community/feed/$postId/': typeof AuthedCommunityFeedPostIdIndexRoute
   '/_authed/_community/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/_authed/_community/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
   '/_authed/_community/profile/ai/': typeof AuthedCommunityProfileAiIndexRoute
@@ -418,12 +428,13 @@ export interface FileRouteTypes {
     | '/audit-log/'
     | '/community-tree/'
     | '/dashboard/'
+    | '/feed/'
     | '/members/'
-    | '/memories/'
     | '/my-requests/'
     | '/reviews/'
     | '/onboarding/create/'
     | '/onboarding/invitations/'
+    | '/feed/$postId/'
     | '/members/$id/'
     | '/profile/addresses/'
     | '/profile/ai/'
@@ -457,12 +468,13 @@ export interface FileRouteTypes {
     | '/audit-log'
     | '/community-tree'
     | '/dashboard'
+    | '/feed'
     | '/members'
-    | '/memories'
     | '/my-requests'
     | '/reviews'
     | '/onboarding/create'
     | '/onboarding/invitations'
+    | '/feed/$postId'
     | '/members/$id'
     | '/profile/addresses'
     | '/profile/ai'
@@ -499,12 +511,13 @@ export interface FileRouteTypes {
     | '/_authed/_community/audit-log/'
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
+    | '/_authed/_community/feed/'
     | '/_authed/_community/members/'
-    | '/_authed/_community/memories/'
     | '/_authed/_community/my-requests/'
     | '/_authed/_community/reviews/'
     | '/_authed/onboarding/create/'
     | '/_authed/onboarding/invitations/'
+    | '/_authed/_community/feed/$postId/'
     | '/_authed/_community/members/$id/'
     | '/_authed/_community/profile/addresses/'
     | '/_authed/_community/profile/ai/'
@@ -691,18 +704,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityMyRequestsIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/memories/': {
-      id: '/_authed/_community/memories/'
-      path: '/memories'
-      fullPath: '/memories/'
-      preLoaderRoute: typeof AuthedCommunityMemoriesIndexRouteImport
-      parentRoute: typeof AuthedCommunityRoute
-    }
     '/_authed/_community/members/': {
       id: '/_authed/_community/members/'
       path: '/members'
       fullPath: '/members/'
       preLoaderRoute: typeof AuthedCommunityMembersIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
+    '/_authed/_community/feed/': {
+      id: '/_authed/_community/feed/'
+      path: '/feed'
+      fullPath: '/feed/'
+      preLoaderRoute: typeof AuthedCommunityFeedIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
     '/_authed/_community/dashboard/': {
@@ -817,6 +830,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityMembersIdIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
+    '/_authed/_community/feed/$postId/': {
+      id: '/_authed/_community/feed/$postId/'
+      path: '/feed/$postId'
+      fullPath: '/feed/$postId/'
+      preLoaderRoute: typeof AuthedCommunityFeedPostIdIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
   }
 }
 
@@ -866,10 +886,11 @@ interface AuthedCommunityRouteChildren {
   AuthedCommunityAuditLogIndexRoute: typeof AuthedCommunityAuditLogIndexRoute
   AuthedCommunityCommunityTreeIndexRoute: typeof AuthedCommunityCommunityTreeIndexRoute
   AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
+  AuthedCommunityFeedIndexRoute: typeof AuthedCommunityFeedIndexRoute
   AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
-  AuthedCommunityMemoriesIndexRoute: typeof AuthedCommunityMemoriesIndexRoute
   AuthedCommunityMyRequestsIndexRoute: typeof AuthedCommunityMyRequestsIndexRoute
   AuthedCommunityReviewsIndexRoute: typeof AuthedCommunityReviewsIndexRoute
+  AuthedCommunityFeedPostIdIndexRoute: typeof AuthedCommunityFeedPostIdIndexRoute
   AuthedCommunityMembersIdIndexRoute: typeof AuthedCommunityMembersIdIndexRoute
   AuthedCommunityProfileAddressesIndexRoute: typeof AuthedCommunityProfileAddressesIndexRoute
   AuthedCommunityProfileAiIndexRoute: typeof AuthedCommunityProfileAiIndexRoute
@@ -883,10 +904,11 @@ const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
   AuthedCommunityCommunityTreeIndexRoute:
     AuthedCommunityCommunityTreeIndexRoute,
   AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
+  AuthedCommunityFeedIndexRoute: AuthedCommunityFeedIndexRoute,
   AuthedCommunityMembersIndexRoute: AuthedCommunityMembersIndexRoute,
-  AuthedCommunityMemoriesIndexRoute: AuthedCommunityMemoriesIndexRoute,
   AuthedCommunityMyRequestsIndexRoute: AuthedCommunityMyRequestsIndexRoute,
   AuthedCommunityReviewsIndexRoute: AuthedCommunityReviewsIndexRoute,
+  AuthedCommunityFeedPostIdIndexRoute: AuthedCommunityFeedPostIdIndexRoute,
   AuthedCommunityMembersIdIndexRoute: AuthedCommunityMembersIdIndexRoute,
   AuthedCommunityProfileAddressesIndexRoute:
     AuthedCommunityProfileAddressesIndexRoute,

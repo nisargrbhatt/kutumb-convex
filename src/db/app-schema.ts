@@ -15,11 +15,13 @@ import {
 	CUSTOM_FIELD_TYPE,
 	GENDERS,
 	ORGANIZATION_ROLES,
+	POST_KIND,
 	enumValues,
 } from "./constants";
 import { relations } from "drizzle-orm";
 import { organization, user } from "./auth-schema";
 import type { CustomFieldValues } from "@/domain/customFields";
+import type { DescriptionDoc } from "@/domain/memoryDescription";
 
 export const communityProfileCustomField = sqliteTable("communityProfileCustomField", {
 	id: text("id").primaryKey(),
@@ -158,27 +160,35 @@ export const communityRelationRelations = relations(communityRelation, ({ one })
 	}),
 }));
 
-export const communityMemory = sqliteTable("communityMemory", {
-	id: text("id").primaryKey(),
-	createdBy: text("createdBy").references(() => communityProfile.id, {
-		onDelete: "cascade",
-	}),
-	organizationId: text("organizationId").references(() => organization.id, {
-		onDelete: "cascade",
-	}),
-	content: text("content").notNull(),
-});
+// Feed Post base row (ADR 0010): one per Post, whatever its kind. Author name is a frozen
+// `user.name` snapshot; no FK to `user`, so a Post outlives its author's membership.
+export const post = sqliteTable(
+	"post",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organizationId")
+			.references(() => organization.id, { onDelete: "cascade" })
+			.notNull(),
+		kind: text("kind", { mode: "text", enum: enumValues(POST_KIND) }).notNull(),
+		authorUserId: text("authorUserId").notNull(),
+		authorName: text("authorName").notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+		editedAt: integer("editedAt", { mode: "timestamp_ms" }),
+	},
+	(table) => [index("post_org_created_id_idx").on(table.organizationId, table.createdAt, table.id)]
+);
 
-export const communityMemoryRelations = relations(communityMemory, ({ one }) => ({
-	communityProfile: one(communityProfile, {
-		fields: [communityMemory.createdBy],
-		references: [communityProfile.id],
-	}),
-	organization: one(organization, {
-		fields: [communityMemory.organizationId],
-		references: [organization.id],
-	}),
-}));
+// Memory kind row. `description` is the Markdown source of truth; `descriptionDoc` (detail) and
+// `descriptionText` (cards) are Worker-derived from it at save (ADR 0012).
+export const postMemory = sqliteTable("postMemory", {
+	postId: text("postId")
+		.primaryKey()
+		.references(() => post.id, { onDelete: "cascade" }),
+	title: text("title").notNull(),
+	description: text("description"),
+	descriptionDoc: text("descriptionDoc", { mode: "json" }).$type<DescriptionDoc>(),
+	descriptionText: text("descriptionText"),
+});
 
 // Change Request: a proposed profile change awaiting Review. FK to org only; profile/user are
 // snapshotted so the row survives profile hard-delete (My requests still shows the outcome).

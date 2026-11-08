@@ -11,7 +11,7 @@ export function CommunityLayout({ children }: Props) {
 	return (
 		<SidebarProvider>
 			<AppSidebar />
-			<main className="w-full">
+			<main className="w-full min-w-0">
 				<VerifyEmailNag />
 				{children}
 			</main>
