@@ -55,6 +55,12 @@ export const auditKeys = {
 		[...auditKeys.all(orgId), "profile", profileId, filter] as const,
 };
 
+export const feedKeys = {
+	all: (orgId: string) => ["feed", orgId] as const,
+	list: (orgId: string) => [...feedKeys.all(orgId), "list"] as const,
+	post: (orgId: string, postId: string) => [...feedKeys.all(orgId), "post", postId] as const,
+};
+
 export const orgKeys = {
 	all: (orgId: string) => ["organization", orgId] as const,
 	usage: (orgId: string) => [...orgKeys.all(orgId), "usage"] as const,
