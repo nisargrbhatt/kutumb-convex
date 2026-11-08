@@ -6,12 +6,14 @@ const h = vi.hoisted(() => ({
 			new Response("tanstack", { status: 200, headers: { "Set-Cookie": "s=; Max-Age=0" } })
 	),
 	blobFetch: vi.fn(async (_req: Request) => new Response("blob", { status: 200 })),
+	sweepRun: vi.fn(async () => ({ expired: 0, orphaned: 0, purged: 0, subrequests: 2 })),
 }));
 
 vi.mock("@tanstack/react-start/server-entry", () => ({
 	default: { fetch: h.tanstackFetch },
 }));
 vi.mock("@/server/blobRoute", () => ({ blobRoute: { fetch: h.blobFetch } }));
+vi.mock("@/server/blobSweep", () => ({ blobSweep: { run: h.sweepRun } }));
 
 const { default: server } = await import("./server");
 
@@ -55,7 +57,8 @@ describe("server entry fetch", () => {
 });
 
 describe("server entry scheduled", () => {
-	it("is a no-op that resolves", async () => {
+	it("runs the blob sweep", async () => {
 		await expect(server.scheduled()).resolves.toBeUndefined();
+		expect(h.sweepRun).toHaveBeenCalledTimes(1);
 	});
 });

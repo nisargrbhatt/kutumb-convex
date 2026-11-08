@@ -1,9 +1,11 @@
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, not, sql } from "drizzle-orm";
 import { mediaBlob } from "@/db/app-schema";
 import { changeRequest, communityProfile } from "@/db/schema";
 import {
 	BLOB_MEDIA_KIND,
+	BLOB_OWNER_KIND,
 	BLOB_STATUS,
+	COMMUNITY_PROFILE_STATUS,
 	BLOB_VARIANT,
 	ORGANIZATION_ROLES,
 	type BlobOwnerKind,
@@ -47,10 +49,68 @@ const notFound = () => plain(404, "Not found");
 type Deps = {
 	db: QueryDb;
 	bucket: BlobBucket;
-	/** Session's user id, or null when signed out. */
+	/** Session's user id, or null when signed out. Reads D1: only on a memo miss. */
 	getUserId: (request: Request) => Promise<string | null>;
+	/** Raw session cookie value (no D1), the memo key; null when absent. */
+	sessionToken: (request: Request) => string | null;
 	now: () => Date;
 };
+
+/** Isolate memo lifetime (spec: Serving > Gate). Accepted lag for role and visibility changes. */
+export const GATE_MEMO_TTL_MS = 30_000;
+/** Entries per memo map; oldest goes first past this. */
+const GATE_MEMO_MAX = 1000;
+
+/** Plain-data, TTL'd, size-capped isolate memo. */
+function ttlMemo<V>(now: () => Date) {
+	const entries = new Map<string, { at: number; value: V }>();
+	return {
+		get(key: string): V | undefined {
+			const hit = entries.get(key);
+			if (!hit) return undefined;
+			if (now().getTime() - hit.at >= GATE_MEMO_TTL_MS) {
+				entries.delete(key);
+				return undefined;
+			}
+			return hit.value;
+		},
+		set(key: string, value: V) {
+			entries.delete(key);
+			if (entries.size >= GATE_MEMO_MAX) entries.delete(entries.keys().next().value!);
+			entries.set(key, { at: now().getTime(), value });
+		},
+	};
+}
+
+const sha256Hex = async (text: string) =>
+	Array.from(
+		new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))),
+		(b) => b.toString(16).padStart(2, "0")
+	).join("");
+
+/**
+ * Restricted Blobs of an org: everything but an `attached` photo on an `active` profile, the one
+ * case any member may see. Covers `pending`, `deleted`, Change Request owned, photos on `inactive`
+ * or `draft` profiles, orphans, and kinds without a memo rule yet.
+ */
+async function restrictedBlobIds(db: QueryDb, organizationId: string) {
+	const rows = await db
+		.select({ id: mediaBlob.id })
+		.from(mediaBlob)
+		.where(
+			and(
+				eq(mediaBlob.organizationId, organizationId),
+				not(
+					and(
+						eq(mediaBlob.status, BLOB_STATUS.attached),
+						eq(mediaBlob.ownerKind, BLOB_OWNER_KIND.profile),
+						sql`exists (select 1 from ${communityProfile} where ${communityProfile.id} = ${mediaBlob.ownerId} and ${communityProfile.organizationId} = ${mediaBlob.organizationId} and ${communityProfile.status} = ${COMMUNITY_PROFILE_STATUS.active})`
+					)!
+				)
+			)
+		);
+	return new Set(rows.map((r) => r.id));
+}
 
 /**
  * Owning-record check per owner kind (spec: Serving > Gate). A `Record` so a new kind fails to
@@ -95,7 +155,46 @@ const etagMatches = (ifNoneMatch: string, etag: string) =>
  * `/api/blob/<orgId>/<blobId>/<variant>`, ahead of TanStack (spec: Upload, Serving). `PUT` lands
  * one variant of a `pending` Blob; `GET` serves an attached one after the full owning-record check.
  */
-export function makeBlobRoute({ db, bucket, getUserId, now }: Deps) {
+export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps) {
+	/** `sha256(session cookie)` → user and role per org. */
+	const sessions = ttlMemo<{ userId: string; roles: Record<string, Role> }>(now);
+	/** `orgId` → restricted Blob ids. */
+	const restricted = ttlMemo<Set<string>>(now);
+
+	/** Actor in the URL's org via the memo; on a miss reads the session and memberships live. */
+	async function memoActor(request: Request, organizationId: string): Promise<Actor | null> {
+		const token = sessionToken(request);
+		if (!token) return null;
+		const key = await sha256Hex(token);
+		let session = sessions.get(key);
+		if (!session) {
+			const userId = await getUserId(request);
+			if (!userId) return null;
+			const rows = await db.query.member.findMany({
+				where: (f, o) => o.eq(f.userId, userId),
+				columns: { organizationId: true, role: true },
+			});
+			session = {
+				userId,
+				roles: Object.fromEntries(rows.map((r) => [r.organizationId, r.role as Role])),
+			};
+			sessions.set(key, session);
+		}
+		const role = Object.hasOwn(session.roles, organizationId)
+			? session.roles[organizationId]
+			: undefined;
+		return role ? { userId: session.userId, organizationId, role } : null;
+	}
+
+	async function isRestricted(organizationId: string, blobId: string) {
+		let ids = restricted.get(organizationId);
+		if (!ids) {
+			ids = await restrictedBlobIds(db, organizationId);
+			restricted.set(organizationId, ids);
+		}
+		return ids.has(blobId);
+	}
+
 	/** Actor in the URL's org (never the active org), or null for a non-member. */
 	async function actorIn(organizationId: string, userId: string): Promise<Actor | null> {
 		const m = await db.query.member.findFirst({
@@ -208,22 +307,23 @@ export function makeBlobRoute({ db, bucket, getUserId, now }: Deps) {
 		blobId: string,
 		variant: BlobVariant
 	) {
-		const userId = await getUserId(request);
-		if (!userId) return notFound();
-		const actor = await actorIn(organizationId, userId);
+		const actor = await memoActor(request, organizationId);
 		if (!actor) return notFound();
 
-		const row = await db.query.mediaBlob.findFirst({
-			where: (f, o) => o.and(o.eq(f.id, blobId), o.eq(f.organizationId, organizationId)),
-		});
-		if (!row || row.status !== BLOB_STATUS.attached || !row.ownerKind || !row.ownerId) {
-			return notFound();
+		// Unrestricted plus member: no D1. Image variants only: `video` reads its type from the row.
+		let contentType: string | null = "image/jpeg";
+		if (!isImageVariant(variant) || (await isRestricted(organizationId, blobId))) {
+			const row = await db.query.mediaBlob.findFirst({
+				where: (f, o) => o.and(o.eq(f.id, blobId), o.eq(f.organizationId, organizationId)),
+			});
+			if (!row || row.status !== BLOB_STATUS.attached || !row.ownerKind || !row.ownerId) {
+				return notFound();
+			}
+			if (row.variants[variant] === undefined) return notFound();
+			if (!(await OWNER_CHECKS[row.ownerKind](db, actor, row.ownerId))) return notFound();
+			contentType = isImageVariant(variant) ? "image/jpeg" : row.contentType;
+			if (!contentType) return notFound();
 		}
-		if (row.variants[variant] === undefined) return notFound();
-		if (!(await OWNER_CHECKS[row.ownerKind](db, actor, row.ownerId))) return notFound();
-
-		const contentType = isImageVariant(variant) ? "image/jpeg" : row.contentType;
-		if (!contentType) return notFound();
 
 		const key = blobKey(organizationId, blobId, variant);
 		const headers: Record<string, string> = {

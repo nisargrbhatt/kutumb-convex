@@ -1,6 +1,7 @@
 import handler from "@tanstack/react-start/server-entry";
 import { BLOB_PATH_PREFIX } from "@/domain/blob";
 import { blobRoute } from "@/server/blobRoute";
+import { blobSweep } from "@/server/blobSweep";
 
 const SIGN_OUT_PATH = "/api/auth/sign-out";
 
@@ -21,5 +22,8 @@ export default {
 		}
 		return response;
 	},
-	async scheduled() {},
+	async scheduled() {
+		const result = await blobSweep.run();
+		console.info("blob sweep", result);
+	},
 } satisfies ExportedHandler<Env>;

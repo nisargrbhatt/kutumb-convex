@@ -57,6 +57,7 @@ describe("PUT sha256 on Miniflare R2", () => {
 			db: h.db,
 			bucket,
 			getUserId: async () => MEMBER.userId,
+			sessionToken: () => "t",
 			now,
 		});
 		await store.start(MEMBER, { mediaKind: "profilePhoto", size: 1_000_000 });
