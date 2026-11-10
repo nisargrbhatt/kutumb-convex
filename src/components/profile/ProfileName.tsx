@@ -30,11 +30,12 @@ export function PhotoAvatar({
 	fallbackClassName,
 }: PhotoProps & { initials: string }) {
 	const organizationId = useActor()?.organizationId;
+	const src = photoBlobId && organizationId ? blobUrl(organizationId, photoBlobId, variant) : null;
+	// Keyed by src: Base UI keeps the root's "loaded" status after the image unmounts, which
+	// would hide the fallback when a photo is removed.
 	return (
-		<Avatar className={className}>
-			{photoBlobId && organizationId ? (
-				<AvatarImage src={blobUrl(organizationId, photoBlobId, variant)} alt="" />
-			) : null}
+		<Avatar key={src ?? "none"} className={className}>
+			{src ? <AvatarImage src={src} alt="" /> : null}
 			<AvatarFallback className={cn("font-medium", fallbackClassName)}>{text}</AvatarFallback>
 		</Avatar>
 	);
