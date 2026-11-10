@@ -27,4 +27,5 @@ Findings: `.scratch/storage-and-feed/research/crop-library-options.md` on branch
 ## Comments
 
 `heic-to` not adopted, and the `decode` fallback above is dropped: HEIC is rejected where
-`createImageBitmap` fails. See [HEIC on browsers that can't read it](16-heic-on-browsers-that-cant-read-it.md).
+`createImageBitmap` fails. See
+[HEIC on browsers that can't read it](16-heic-on-browsers-that-cant-read-it.md).

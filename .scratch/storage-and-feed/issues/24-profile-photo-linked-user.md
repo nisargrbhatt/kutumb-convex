@@ -24,11 +24,11 @@ change seam, Crop editor), Unconfirmed defaults.
 ## Done when
 
 - [ ] Linked user sets, replaces and removes their photo on `/profile/info`, on desktop and mobile
-  emulation widths.
+      emulation widths.
 - [ ] Straighten at low zoom leaves no white wedges: minimum zoom rises with the angle.
 - [ ] `display` is capped at 1024 px and never upscaled.
 - [ ] Saved files hold no APPn but APP0. Checked in Chrome here; the strip path is unit tested with
-  the WebKit fixture.
+      the WebKit fixture.
 - [ ] Replacing a photo deletes the old bytes. Audit Event holds metadata, no bytes.
 - [ ] A HEIC file on Chrome shows the HEIC message, not a crash.
 - [ ] Plan tests in the existing `profileChanges` harness.

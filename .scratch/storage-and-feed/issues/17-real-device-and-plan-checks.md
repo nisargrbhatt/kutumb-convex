@@ -11,11 +11,12 @@ Research ran on a Mac only. Gather the facts later decisions wait on, using a th
 - [ ] Real iPhone: `<video>` plays from a route gated by the HttpOnly session cookie, with `206`.
 - [ ] Real phones: Tiptap typing, selection and toolbar on iOS and Android.
 - [ ] Deployed Worker: a 100,000,000-byte `put()` passes the body cap, one byte over the zone limit
-  gives 413, and CPU stays within limits.
+      gives 413, and CPU stays within limits.
 - [ ] Real iPhone: size and codec of a picked video against the original (100 MB cap).
 - [ ] Deployed Worker: JPEG marker walk and video atom scrub within memory and CPU limits.
 - [ ] Deployed Worker: custom `src/server.ts` runs `scheduled` alongside TanStack `fetch`.
-- [ ] Real phones: crop drag, pinch and sliders inside the Drawer, with no page scroll fighting them.
+- [ ] Real phones: crop drag, pinch and sliders inside the Drawer, with no page scroll fighting
+      them.
 - [ ] Real phones: Feed mosaic, lightbox swipe and comment composer on iOS and Android.
 - [ ] Signed in: Feed prototype on `/memories` inside the real shell.
 
@@ -50,13 +51,14 @@ Restrictive defaults, for the spec:
   initials, gallery image error a placeholder.
 - **Blob route runs in `src/server.ts`, ahead of TanStack.** Its CPU is unmeasured, and the TanStack
   stack is the cost most likely to hit 10 ms.
-- **Sweep sized for Free:** at most 40 subrequests per run. Pending cap counts only unexpired rows, so
-  a missed cron can't lock a member out.
+- **Sweep sized for Free:** at most 40 subrequests per run. Pending cap counts only unexpired rows,
+  so a missed cron can't lock a member out.
 - **No gesture-only path.** Crop has sliders, lightbox has visible previous, next and close buttons,
   comment composer text is at least 16 px. Crop stage sets `touch-action: none`.
 
 Free also caps the account at 100,000 Worker requests a day, and every blob read is one. Browser
-caching and the tree's zoom threshold keep that down. Over the cap, the whole app returns Error 1027.
+caching and the tree's zoom threshold keep that down. Over the cap, the whole app returns
+Error 1027.
 
 If production shows Error 1102 or 1027, Workers Paid is the first paid add-on to propose.
 

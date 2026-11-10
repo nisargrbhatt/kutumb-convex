@@ -28,8 +28,9 @@ after an auto-switch still shows the old org: see
 
 What a Blob is:
 
-- One piece of media, one record. Variants (`avatar`, `thumb`, `display`, video `poster`) are objects
-  under it. Immutable: a new crop is a new Blob. No dedupe. No original kept: re-crop is re-upload.
+- One piece of media, one record. Variants (`avatar`, `thumb`, `display`, video `poster`) are
+  objects under it. Immutable: a new crop is a new Blob. No dedupe. No original kept: re-crop is
+  re-upload.
 - Internal term, no glossary entry unless members see the word.
 
 Owner:
@@ -72,8 +73,8 @@ R2:
 
 Gate:
 
-- Checks membership of the Blob's owning org, never the active org. Non-member, wrong org and missing
-  Blob get one identical 404.
+- Checks membership of the Blob's owning org, never the active org. Non-member, wrong org and
+  missing Blob get one identical 404.
 - Pending is never served, even to its uploader: the browser previews the local file.
 - Memo's restricted set: `pending`, `deleted`, Change Request owned, photos on `inactive` or `draft`
   profiles.
@@ -92,6 +93,6 @@ Throwaway deploy dropped, so no separate bucket. See
 Blob gains Worker-read `width`, `height` and `durationMs`. See
 [Video playback in the Feed](19-video-playback-in-the-feed.md).
 
-Media added in a cancelled edit is now discarded on close, not left pending. A `pending` file removed
-in the Drawer is discarded on click. Upload route re-checks the row after `put()`. See
+Media added in a cancelled edit is now discarded on close, not left pending. A `pending` file
+removed in the Drawer is discarded on click. Upload route re-checks the row after `put()`. See
 [Cancelled Memory edit](20-cancelled-memory-edit.md).

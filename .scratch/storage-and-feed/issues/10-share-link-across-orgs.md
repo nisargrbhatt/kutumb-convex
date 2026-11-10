@@ -41,4 +41,5 @@ Signed out or no org:
 - No new flows. Signed out: login with `redirectTo` (email and Google both keep it), then the rules
   above. Same for every id, so nothing leaks.
 - Page `head` stays generic, no Post title. Chat apps show no preview.
-- New signup with zero orgs goes to onboarding and the link is dropped. They reopen it after joining.
+- New signup with zero orgs goes to onboarding and the link is dropped. They reopen it after
+  joining.

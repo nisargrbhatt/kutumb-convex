@@ -35,15 +35,14 @@ change to it is a Change Request. _Avoid_: "orphan profile".
 
 A member's proposed change to one Userless Profile, awaiting an owner/admin Review. Covers exactly
 one thing: creating the profile, or one change to its info, its Profile Photo, one relation, or one
-address. Changes by
-owner/admin apply directly instead. A profile linked to an Org Member never has Change Requests.
-Ends **approved** or **rejected** by a Review, **withdrawn** by its submitter, or **superseded**
-when its profile is reassigned or deleted while it is pending. Only an `active` Userless Profile
-takes Change Requests beyond its creation. The member who proposes it is its **submitter**, who may
-hold at most a fixed number pending at once in an organization (the **pending request limit**). A
-pending Change Request is **stale** when its profile or target changed since submission so it can no
-longer apply as proposed; a stale one can only be rejected or withdrawn. _Avoid_: "suggestion",
-"edit request".
+address. Changes by owner/admin apply directly instead. A profile linked to an Org Member never has
+Change Requests. Ends **approved** or **rejected** by a Review, **withdrawn** by its submitter, or
+**superseded** when its profile is reassigned or deleted while it is pending. Only an `active`
+Userless Profile takes Change Requests beyond its creation. The member who proposes it is its
+**submitter**, who may hold at most a fixed number pending at once in an organization (the **pending
+request limit**). A pending Change Request is **stale** when its profile or target changed since
+submission so it can no longer apply as proposed; a stale one can only be rejected or withdrawn.
+_Avoid_: "suggestion", "edit request".
 
 ## Review
 
@@ -87,8 +86,8 @@ Profile respectively. There is no exemption for an Org Member creating their own
 ## Upload limit
 
 The maximum size of a single piece of media added to a community. A video is at most 2 minutes and
-95 MB. There is no limit on the total a community or Org Member stores; only media still being
-added is capped per Org Member, at 500 MB.
+95 MB. There is no limit on the total a community or Org Member stores; only media still being added
+is capped per Org Member, at 500 MB.
 
 ## Actor
 

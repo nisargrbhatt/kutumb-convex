@@ -13,9 +13,9 @@ all, and do author checks stay outside access control, in the Feed module?
 
 Statements in `src/domain/permission.ts`:
 
-- `post: ["moderate"]`, owner and admin only: remove anyone's Post or Comment. No `comment` resource.
-  No role hierarchy, so an admin may remove an owner's Post. A later power such as pinning gets its
-  own action.
+- `post: ["moderate"]`, owner and admin only: remove anyone's Post or Comment. No `comment`
+  resource. No role hierarchy, so an admin may remove an owner's Post. A later power such as pinning
+  gets its own action.
 - `communityProfile: ["removePhoto"]`, owner and admin only: remove the photo of a linked profile,
   per [Who can change a Profile Photo](06-who-can-change-a-profile-photo.md). Userless Profile photo
   changes stay on the `isReviewer` direct path.

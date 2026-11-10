@@ -20,12 +20,12 @@ Everyone else who may change a photo directly, and bytes following the profile o
 ## Done when
 
 - [ ] Owner/admin set, replace and remove on a Userless Profile; a draft creator does on their
-  draft.
+      draft.
 - [ ] Owner/admin can remove but not set a linked profile's photo. Plain member can do neither.
 - [ ] Every profile delete path takes the bytes, including a rejected draft.
 - [ ] Reassigning a profile keeps `photoBlobId`.
-- [ ] A plain member on an `active` Userless Profile sees no direct action: [`photo` Change
-  Request](27-photo-change-request.md) gives them the request.
+- [ ] A plain member on an `active` Userless Profile sees no direct action:
+      [`photo` Change Request](27-photo-change-request.md) gives them the request.
 
 ## Comments
 

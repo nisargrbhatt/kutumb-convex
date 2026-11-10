@@ -22,8 +22,8 @@ Per file, constants in `src/domain/limits.ts`:
   at most 4096 px. No in-app trim. 100 MB is the real limit (estimates: 1080p30 about 1:40, 4K30
   about 35 s, 4K60 about 15 s), so rejection copy leads with size.
 - Image variants, longest edge: Profile Photo `avatar` 128 px, `display` at most 1024 px
-  ([Profile Photo crop editor](14-profile-photo-crop-editor.md) picks the size); Memory image `thumb`
-  640 px, `display` 2048 px; video `poster` 1280 px.
+  ([Profile Photo crop editor](14-profile-photo-crop-editor.md) picks the size); Memory image
+  `thumb` 640 px, `display` 2048 px; video `poster` 1280 px.
 - `poster` is optional: a browser that can't decode the clip can't make one, so it gets a
   placeholder. Refines "all required variants landed" in [Blob model](11-blob-model.md).
 - 5 MiB cap per image variant in the Worker.
@@ -39,17 +39,17 @@ Storage ([ADR 0011](../../../docs/adr/0011-no-storage-cap-per-file-limits-only.m
 
 Upload:
 
-- Every file is one `put()`. **Overrides multipart** in [Upload path to R2](01-r2-upload-path.md) and
-  [Blob model](11-blob-model.md): no part route, `uploadId`, client part list or
+- Every file is one `put()`. **Overrides multipart** in [Upload path to R2](01-r2-upload-path.md)
+  and [Blob model](11-blob-model.md): no part route, `uploadId`, client part list or
   `--abort-multipart-days`. A dropped connection restarts the file.
-- Start declares the size, checks caps and the pending cap, and reserves it on the `pending` row. The
-  Worker checks `Content-Length` before writing, `head()` after. Over declared: delete and fail.
+- Start declares the size, checks caps and the pending cap, and reserves it on the `pending` row.
+  The Worker checks `Content-Length` before writing, `head()` after. Over declared: delete and fail.
   Otherwise real size replaces the reservation.
 
 Hitting a limit:
 
-- Per-file checks run in the browser before upload, inline on that gallery item. The Worker re-checks
-  with the same constants.
+- Per-file checks run in the browser before upload, inline on that gallery item. The Worker
+  re-checks with the same constants.
 - Pending cap throws `LimitError` kind `pendingUpload`, with `LIMIT_COPY` and the usual PostHog
   capture. `Counters` gains a member pending byte sum.
 - ADR 0003's race now overshoots the pending cap by up to one file. Harmless.

@@ -22,8 +22,8 @@ Variant C, the workspace, chosen by the owner.
 - Square crop with thirds grid. Output is a square JPEG; circles are only how avatars render.
 - Controls: Zoom and Straighten tabs. Zoom 1x to 4x, straighten -45° to 45°, plus 90° left and
   right. "Choose another" in the footer.
-- Live previews at real sizes: list row, profile header, community tree, square full view. Drawn from
-  a 512 px copy so dragging stays cheap.
+- Live previews at real sizes: list row, profile header, community tree, square full view. Drawn
+  from a 512 px copy so dragging stays cheap.
 - Output: `avatar` 128 px, `display` the crop's edge capped at 1024 px, never upscaled.
 
 Required fix, found in the prototype: straighten at low zoom leaves white wedges in the saved photo.

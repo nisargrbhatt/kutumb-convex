@@ -24,8 +24,8 @@ Who:
 
 `photo` Change Request:
 
-- Base is the photo at submission; current differs → stale, same as `info` (reject or withdraw
-  only, never auto-closed). Reason reads "Changed since requested: Photo".
+- Base is the photo at submission; current differs → stale, same as `info` (reject or withdraw only,
+  never auto-closed). Reason reads "Changed since requested: Photo".
 - Joins overlap warnings and counts toward the pending request limit.
 - Proposed image is visible to submitter and owner/admin only; avatar unchanged until approved.
 - Review drawer shows current and proposed side by side. Closed requests show "Photo proposed", no

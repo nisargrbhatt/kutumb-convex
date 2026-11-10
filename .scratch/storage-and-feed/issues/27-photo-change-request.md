@@ -13,8 +13,8 @@ A plain member proposes a photo for an `active` Userless Profile, and owner/admi
 - Rejected, withdrawn, superseded delete bytes. Stale keeps them until closed.
 - `ReviewDrawer`: current and proposed side by side. Closed requests show "Photo proposed", no
   thumbnail.
-- Replace the `changeRequest` stub owner check from [Gate memo and
-  sweep](25-gate-memo-and-sweep.md).
+- Replace the `changeRequest` stub owner check from
+  [Gate memo and sweep](25-gate-memo-and-sweep.md).
 
 ## Spec
 
@@ -24,7 +24,7 @@ A plain member proposes a photo for an `active` Userless Profile, and owner/admi
 
 - [ ] Avatar is unchanged until approval. Proposed image reads for submitter and owner/admin only.
 - [ ] Base changed since submission: stale, "Changed since requested: Photo", reject or withdraw
-  only.
+      only.
 - [ ] Joins overlap warnings and counts toward the pending request limit.
 - [ ] Approve applies with one Audit Event; old photo's bytes go.
 - [ ] Reject, withdraw and supersede delete the proposed bytes; Audit keeps metadata.

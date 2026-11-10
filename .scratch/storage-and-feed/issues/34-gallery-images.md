@@ -9,8 +9,8 @@ Photos on Memories, from Drawer to lightbox.
 - `postMemoryMedia`; `load` returns gallery with Blob size data.
 - Drawer gallery grid: per-file progress and inline error, reorder arrows, a rejected file blocks
   posting, submit waits for uploads.
-- `memoryImage` variants `thumb` and `display`, through the pipeline from [Profile Photo for the
-  linked user](24-profile-photo-linked-user.md).
+- `memoryImage` variants `thumb` and `display`, through the pipeline from
+  [Profile Photo for the linked user](24-profile-photo-linked-user.md).
 - `createMemory` and `updateMemory` attach Blobs in their batch. Edit marks removed `attached` media
   on save. Remove marks every Blob `deleted`.
 - Discard rules: `FormDrawer` close without a save aborts uploads and discards; removing a `pending`
@@ -29,7 +29,7 @@ Photos on Memories, from Drawer to lightbox.
 
 - [ ] Create with 0 and with 5 images; 6 is refused by Drawer and server.
 - [ ] Attach refuses another user's Blob, another org's, an unfinished one, and one already
-  attached.
+      attached.
 - [ ] Cancel during an upload leaves no `pending` row and no bytes.
 - [ ] Cancel on an edit restores attached media and discards new media.
 - [ ] Removing a Memory deletes all its bytes. Sweep catches a Memory lost to org delete.

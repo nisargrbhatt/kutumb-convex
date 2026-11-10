@@ -36,8 +36,8 @@ as its first kind of Post. No feature code in this map; throwaway prototypes are
   - Uploading straight from an iPhone camera roll must work, including HEIC photos and HEVC `.mov`
     videos, with no manual converting. A clip over the size limit is still rejected. A HEIC file on
     a browser that can't decode it is rejected: the member exports it as JPEG.
-  - Memory description is formatted text only (bold, italic, lists, links, headings). All media lives
-    in the gallery, nothing inline.
+  - Memory description is formatted text only (bold, italic, lists, links, headings). All media
+    lives in the gallery, nothing inline.
   - The `/memories` → `/feed` route move and nav update go straight into the spec: no ticket.
   - No real-device or deploy checks will happen. Prefer restricting a feature over depending on
     anything unverified. Design to Workers Free limits.
@@ -76,8 +76,8 @@ as its first kind of Post. No feature code in this map; throwaway prototypes are
   edit, newest first on detail page; one like per member with visible likers; counts computed at
   read.
 - [Share link when another org is active](issues/10-share-link-across-orgs.md): plain
-  `/feed/$postId`, server finds org from Post; member auto-switches with toast, after mount; everyone
-  else gets one identical not-found.
+  `/feed/$postId`, server finds org from Post; member auto-switches with toast, after mount;
+  everyone else gets one identical not-found.
 - [Blob model](issues/11-blob-model.md): one immutable record per media, variants under it; mark
   `deleted` in D1 then delete bytes, hourly sweep covers org delete; gate checks owning org.
 - [Upload limits and storage quotas](issues/12-upload-limits-and-quotas.md): video 2 min and 100 MB,
@@ -99,9 +99,11 @@ as its first kind of Post. No feature code in this map; throwaway prototypes are
   nothing downloads before play; failure on `error` or zero `videoWidth`; Blob gains Worker-read
   size and duration.
 - [Cancelled Memory edit](issues/20-cancelled-memory-edit.md): any Drawer close discards media added
-  in that session, `pending` removal discards on click; upload route re-checks the row after `put()`.
-- [Write the spec](issues/21-write-the-spec.md): [spec.md](spec.md) done; browser must strip WebKit's
-  APP1/APP13 JPEG blocks. Sliced into 15 implementation tickets, `issues/22` to `issues/36`.
+  in that session, `pending` removal discards on click; upload route re-checks the row after
+  `put()`.
+- [Write the spec](issues/21-write-the-spec.md): [spec.md](spec.md) done; browser must strip
+  WebKit's APP1/APP13 JPEG blocks. Sliced into 15 implementation tickets, `issues/22` to
+  `issues/36`.
 
 ## Not yet specified
 

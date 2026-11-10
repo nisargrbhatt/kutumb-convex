@@ -4,9 +4,9 @@ Type: grilling Status: resolved Blocked by:
 
 ## Question
 
-Media added in a cancelled Memory edit stays `pending`, so at the 500 MB pending cap a retry can wait
-up to 24h. Should cancelling an edit send the same best-effort discard as closing the create Drawer,
-for media added in that edit only? See [Blob model](11-blob-model.md) and
+Media added in a cancelled Memory edit stays `pending`, so at the 500 MB pending cap a retry can
+wait up to 24h. Should cancelling an edit send the same best-effort discard as closing the create
+Drawer, for media added in that edit only? See [Blob model](11-blob-model.md) and
 [Upload limits and storage quotas](12-upload-limits-and-quotas.md).
 
 ## Answer

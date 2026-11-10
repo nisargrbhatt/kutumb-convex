@@ -69,10 +69,11 @@ Defaults not confirmed by the owner, change if wrong:
 - No alt text field: media gets a generated label ("Photo 2 of 5 in <title>").
 - Native share sheet on touch devices.
 
-Not checked: real touch, the signed-in `/memories` page, tablet width. Real touch and signed-in
-page are on [Real device and plan checks](17-real-device-and-plan-checks.md). Video in the lightbox
-is a mock poster; playback is [Video playback in the Feed](19-video-playback-in-the-feed.md). The
-drawer's description is a stand-in: see [Memory description format](13-memory-description-format.md).
+Not checked: real touch, the signed-in `/memories` page, tablet width. Real touch and signed-in page
+are on [Real device and plan checks](17-real-device-and-plan-checks.md). Video in the lightbox is a
+mock poster; playback is [Video playback in the Feed](19-video-playback-in-the-feed.md). The
+drawer's description is a stand-in: see
+[Memory description format](13-memory-description-format.md).
 
 Prototype: commit `c5f9f6b` on local branch `prototype/feed-card-gallery`, all three variants.
 

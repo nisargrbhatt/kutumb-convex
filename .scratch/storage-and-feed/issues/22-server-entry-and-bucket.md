@@ -4,8 +4,8 @@ Status: resolved Blocked by:
 
 ## What to build
 
-Give the Worker its own entry so blob routes can run ahead of TanStack and a cron can run. No
-blob behaviour yet.
+Give the Worker its own entry so blob routes can run ahead of TanStack and a cron can run. No blob
+behaviour yet.
 
 - `src/server.ts` exports `fetch` and `scheduled`. `fetch` hands everything to TanStack, except
   `/api/blob/*`, which returns `404` for now. `scheduled` is a no-op.
@@ -23,7 +23,7 @@ blob behaviour yet.
 - [ ] `/api/blob/x` returns `404` from `src/server.ts`, not TanStack's page.
 - [ ] `npm run build` passes.
 - [ ] `scheduled` runs from a built app locally. Ticket 17: the local trigger needed `assets`
-  removed.
+      removed.
 
 ## Human step
 

@@ -8,8 +8,8 @@ What are the rules for likes and comments? Flat or threaded, plain text or forma
 can a comment be edited, who may remove one, can comments be liked, and how are counts shown and
 kept correct on Feed cards?
 
-Likes and comments attach to `post` and are on for every kind: see
-[Feed model](07-feed-model.md). Counts load in the Feed's second read step.
+Likes and comments attach to `post` and are on for every kind: see [Feed model](07-feed-model.md).
+Counts load in the Feed's second read step.
 
 Comments and likes outlive their author, and a comment carries a frozen name snapshot with no FK to
 `user`: see [Memory lifecycle](08-memory-lifecycle.md). Removing a Post hard-deletes its comments
@@ -46,5 +46,6 @@ Counts:
   liked state. No stored counter columns, so nothing drifts.
 - Cards show counts only. Comment button goes to the detail page.
 
-Post removed mid-action: like or comment shows "This Post was removed" and refreshes. What a stranger
-sees on a link belongs to [Share link when another org is active](10-share-link-across-orgs.md).
+Post removed mid-action: like or comment shows "This Post was removed" and refreshes. What a
+stranger sees on a link belongs to
+[Share link when another org is active](10-share-link-across-orgs.md).

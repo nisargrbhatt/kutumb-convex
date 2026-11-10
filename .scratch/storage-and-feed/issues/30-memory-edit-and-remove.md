@@ -22,7 +22,7 @@ Authors edit; authors and owner/admin remove.
 - [ ] Policy table test: author, other member, admin, owner, ex-member.
 - [ ] Admin of org A acting on org B's Post gets `NotFound` before the policy runs.
 - [ ] Owner/admin can't edit someone else's Memory; can remove it. An admin can remove an owner's
-  Post.
+      Post.
 - [ ] Removing a Post leaves no rows behind, by FK cascade.
 - [ ] Menu is absent when there's nothing to show.
 

@@ -4,8 +4,8 @@ Status: resolved Blocked by: 22
 
 ## What to build
 
-The blob layer for images, proven by tests: a Blob can be reserved, uploaded, verified, read
-through the gate, and discarded. No UI, no memo.
+The blob layer for images, proven by tests: a Blob can be reserved, uploaded, verified, read through
+the gate, and discarded. No UI, no memo.
 
 - `blob` table and enums in `src/db/constants.ts`, all three `ownerKind`s and all three `mediaKind`s
   from the start. Migration via `npm run migration:generate`.
@@ -28,15 +28,15 @@ Serving (Gate without memo, Response).
 ## Done when
 
 - [ ] JPEG walker rejects APP1, APP13, COM and a missing SOS; accepts a stripped WebKit-shaped file.
-  Fixture includes the 76-byte APP1 and 56-byte APP13.
+      Fixture includes the 76-byte APP1 and 56-byte APP13.
 - [ ] `PUT` rejects: wrong `Origin`, another user's row, row not `pending`, unknown variant, no
-  `Content-Length`, over 5 MiB, over declared.
+      `Content-Length`, over 5 MiB, over declared.
 - [ ] A row discarded during `put()` loses its bytes.
 - [ ] `PUT` with a wrong `sha256` fails in local Miniflare. If Miniflare doesn't check it, say so on
-  the ticket.
+      the ticket.
 - [ ] `GET` gives one identical `404` for non-member, wrong org, missing Blob and `pending`.
 - [ ] `GET` hides a photo on an `inactive` profile from a plain member, shows it to owner/admin and
-  the linked user, using `visibleProfileWhere`.
+      the linked user, using `visibleProfileWhere`.
 - [ ] A Change Request owned Blob is readable by submitter and owner/admin only.
 - [ ] `304` turns to `404` once the object is gone.
 - [ ] Pending cap throws `LimitError`; expired rows don't count; discard frees it at once.
