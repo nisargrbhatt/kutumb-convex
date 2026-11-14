@@ -7,6 +7,7 @@ const h = vi.hoisted(() => ({
 	),
 	blobFetch: vi.fn(async (_req: Request) => new Response("blob", { status: 200 })),
 	sweepRun: vi.fn(async () => ({ expired: 0, orphaned: 0, purged: 0, subrequests: 2 })),
+	billingSweepRun: vi.fn(async () => ({ ensured: 0, sent: 0, failed: 0 })),
 }));
 
 vi.mock("@tanstack/react-start/server-entry", () => ({
@@ -14,6 +15,7 @@ vi.mock("@tanstack/react-start/server-entry", () => ({
 }));
 vi.mock("@/server/blobRoute", () => ({ blobRoute: { fetch: h.blobFetch } }));
 vi.mock("@/server/blobSweep", () => ({ blobSweep: { run: h.sweepRun } }));
+vi.mock("@/server/billingSweep", () => ({ billingSweep: { run: h.billingSweepRun } }));
 
 const { default: server } = await import("./server");
 
@@ -57,8 +59,9 @@ describe("server entry fetch", () => {
 });
 
 describe("server entry scheduled", () => {
-	it("runs the blob sweep", async () => {
+	it("runs the blob and billing sweeps", async () => {
 		await expect(server.scheduled()).resolves.toBeUndefined();
 		expect(h.sweepRun).toHaveBeenCalledTimes(1);
+		expect(h.billingSweepRun).toHaveBeenCalledTimes(1);
 	});
 });
