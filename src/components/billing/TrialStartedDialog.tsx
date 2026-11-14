@@ -10,12 +10,10 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { TRIAL_DAYS } from "@/domain/billing";
+import { formatBillingDate } from "@/domain/billingCopy";
 import { trialSummaryQuery, useOpenPortal } from "@/queries/billing";
 
 const PRICE = "$5";
-
-const formatDate = (d: Date) =>
-	new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 /** One-time, owners only: shown after org create (`/dashboard?trialStarted=1`). */
 export function TrialStartedDialog({
@@ -31,7 +29,7 @@ export function TrialStartedDialog({
 }) {
 	const { data } = useQuery({ ...trialSummaryQuery(orgId), enabled: open });
 	const portal = useOpenPortal();
-	const ends = data ? formatDate(data.trialEndsAt) : null;
+	const ends = data ? formatBillingDate(new Date(data.trialEndsAt)) : null;
 
 	return (
 		<Dialog open={open} onOpenChange={(o) => !o && onClose()}>

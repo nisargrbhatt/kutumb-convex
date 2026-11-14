@@ -23,3 +23,6 @@ export function createDodo(e: DodoEnv = env): DodoPayments {
 
 /** Dodo product id of the single `Standard` plan. */
 export const dodoProductId = (e: Pick<Env, "DODO_PRODUCT_ID"> = env) => e.DODO_PRODUCT_ID;
+
+/** Public app origin (`BETTER_AUTH_URL`): base of Dodo return URLs. */
+export const appUrl = (e: Pick<Env, "BETTER_AUTH_URL"> = env) => e.BETTER_AUTH_URL;

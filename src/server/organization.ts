@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { ORG_LIMIT, MEMBER_LIMIT, LIMIT_ERROR_CODES, LimitError } from "@/domain/limits";
 import { AppError } from "@/domain/errors";
 import { createOrganizationSchema, SLUG_TAKEN } from "@/domain/organization";
-import { startOrgBilling } from "@/server/billing";
+import { startOrgBilling } from "@/lib/billing";
 import {
 	countUserMemberships,
 	countOrgMembersAndPending,

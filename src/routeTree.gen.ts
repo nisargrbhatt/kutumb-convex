@@ -38,12 +38,14 @@ import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_aut
 import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
 import { Route as AuthedCommunityAuditLogIndexRouteImport } from './routes/_authed/_community/audit-log/index'
 import { Route as publicDocsMcpIndexRouteImport } from './routes/(public)/docs/mcp/index'
+import { Route as ApiBillingInvoicePaymentIdRouteImport } from './routes/api/billing/invoice/$paymentId'
 import { Route as DotwellKnownOpenidConfigurationApiAuthRouteImport } from './routes/[.]well-known/openid-configuration/api/auth'
 import { Route as DotwellKnownOauthProtectedResourceApiMcpRouteImport } from './routes/[.]well-known/oauth-protected-resource/api/mcp'
 import { Route as DotwellKnownOauthAuthorizationServerApiAuthRouteImport } from './routes/[.]well-known/oauth-authorization-server/api/auth'
 import { Route as AuthedCommunitySettingsOverviewIndexRouteImport } from './routes/_authed/_community/settings/overview/index'
 import { Route as AuthedCommunitySettingsMembersIndexRouteImport } from './routes/_authed/_community/settings/members/index'
 import { Route as AuthedCommunitySettingsFieldsIndexRouteImport } from './routes/_authed/_community/settings/fields/index'
+import { Route as AuthedCommunitySettingsBillingIndexRouteImport } from './routes/_authed/_community/settings/billing/index'
 import { Route as AuthedCommunitySettingsAiIndexRouteImport } from './routes/_authed/_community/settings/ai/index'
 import { Route as AuthedCommunityProfileRelationshipsIndexRouteImport } from './routes/_authed/_community/profile/relationships/index'
 import { Route as AuthedCommunityProfileInfoIndexRouteImport } from './routes/_authed/_community/profile/info/index'
@@ -206,6 +208,12 @@ const publicDocsMcpIndexRoute = publicDocsMcpIndexRouteImport.update({
   path: '/docs/mcp/',
   getParentRoute: () => publicRouteRoute,
 } as any)
+const ApiBillingInvoicePaymentIdRoute =
+  ApiBillingInvoicePaymentIdRouteImport.update({
+    id: '/api/billing/invoice/$paymentId',
+    path: '/api/billing/invoice/$paymentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DotwellKnownOpenidConfigurationApiAuthRoute =
   DotwellKnownOpenidConfigurationApiAuthRouteImport.update({
     id: '/.well-known/openid-configuration/api/auth',
@@ -240,6 +248,12 @@ const AuthedCommunitySettingsFieldsIndexRoute =
   AuthedCommunitySettingsFieldsIndexRouteImport.update({
     id: '/fields/',
     path: '/fields/',
+    getParentRoute: () => AuthedCommunitySettingsRoute,
+  } as any)
+const AuthedCommunitySettingsBillingIndexRoute =
+  AuthedCommunitySettingsBillingIndexRouteImport.update({
+    id: '/billing/',
+    path: '/billing/',
     getParentRoute: () => AuthedCommunitySettingsRoute,
   } as any)
 const AuthedCommunitySettingsAiIndexRoute =
@@ -305,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  '/api/billing/invoice/$paymentId': typeof ApiBillingInvoicePaymentIdRoute
   '/docs/mcp/': typeof publicDocsMcpIndexRoute
   '/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
@@ -322,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
   '/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
   '/settings/ai/': typeof AuthedCommunitySettingsAiIndexRoute
+  '/settings/billing/': typeof AuthedCommunitySettingsBillingIndexRoute
   '/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
   '/settings/members/': typeof AuthedCommunitySettingsMembersIndexRoute
   '/settings/overview/': typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -346,6 +362,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  '/api/billing/invoice/$paymentId': typeof ApiBillingInvoicePaymentIdRoute
   '/docs/mcp': typeof publicDocsMcpIndexRoute
   '/audit-log': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
@@ -363,6 +380,7 @@ export interface FileRoutesByTo {
   '/profile/info': typeof AuthedCommunityProfileInfoIndexRoute
   '/profile/relationships': typeof AuthedCommunityProfileRelationshipsIndexRoute
   '/settings/ai': typeof AuthedCommunitySettingsAiIndexRoute
+  '/settings/billing': typeof AuthedCommunitySettingsBillingIndexRoute
   '/settings/fields': typeof AuthedCommunitySettingsFieldsIndexRoute
   '/settings/members': typeof AuthedCommunitySettingsMembersIndexRoute
   '/settings/overview': typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -391,6 +409,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  '/api/billing/invoice/$paymentId': typeof ApiBillingInvoicePaymentIdRoute
   '/(public)/docs/mcp/': typeof publicDocsMcpIndexRoute
   '/_authed/_community/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
@@ -408,6 +427,7 @@ export interface FileRoutesById {
   '/_authed/_community/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
   '/_authed/_community/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
   '/_authed/_community/settings/ai/': typeof AuthedCommunitySettingsAiIndexRoute
+  '/_authed/_community/settings/billing/': typeof AuthedCommunitySettingsBillingIndexRoute
   '/_authed/_community/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
   '/_authed/_community/settings/members/': typeof AuthedCommunitySettingsMembersIndexRoute
   '/_authed/_community/settings/overview/': typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -434,6 +454,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/api/auth'
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
+    | '/api/billing/invoice/$paymentId'
     | '/docs/mcp/'
     | '/audit-log/'
     | '/community-tree/'
@@ -451,6 +472,7 @@ export interface FileRouteTypes {
     | '/profile/info/'
     | '/profile/relationships/'
     | '/settings/ai/'
+    | '/settings/billing/'
     | '/settings/fields/'
     | '/settings/members/'
     | '/settings/overview/'
@@ -475,6 +497,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/api/auth'
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
+    | '/api/billing/invoice/$paymentId'
     | '/docs/mcp'
     | '/audit-log'
     | '/community-tree'
@@ -492,6 +515,7 @@ export interface FileRouteTypes {
     | '/profile/info'
     | '/profile/relationships'
     | '/settings/ai'
+    | '/settings/billing'
     | '/settings/fields'
     | '/settings/members'
     | '/settings/overview'
@@ -519,6 +543,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/api/auth'
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
+    | '/api/billing/invoice/$paymentId'
     | '/(public)/docs/mcp/'
     | '/_authed/_community/audit-log/'
     | '/_authed/_community/community-tree/'
@@ -536,6 +561,7 @@ export interface FileRouteTypes {
     | '/_authed/_community/profile/info/'
     | '/_authed/_community/profile/relationships/'
     | '/_authed/_community/settings/ai/'
+    | '/_authed/_community/settings/billing/'
     | '/_authed/_community/settings/fields/'
     | '/_authed/_community/settings/members/'
     | '/_authed/_community/settings/overview/'
@@ -559,6 +585,7 @@ export interface RootRouteChildren {
   DotwellKnownOauthAuthorizationServerApiAuthRoute: typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   DotwellKnownOauthProtectedResourceApiMcpRoute: typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   DotwellKnownOpenidConfigurationApiAuthRoute: typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  ApiBillingInvoicePaymentIdRoute: typeof ApiBillingInvoicePaymentIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -766,6 +793,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicDocsMcpIndexRouteImport
       parentRoute: typeof publicRouteRoute
     }
+    '/api/billing/invoice/$paymentId': {
+      id: '/api/billing/invoice/$paymentId'
+      path: '/api/billing/invoice/$paymentId'
+      fullPath: '/api/billing/invoice/$paymentId'
+      preLoaderRoute: typeof ApiBillingInvoicePaymentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/openid-configuration/api/auth': {
       id: '/.well-known/openid-configuration/api/auth'
       path: '/.well-known/openid-configuration/api/auth'
@@ -806,6 +840,13 @@ declare module '@tanstack/react-router' {
       path: '/fields'
       fullPath: '/settings/fields/'
       preLoaderRoute: typeof AuthedCommunitySettingsFieldsIndexRouteImport
+      parentRoute: typeof AuthedCommunitySettingsRoute
+    }
+    '/_authed/_community/settings/billing/': {
+      id: '/_authed/_community/settings/billing/'
+      path: '/billing'
+      fullPath: '/settings/billing/'
+      preLoaderRoute: typeof AuthedCommunitySettingsBillingIndexRouteImport
       parentRoute: typeof AuthedCommunitySettingsRoute
     }
     '/_authed/_community/settings/ai/': {
@@ -880,6 +921,7 @@ const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
 
 interface AuthedCommunitySettingsRouteChildren {
   AuthedCommunitySettingsAiIndexRoute: typeof AuthedCommunitySettingsAiIndexRoute
+  AuthedCommunitySettingsBillingIndexRoute: typeof AuthedCommunitySettingsBillingIndexRoute
   AuthedCommunitySettingsFieldsIndexRoute: typeof AuthedCommunitySettingsFieldsIndexRoute
   AuthedCommunitySettingsMembersIndexRoute: typeof AuthedCommunitySettingsMembersIndexRoute
   AuthedCommunitySettingsOverviewIndexRoute: typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -888,6 +930,8 @@ interface AuthedCommunitySettingsRouteChildren {
 const AuthedCommunitySettingsRouteChildren: AuthedCommunitySettingsRouteChildren =
   {
     AuthedCommunitySettingsAiIndexRoute: AuthedCommunitySettingsAiIndexRoute,
+    AuthedCommunitySettingsBillingIndexRoute:
+      AuthedCommunitySettingsBillingIndexRoute,
     AuthedCommunitySettingsFieldsIndexRoute:
       AuthedCommunitySettingsFieldsIndexRoute,
     AuthedCommunitySettingsMembersIndexRoute:
@@ -979,6 +1023,7 @@ const rootRouteChildren: RootRouteChildren = {
     DotwellKnownOauthProtectedResourceApiMcpRoute,
   DotwellKnownOpenidConfigurationApiAuthRoute:
     DotwellKnownOpenidConfigurationApiAuthRoute,
+  ApiBillingInvoicePaymentIdRoute: ApiBillingInvoicePaymentIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

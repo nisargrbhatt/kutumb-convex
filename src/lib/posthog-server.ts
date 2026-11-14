@@ -126,37 +126,19 @@ export function captureBillingTrialStarted(props: {
 	);
 }
 
-/** Owner sent to a Dodo hosted page (portal or checkout). */
-export function captureBillingCheckoutOpened(props: {
-	userId: string;
-	organizationId: string;
-	kind: "checkout" | "portal";
-}) {
-	capture(
-		"billing_checkout_opened",
-		props.userId,
-		{ orgId: props.organizationId, kind: props.kind },
-		{ organization: props.organizationId }
-	);
-}
-
-/** Billing analytics (spec: Analytics), on the org group. `userId` = org creator. */
+/**
+ * Billing analytics (spec: Analytics), on the org group. `userId` = org creator for webhook
+ * events, the acting owner for `billing_checkout_opened` (`kind`: Dodo page opened).
+ */
 export function captureBillingEvent(
-	event: BillingAnalyticsEvent,
-	props: { organizationId: string; userId: string }
+	event: BillingAnalyticsEvent | "billing_checkout_opened",
+	{
+		organizationId,
+		userId,
+		...extra
+	}: { organizationId: string; userId: string; kind?: "checkout" | "portal" }
 ) {
-	try {
-		const client = getPostHogClient();
-		client.capture({
-			distinctId: props.userId,
-			event,
-			groups: { organization: props.organizationId },
-			properties: { orgId: props.organizationId },
-		});
-		waitUntil(client.flush());
-	} catch (error) {
-		console.error(`Failed to capture ${event} event`, error);
-	}
+	capture(event, userId, { orgId: organizationId, ...extra }, { organization: organizationId });
 }
 
 /** The owner switched "AI Client writes" for the community. Carries no names or values. */
