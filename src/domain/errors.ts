@@ -28,3 +28,6 @@ export class AppError extends Error {
 
 export const isAppError = (e: unknown): e is AppError =>
 	typeof e === "object" && e !== null && (e as { name?: unknown }).name === "AppError";
+
+/** Org became Locked mid-session: the client re-runs route gates (→ `/locked`). */
+export const isLockedError = (e: unknown) => isAppError(e) && e.kind === "Locked";

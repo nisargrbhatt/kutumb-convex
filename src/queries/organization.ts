@@ -9,7 +9,7 @@ import { authClient } from "@/lib/auth-client";
 import { isAppError } from "@/domain/errors";
 import { SLUG_TAKEN, type CreateOrganizationInput } from "@/domain/organization";
 import { createOrganizationFn, getMyOrganizationCount, getOrgUsage } from "@/server/organization";
-import { accountKeys, orgKeys } from "./keys";
+import { accountKeys, billingKeys, orgKeys } from "./keys";
 import { toastMutationError, unwrap, useOrgId } from "./mutation";
 
 export const myOrganizationCountQuery = (userId: string) =>
@@ -149,6 +149,58 @@ export function useDeleteOrganization() {
 		onError: toastMutationError("Failed to delete organization", "Please try again later."),
 	});
 }
+
+/** Leave the active org (works under Lock); then off to whatever org is next. */
+export function useLeaveOrganization() {
+	const posthog = usePostHog();
+	const orgId = useOrgId();
+	const reset = useResetToOrg();
+	return useMutation({
+		mutationFn: () => unwrap(authClient.organization.leave({ organizationId: orgId })),
+		onSuccess: async () => {
+			posthog.capture("organization_left", { organization_id: orgId });
+			toast.success("Organization", { description: "You left the organization" });
+			await reset("/dashboard");
+		},
+		onError: toastMutationError("Couldn't leave the organization", "Please try again later."),
+	});
+}
+
+/**
+ * Owner → owner handoff (allowed under Lock): promote `memberId` to owner, then step down to
+ * admin. `selfMemberId` = the caller's member row.
+ */
+export function useTransferOwnership() {
+	const posthog = usePostHog();
+	const router = useRouter();
+	const qc = useQueryClient();
+	const orgId = useOrgId();
+	return useMutation({
+		mutationFn: async (v: { memberId: string; selfMemberId: string }) => {
+			await unwrap(
+				authClient.organization.updateMemberRole({ memberId: v.memberId, role: "owner" })
+			);
+			await unwrap(
+				authClient.organization.updateMemberRole({ memberId: v.selfMemberId, role: "admin" })
+			);
+		},
+		onSuccess: async () => {
+			posthog.capture("organization_ownership_transferred", { organization_id: orgId });
+			toast.success("Ownership transferred");
+			await qc.invalidateQueries({ queryKey: billingKeys.all(orgId) });
+			await router.invalidate();
+		},
+		onError: toastMutationError("Couldn't transfer ownership", "Please try again later."),
+	});
+}
+
+/** Members of the active org (better-auth; works under Lock). */
+export const orgMembersQuery = (orgId: string) =>
+	queryOptions({
+		queryKey: orgKeys.members(orgId),
+		queryFn: () =>
+			unwrap(authClient.organization.listMembers({ query: { organizationId: orgId } })),
+	});
 
 type InviteInput = { email: string; role: Role };
 

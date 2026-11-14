@@ -9,6 +9,7 @@ import {
 	headline,
 	invoiceStatusLabel,
 	lockCopy,
+	lockScreenCopy,
 	primaryAction,
 	priceLabel,
 } from "./billingCopy";
@@ -174,5 +175,37 @@ describe("cancelAccessUntil", () => {
 		for (const a of [canceling, grace, pending, locked("canceled")]) {
 			expect(cancelAccessUntil(a)).toBeNull();
 		}
+	});
+});
+
+describe("lockScreenCopy", () => {
+	const owners = ["Asha", "Chetan"];
+
+	it("owner → lockCopy for the reason", () => {
+		expect(lockScreenCopy("canceled", { ...ctx, owner: true, ownerNames: owners })).toEqual({
+			title: "Subscription ended",
+			body: "Re-subscribe for $5/month to pick up where you left off.",
+		});
+	});
+
+	it("member, trial ended / canceled → ask an owner to subscribe", () => {
+		const c = lockScreenCopy("trial_ended", {
+			orgName: "Patel_Samaj",
+			owner: false,
+			ownerNames: owners,
+		});
+		expect(c).toEqual({
+			title: "Patel_Samaj is locked",
+			body: "An owner needs to subscribe before anyone can use it. Owners: Asha, Chetan.",
+		});
+	});
+
+	it("member, payment failed → ask an owner to update payment details", () => {
+		expect(
+			lockScreenCopy("payment_failed", { orgName: "Patel_Samaj", owner: false, ownerNames: owners })
+				.body
+		).toBe(
+			"An owner needs to update the payment details before anyone can use it. Owners: Asha, Chetan."
+		);
 	});
 });

@@ -128,6 +128,24 @@ export function lockCopy(r: LockReason, { orgName, price }: BillingCopyContext):
 	}
 }
 
+/** `/locked` title + body: owners get `lockCopy`; members are told which owners to ask. */
+export function lockScreenCopy(
+	r: LockReason,
+	{
+		orgName,
+		price,
+		owner,
+		ownerNames,
+	}: { orgName: string; price?: string; owner: boolean; ownerNames: readonly string[] }
+): Copy {
+	if (owner) return lockCopy(r, { orgName, price: price ?? "$5" });
+	const need = r === "payment_failed" ? "update the payment details" : "subscribe";
+	return {
+		title: `${orgName} is locked`,
+		body: `An owner needs to ${need} before anyone can use it. Owners: ${formatOwnerNames(ownerNames)}.`,
+	};
+}
+
 /** What the state's one button does: Dodo portal, resume, or a new checkout (ended sub). */
 export type BillingAction = {
 	kind: "portal" | "resume" | "checkout";
