@@ -179,6 +179,32 @@ export const POST_KIND = {
 
 export type PostKind = (typeof POST_KIND)[keyof typeof POST_KIND];
 
+/** Raw Dodo Subscription status, mirrored on `orgBilling.status` (SDK `SubscriptionStatus`). */
+export const DODO_SUBSCRIPTION_STATUSES = {
+	pending: "pending",
+	active: "active",
+	on_hold: "on_hold",
+	paused: "paused",
+	cancelled: "cancelled",
+	failed: "failed",
+	expired: "expired",
+	past_due: "past_due",
+} as const;
+
+export type DodoSubscriptionStatus =
+	(typeof DODO_SUBSCRIPTION_STATUSES)[keyof typeof DODO_SUBSCRIPTION_STATUSES];
+
+/** Reminder email kinds; one `billingNotice` row per (org, kind, anchor). */
+export const BILLING_NOTICE_KIND = {
+	trial_t3: "trial_t3",
+	trial_t1: "trial_t1",
+	grace_start: "grace_start",
+	grace_t2: "grace_t2",
+	locked: "locked",
+} as const;
+
+export type BillingNoticeKind = (typeof BILLING_NOTICE_KIND)[keyof typeof BILLING_NOTICE_KIND];
+
 /** Non-empty tuple of an enum-like const's values, for Drizzle `text({ enum })`. */
 export const enumValues = <T extends Record<string, string>>(o: T) =>
 	Object.values(o) as [T[keyof T], ...T[keyof T][]];

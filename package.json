@@ -50,6 +50,7 @@
 		"clsx": "^2.1.1",
 		"cmdk": "^1.1.1",
 		"date-fns": "^4.4.0",
+		"dodopayments": "^2.62.0",
 		"dotenv": "^17.4.2",
 		"drizzle-orm": "^0.45.2",
 		"elkjs": "^0.9.3",

@@ -13,6 +13,7 @@ const customStatements = {
 	auditEvent: ["read"],
 	orgSetting: ["update"],
 	post: ["moderate"],
+	billing: ["manage"],
 } as const;
 
 const expected: Record<Role, Record<string, readonly string[]>> = {
@@ -35,6 +36,7 @@ const expected: Record<Role, Record<string, readonly string[]>> = {
 		auditEvent: ["read"],
 		orgSetting: ["update"],
 		post: ["moderate"],
+		billing: ["manage"],
 	},
 };
 
