@@ -93,6 +93,21 @@ describe("startOrgBilling", () => {
 		});
 		expect(await row()).toMatchObject({ needsSubscription: true, createdByUserId: "u1" });
 	});
+	it("row insert fails: org create is rolled back, error surfaces, Dodo untouched", async () => {
+		const rollback = vi.fn(async () => {});
+		vi.spyOn(fresh.db, "insert").mockImplementationOnce(() => {
+			throw new Error("D1 down");
+		});
+
+		await expect(
+			startOrgBilling(
+				{ organizationId: "o1", createdByUserId: "u1", country: "IN", createdAt: NOW, rollback },
+				{ db: fresh.db, dodo: dodo as never, productId: "pdt_x", now: () => NOW }
+			)
+		).rejects.toThrow("D1 down");
+		expect(rollback).toHaveBeenCalledTimes(1);
+		expect(dodo.customers.create).not.toHaveBeenCalled();
+	});
 });
 
 describe("ensureSubscription", () => {

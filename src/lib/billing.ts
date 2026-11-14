@@ -97,22 +97,38 @@ export async function ensureSubscription(organizationId: string, deps: Partial<B
 /**
  * Right after org create: insert its `orgBilling` row (own-clock Trial), then try to start the Dodo
  * Trial. Dodo failure leaves `needsSubscription` for the retries (billing page, dashboard, sweep).
+ * A failed row insert runs `rollback` (delete the new org) and rethrows: an org without a row has
+ * nothing to retry from.
  */
 export async function startOrgBilling(
-	org: { organizationId: string; createdByUserId: string; country: string; createdAt: Date },
+	org: {
+		organizationId: string;
+		createdByUserId: string;
+		country: string;
+		createdAt: Date;
+		rollback?: () => Promise<unknown>;
+	},
 	deps: Partial<BillingDeps> = {}
 ) {
 	const db = deps.db ?? defaultDb;
 	const now = deps.now ?? (() => new Date());
 	const trialEndsAt = ownClockTrialEndsAt(org.createdAt);
-	await db.insert(orgBilling).values({
-		organizationId: org.organizationId,
-		createdByUserId: org.createdByUserId,
-		country: org.country,
-		trialEndsAt,
-		needsSubscription: true,
-		syncedAt: now(),
-	});
+	const inserted = await safeAsync(
+		(async () =>
+			db.insert(orgBilling).values({
+				organizationId: org.organizationId,
+				createdByUserId: org.createdByUserId,
+				country: org.country,
+				trialEndsAt,
+				needsSubscription: true,
+				syncedAt: now(),
+			}))()
+	);
+	if (!inserted.success) {
+		const undone = await safeAsync(Promise.resolve(org.rollback?.()));
+		if (!undone.success) console.error("org create rollback failed", org.organizationId, undone.error);
+		throw inserted.error;
+	}
 	const result = await ensureSubscription(org.organizationId, deps);
 	const subscribed = result.success;
 	captureBillingEvent("billing_trial_started", {

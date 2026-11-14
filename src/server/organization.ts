@@ -79,6 +79,12 @@ export const createOrganizationFn = createServerFn({ method: "POST" })
 			createdByUserId: context.userId,
 			country: data.country,
 			createdAt: new Date(org.createdAt),
+			// No row = unrepairable org: undo the create, the user retries the form.
+			rollback: () =>
+				auth.api.deleteOrganization({
+					body: { organizationId: org.id },
+					headers: getRequestHeaders(),
+				}),
 		});
 		return { organizationId: org.id, subscribed };
 	});
