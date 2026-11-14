@@ -45,8 +45,8 @@ consistent with the above:
     becomes informational or disappears.
 - Non-owners: nothing, or last-3-days soft note: "This community's trial ends soon. An owner needs
   to add payment details." No CTA they can't act on; optionally list owner names.
-- Anti-pattern: dismissible-forever banner with no other surfacing; or showing billing CTA to
-  people who can't pay.
+- Anti-pattern: dismissible-forever banner with no other surfacing; or showing billing CTA to people
+  who can't pay.
 
 ## 3. Billing settings page
 
@@ -89,8 +89,8 @@ Pattern (single plan makes this short), top to bottom:
 Patterns:
 
 - Grace window spans the PSP's retry schedule; lock only after retries are exhausted (Slack 28d,
-  Notion ~1 month + limited-access phase). Locking while the PSP is still retrying causes
-  "locked but then charged" confusion.
+  Notion ~1 month + limited-access phase). Locking while the PSP is still retrying causes "locked
+  but then charged" confusion.
 - Every failure message has a single fix action (update payment method) that retries immediately.
 - Unlock is automatic on successful payment; no support ticket.
 - Don't back-charge locked time (GitHub).
@@ -122,7 +122,8 @@ limited-access. Adapted pattern:
 - **Linear**: cancel takes effect at end of period; no refund for mid-period cancel; nothing
   deleted. https://linear.app/docs/billing-and-plans
 - **Notion**: cancel via Settings > Billing; paid features stay "until the end of your billing
-  cycle"; confirmation shows when plan ends. https://www.notion.com/help/upgrade-or-downgrade-your-plan
+  cycle"; confirmation shows when plan ends.
+  https://www.notion.com/help/upgrade-or-downgrade-your-plan
 - **Stripe**: `cancel_at_period_end` reversible until period ends ("renew"); once fully canceled a
   new subscription is needed. Portal offers optional reason picker (8 canned reasons + free text)
   and optional retention coupon. https://docs.stripe.com/billing/subscriptions/cancel ;
@@ -142,13 +143,13 @@ Patterns:
 
 ## 7. Reminder email cadence
 
-| Event | Vendor evidence | Suggested for Kutumb (to owners) |
-| --- | --- | --- |
-| Trial ending | Stripe default 7 days before; immediately if trial < 7d (card-network driven) | T-3, T-1 (card-less: no charge risk). If card on file: consider T-7 "you'll be charged $5 on <date>" |
-| Trial ended / locked | Vercel/Slack: revert, no charge | On Lock |
-| Payment failed | Slack immediate + 7/14/21; Stripe each failure; Notion each failure | Immediately + one mid-grace + day-before-Lock |
-| Expiring card | Stripe 1 month before | If Dodo doesn't send, optional |
-| Receipt/invoice | GitHub emails receipts to billing managers on billing date | Leave to Dodo (matches map) |
+| Event                | Vendor evidence                                                               | Suggested for Kutumb (to owners)                                                                     |
+| -------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Trial ending         | Stripe default 7 days before; immediately if trial < 7d (card-network driven) | T-3, T-1 (card-less: no charge risk). If card on file: consider T-7 "you'll be charged $5 on <date>" |
+| Trial ended / locked | Vercel/Slack: revert, no charge                                               | On Lock                                                                                              |
+| Payment failed       | Slack immediate + 7/14/21; Stripe each failure; Notion each failure           | Immediately + one mid-grace + day-before-Lock                                                        |
+| Expiring card        | Stripe 1 month before                                                         | If Dodo doesn't send, optional                                                                       |
+| Receipt/invoice      | GitHub emails receipts to billing managers on billing date                    | Leave to Dodo (matches map)                                                                          |
 
 Card-network note: Stripe's trial compliance page ties reminder emails, cancellation link on
 receipts and "TRIAL OVER" statement descriptors to card network rules for trials that convert to
