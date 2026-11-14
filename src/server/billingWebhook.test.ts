@@ -51,6 +51,7 @@ describe("POST /api/billing/webhook", () => {
 	let dodoSubs: Record<string, Subscription>;
 	let retrieves: string[];
 	let captured: { event: string; organizationId: string; userId: string }[];
+	let graceNotified: { organizationId: string; pastDueEndsAt: Date | null }[];
 	let deps: BillingWebhookDeps;
 
 	const row = async () =>
@@ -66,6 +67,7 @@ describe("POST /api/billing/webhook", () => {
 		dodoSubs = { sub_a: sub({ subscription_id: "sub_a" }) };
 		retrieves = [];
 		captured = [];
+		graceNotified = [];
 		const real = new DodoPayments({
 			bearerToken: "test",
 			webhookKey: SECRET,
@@ -85,6 +87,9 @@ describe("POST /api/billing/webhook", () => {
 				},
 			},
 			capture: (event, p) => captured.push({ event, ...p }),
+			notifyGraceStart: async ({ organizationId, pastDueEndsAt }) => {
+				graceNotified.push({ organizationId, pastDueEndsAt });
+			},
 			now: () => NOW,
 		};
 	});
@@ -195,6 +200,9 @@ describe("POST /api/billing/webhook", () => {
 			pastDueEndsAt: new Date("2026-11-27T00:00:00.000Z"),
 		});
 		expect(captured.map((c) => c.event)).toEqual(["billing_payment_failed"]);
+		expect(graceNotified).toEqual([
+			{ organizationId: "o1", pastDueEndsAt: new Date("2026-11-27T00:00:00.000Z") },
+		]);
 	});
 
 	it("re-subscribe: new sub replaces a terminal one → billing_resubscribed", async () => {
