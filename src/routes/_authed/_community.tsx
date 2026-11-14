@@ -1,4 +1,5 @@
 import { CommunityLayout } from "@/components/CommunityLayout/CommunityLayout";
+import { BillingBanner } from "@/components/billing/BillingBanner";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { ONBOARDING_CREATE_PATH } from "@/domain/authRoutes";
 import { LOCKED_PATH } from "@/domain/lock";
@@ -18,8 +19,9 @@ export const Route = createFileRoute("/_authed/_community")({
 });
 
 function CommunityLayoutComponent() {
+	const { organizationId } = Route.useRouteContext();
 	return (
-		<CommunityLayout>
+		<CommunityLayout banner={<BillingBanner orgId={organizationId} />}>
 			<Outlet />
 		</CommunityLayout>
 	);

@@ -8,6 +8,7 @@ import {
 	startCheckoutFn,
 	syncBillingFn,
 } from "@/server/billing";
+import { getBannerFn } from "@/server/billingBanner";
 import { billingKeys } from "./keys";
 import { toastMutationError } from "./mutation";
 
@@ -27,6 +28,14 @@ export const billingPageQuery = (orgId: string) =>
 		queryKey: billingKeys.page(orgId),
 		queryFn: () => getBillingFn(),
 		refetchInterval: (q) => (q.state.data?.access.state === "pending" ? PENDING_POLL_MS : false),
+	});
+
+/** Any role: banner copy for the active org (no prices for admins / members). */
+export const billingBannerQuery = (orgId: string) =>
+	queryOptions({
+		queryKey: billingKeys.banner(orgId),
+		queryFn: () => getBannerFn(),
+		refetchInterval: (q) => (q.state.data?.state === "pending" ? PENDING_POLL_MS : false),
 	});
 
 /** Owner-only: leave for Dodo's customer portal (add / update card). */
