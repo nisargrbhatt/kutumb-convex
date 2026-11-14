@@ -3,7 +3,7 @@ import { BillingBanner } from "@/components/billing/BillingBanner";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { ONBOARDING_CREATE_PATH } from "@/domain/authRoutes";
 import { LOCKED_PATH } from "@/domain/lock";
-import { activeOrgBillingQuery } from "@/queries/billingAccess";
+import { activeOrgBillingQuery } from "@/queries/billing";
 
 export const Route = createFileRoute("/_authed/_community")({
 	// `_authed` already redirects org-less sessions; this narrows the type for child loaders.

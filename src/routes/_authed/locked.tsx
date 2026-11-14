@@ -3,7 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import z from "zod";
 import { LockScreen } from "@/components/billing/LockScreen";
 import { ONBOARDING_CREATE_PATH } from "@/domain/authRoutes";
-import { activeOrgBillingQuery } from "@/queries/billingAccess";
+import { activeOrgBillingQuery } from "@/queries/billing";
 
 /** Lock screen for the active org (outside `_community`); unlocked → `/dashboard`. */
 export const Route = createFileRoute("/_authed/locked")({

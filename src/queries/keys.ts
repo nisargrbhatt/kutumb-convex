@@ -81,7 +81,6 @@ export const billingKeys = {
 	page: (orgId: string) => [...billingKeys.all(orgId), "page"] as const,
 	/** Active org's `billingAccess` + role + owners (gate, `/locked`, banner). */
 	access: (orgId: string) => [...billingKeys.all(orgId), "access"] as const,
-	banner: (orgId: string) => [...billingKeys.all(orgId), "banner"] as const,
 };
 
 /** User-scoped (not tenant-scoped): survives org switch. */

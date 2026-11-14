@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	cancelSubscriptionFn,
+	getActiveOrgBillingFn,
 	getBillingFn,
 	getTrialSummaryFn,
 	openPortalFn,
@@ -8,7 +9,6 @@ import {
 	startCheckoutFn,
 	syncBillingFn,
 } from "@/server/billing";
-import { getBannerFn } from "@/server/billingBanner";
 import { billingKeys } from "./keys";
 import { toastMutationError } from "./mutation";
 
@@ -30,12 +30,18 @@ export const billingPageQuery = (orgId: string) =>
 		refetchInterval: (q) => (q.state.data?.access.state === "pending" ? PENDING_POLL_MS : false),
 	});
 
-/** Any role: banner copy for the active org (no prices for admins / members). */
-export const billingBannerQuery = (orgId: string) =>
+/**
+ * Active org's billing, any role (gate, `/locked`, banner via `bannerFor`). Cached briefly so the
+ * `_community` gate isn't a round trip per navigation; a `Locked` error anywhere invalidates it
+ * (see `router.tsx`). Polls while a payment is pending.
+ */
+export const activeOrgBillingQuery = (orgId: string) =>
 	queryOptions({
-		queryKey: billingKeys.banner(orgId),
-		queryFn: () => getBannerFn(),
-		refetchInterval: (q) => (q.state.data?.state === "pending" ? PENDING_POLL_MS : false),
+		queryKey: billingKeys.access(orgId),
+		queryFn: () => getActiveOrgBillingFn(),
+		staleTime: 30_000,
+		refetchInterval: (q) =>
+			q.state.data?.access.state === "pending" ? PENDING_POLL_MS : false,
 	});
 
 /** Owner-only: leave for Dodo's customer portal (add / update card). */

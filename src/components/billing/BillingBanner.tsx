@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CreditCard, Info, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Banner, BannerTone } from "@/domain/billingBanner";
+import { bannerFor, type Banner, type BannerTone } from "@/domain/billingBanner";
 import { cn } from "@/lib/utils";
-import { billingBannerQuery, useOpenPortal, useResumeSubscription } from "@/queries/billing";
+import { activeOrgBillingQuery, useOpenPortal, useResumeSubscription } from "@/queries/billing";
 
 const TONE: Record<BannerTone, string> = {
 	info: "border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100",
@@ -14,7 +14,15 @@ const TONE: Record<BannerTone, string> = {
 
 /** Full-width billing strip above `_community` pages; renders nothing when there's no banner. */
 export function BillingBanner({ orgId }: { orgId: string }) {
-	const { data: banner } = useQuery(billingBannerQuery(orgId));
+	const { data: banner } = useQuery({
+		...activeOrgBillingQuery(orgId),
+		select: (b) =>
+			bannerFor(b.access, b.role, {
+				orgName: b.orgName,
+				price: b.price ?? "",
+				ownerNames: b.ownerNames,
+			}),
+	});
 	if (!banner) return null;
 	const Icon = banner.tone === "info" ? Info : AlertTriangle;
 	return (

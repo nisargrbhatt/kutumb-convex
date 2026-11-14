@@ -3,6 +3,7 @@ import z from "zod";
 import { db as defaultDb } from "@/db";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
+import { loadActiveOrgBilling } from "@/domain/queries/activeOrgBilling";
 import {
 	billingRow,
 	ensureSubscription,
@@ -20,6 +21,19 @@ import { orgMiddleware, orgMiddlewareAllowLocked } from "@/middleware/org";
  * Billing server fns only. Logic lives in `@/lib/billing`: plain exports here would drag `@/db`
  * and `cloudflare:workers` into the client bundle (only `createServerFn` handlers are stripped).
  */
+
+/**
+ * Billing for the active org, any role (Lock-exempt): `_community` gate, `/locked` (owner list),
+ * banner. Price only for owners.
+ */
+export const getActiveOrgBillingFn = createServerFn({ method: "GET" })
+	.middleware([orgMiddlewareAllowLocked])
+	.handler(async ({ context }) => {
+		const { organizationId, userId } = context.actor;
+		const r = await loadActiveOrgBilling(defaultDb, organizationId, userId, new Date());
+		if (!r) throw new AppError("Forbidden", "Not a member of the active organization");
+		return r;
+	});
 
 /** Owner-only Trial facts for the Trial started dialog; retries `ensureSubscription` if needed. */
 export const getTrialSummaryFn = createServerFn({ method: "GET" })
