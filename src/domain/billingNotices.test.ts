@@ -14,7 +14,7 @@ const trial = (over: Partial<NoticeRow> = {}): NoticeRow => ({
 	pastDueEndsAt: null,
 	hasPaymentMethod: false,
 	needsSubscription: false,
-	syncedAt: SYNCED,
+	lockedAt: SYNCED,
 	...over,
 });
 
@@ -102,7 +102,7 @@ describe("dueNotices", () => {
 			);
 		});
 
-		it("payment_failed: anchored on pastDueEndsAt, else syncedAt", () => {
+		it("payment_failed: anchored on pastDueEndsAt, else lockedAt", () => {
 			const pde = new Date("2026-12-01T00:00:00.000Z");
 			const now = new Date("2026-12-05T00:00:00.000Z");
 			const row = trial({ status: "on_hold", hasPaymentMethod: true, pastDueEndsAt: pde });
@@ -115,7 +115,7 @@ describe("dueNotices", () => {
 			});
 		});
 
-		it("canceled: anchored on nextBillingDate, else syncedAt", () => {
+		it("canceled: anchored on nextBillingDate, else lockedAt", () => {
 			const now = new Date("2026-12-05T00:00:00.000Z");
 			const row = trial({ status: "cancelled" });
 			expect(dueNotices(row, now, new Set())[0]).toMatchObject({
@@ -126,6 +126,12 @@ describe("dueNotices", () => {
 				anchor: SYNCED.toISOString(),
 			});
 		});
+	});
+
+	it("no stable anchor yet (lockedAt unset): no locked notice", () => {
+		const now = new Date("2026-12-05T00:00:00.000Z");
+		const row = trial({ status: "on_hold", hasPaymentMethod: true, lockedAt: null });
+		expect(kinds(row, now)).toEqual([]);
 	});
 
 	it("active / pending / canceling: nothing", () => {

@@ -2,8 +2,8 @@ import type { BillingNoticeKind } from "@/db/constants";
 import type { orgBilling } from "@/db/schema";
 import { billingAccess, type LockReason, type OrgBillingRow } from "./billing";
 
-/** What `dueNotices` reads: the access columns plus `syncedAt` (a Lock anchor fallback). */
-export type NoticeRow = OrgBillingRow & Pick<typeof orgBilling.$inferSelect, "syncedAt">;
+/** What `dueNotices` reads: the access columns plus `lockedAt` (the Lock anchor fallback). */
+export type NoticeRow = OrgBillingRow & Pick<typeof orgBilling.$inferSelect, "lockedAt">;
 
 /** One reminder email (spec: Reminders). `anchor` = ISO of the deadline it's about; dedupe key. */
 export type BillingNotice = {
@@ -56,26 +56,30 @@ function latestDue(row: NoticeRow, now: Date): BillingNotice | null {
 		}
 		case "locked": {
 			const reason = access.lockReason ?? "trial_ended";
-			return notice("locked", lockAnchor(row, reason), reason);
+			const anchor = lockAnchor(row, reason);
+			return anchor && notice("locked", anchor, reason);
 		}
 		default:
 			return null;
 	}
 }
 
-/** Lock date per reason (spec: Reminders); `syncedAt` when Dodo gave none. */
-function lockAnchor(row: NoticeRow, reason: LockReason): Date {
+/**
+ * Lock date per reason (spec: Reminders); `lockedAt` when Dodo gave none (null until stamped: no
+ * notice yet, so a moving date never re-sends `locked`).
+ */
+function lockAnchor(row: NoticeRow, reason: LockReason): Date | null {
 	switch (reason) {
 		case "trial_ended":
 			return row.trialEndsAt;
 		case "payment_failed":
-			return row.pastDueEndsAt ?? row.syncedAt;
+			return row.pastDueEndsAt ?? row.lockedAt;
 		case "canceled":
-			return row.nextBillingDate ?? row.syncedAt;
+			return row.nextBillingDate ?? row.lockedAt;
 	}
 }
 
 /** The webhook's notice on entering `grace`, anchored on its end (else `syncedAt`). */
 export const graceStartNotice = (
-	row: Pick<NoticeRow, "pastDueEndsAt" | "syncedAt">
+	row: Pick<typeof orgBilling.$inferSelect, "pastDueEndsAt" | "syncedAt">
 ): BillingNotice => notice("grace_start", row.pastDueEndsAt ?? row.syncedAt);

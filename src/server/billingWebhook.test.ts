@@ -205,6 +205,33 @@ describe("POST /api/billing/webhook", () => {
 		]);
 	});
 
+	it("grace → on_hold keeps pastDueEndsAt and stamps lockedAt once; recovery clears both", async () => {
+		sqlite.exec(
+			"UPDATE orgBilling SET hasPaymentMethod = 1, status = 'past_due', pastDueEndsAt = " +
+				Date.parse("2026-11-18T00:00:00.000Z")
+		);
+		const onHold = sub({ subscription_id: "sub_a", status: "on_hold", has_payment_method: true });
+		dodoSubs.sub_a = onHold;
+		await handleBillingWebhook(signed({ type: "subscription.on_hold", data: onHold }), deps);
+		expect(await row()).toMatchObject({
+			status: "on_hold",
+			pastDueEndsAt: new Date("2026-11-18T00:00:00.000Z"),
+			lockedAt: NOW,
+		});
+
+		const later = new Date(NOW.getTime() + DAY);
+		deps.now = () => later;
+		await handleBillingWebhook(signed({ type: "subscription.on_hold", data: onHold }), deps);
+		expect(await row()).toMatchObject({ lockedAt: NOW });
+
+		dodoSubs.sub_a = sub({ subscription_id: "sub_a", status: "active", has_payment_method: true });
+		await handleBillingWebhook(
+			signed({ type: "subscription.active", data: dodoSubs.sub_a }),
+			deps
+		);
+		expect(await row()).toMatchObject({ pastDueEndsAt: null, lockedAt: null });
+	});
+
 	it("re-subscribe: new sub replaces a terminal one → billing_resubscribed", async () => {
 		sqlite.exec("UPDATE orgBilling SET status = 'cancelled'");
 		dodoSubs.sub_b = sub({

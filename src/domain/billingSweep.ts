@@ -1,8 +1,8 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { member, organization, user } from "@/db/auth-schema";
 import { billingNotice, orgBilling } from "@/db/app-schema";
 import { ORGANIZATION_ROLES } from "@/db/constants";
-import type { LockReason } from "./billing";
+import { billingAccess, type LockReason } from "./billing";
 import { dueNotices, noticeKey, type BillingNotice } from "./billingNotices";
 import { inChunks, type QueryDb } from "./queries/db";
 
@@ -94,6 +94,22 @@ export function makeBillingNotifier({ db, now, email, capture }: NotifierDeps) {
 	};
 }
 
+/**
+ * Give each Locked row without `lockedAt` one (set once, kept until a pull unlocks it), so its
+ * `locked` notice has a stable anchor. Mutates `rows` to match.
+ */
+async function stampLockedAt(db: QueryDb, rows: (typeof orgBilling.$inferSelect)[], now: Date) {
+	for (const row of rows) {
+		if (row.lockedAt || !billingAccess(row, now).locked) continue;
+		const [stamped] = await db
+			.update(orgBilling)
+			.set({ lockedAt: now })
+			.where(and(eq(orgBilling.organizationId, row.organizationId), isNull(orgBilling.lockedAt)))
+			.returning({ lockedAt: orgBilling.lockedAt });
+		row.lockedAt = stamped?.lockedAt ?? now;
+	}
+}
+
 type SweepDeps = NotifierDeps & {
 	/** Retry sub creation for a `needsSubscription` org (tickets 06/15). */
 	ensureSubscription: (organizationId: string) => Promise<unknown>;
@@ -113,6 +129,7 @@ export function makeBillingSweep(deps: SweepDeps) {
 			try {
 				const now = deps.now();
 				const rows = await db.select().from(orgBilling);
+				await stampLockedAt(db, rows, now);
 
 				for (const row of rows.filter((r) => r.needsSubscription)) {
 					try {

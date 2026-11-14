@@ -113,6 +113,22 @@ describe("billing sweep", () => {
 		expect(captured).toEqual([{ event: "billing_locked", organizationId: "o1", userId: "u1" }]);
 	});
 
+	it("payment_failed lock without a Dodo date: locked email once, though syncedAt moves", async () => {
+		seedOrg(
+			"o1",
+			["u1"],
+			"needsSubscription = 0, status = 'on_hold', hasPaymentMethod = 1, subscriptionId = 'sub_1'"
+		);
+		now = new Date(TRIAL_END + DAY);
+		await sweep();
+		sqlite.exec(`UPDATE orgBilling SET syncedAt = ${now.getTime()}`);
+		now = new Date(now.getTime() + 3_600_000);
+		await sweep();
+		expect(sent.map((s) => s.email)).toEqual([
+			expect.objectContaining({ kind: "locked", lockReason: "payment_failed" }),
+		]);
+	});
+
 	it("retries ensureSubscription for needsSubscription rows only", async () => {
 		seedOrg("o1", ["u1"]);
 		seedOrg("o2", ["u2"], "needsSubscription = 0, status = 'active', subscriptionId = 'sub_2'");

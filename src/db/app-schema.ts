@@ -452,6 +452,8 @@ export const orgBilling = sqliteTable("orgBilling", {
 	needsSubscription: integer("needsSubscription", { mode: "boolean" }).notNull().default(true),
 	/** Last pull from Dodo. */
 	syncedAt: integer("syncedAt", { mode: "timestamp_ms" }).notNull(),
+	/** Set once when the row is first seen Locked, cleared on unlock: stable `locked` notice anchor. */
+	lockedAt: integer("lockedAt", { mode: "timestamp_ms" }),
 });
 
 /** Dodo webhook dedupe: insert-or-ignore on `webhookId`. */
