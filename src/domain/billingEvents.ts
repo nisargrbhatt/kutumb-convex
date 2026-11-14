@@ -27,8 +27,9 @@ export function subscriptionEventTarget(
  */
 export type BillingAccessEvent = "subscribed" | "payment_failed" | "grace_started" | "canceled";
 
-/** Webhook-fired PostHog events (spec: Analytics). */
+/** Server-side PostHog billing events (spec: Analytics); `billing_locked` from the sweep. */
 export type BillingAnalyticsEvent =
+	| "billing_locked"
 	| "billing_subscribed"
 	| "billing_payment_failed"
 	| "billing_canceled"

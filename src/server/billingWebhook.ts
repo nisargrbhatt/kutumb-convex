@@ -18,6 +18,8 @@ export type BillingWebhookDeps = {
 		webhooks: { unwrap(body: string, opts: { headers: Record<string, string> }): unknown };
 	};
 	capture: (event: BillingAnalyticsEvent, p: { organizationId: string; userId: string }) => void;
+	/** Grace-start email to all owners (spec: Reminders); best effort, never fails the webhook. */
+	notifyGraceStart: (row: typeof orgBilling.$inferSelect) => Promise<unknown>;
 	now?: () => Date;
 };
 
@@ -103,8 +105,12 @@ async function handleEvent(
 	const who = { organizationId: row.organizationId, userId: row.createdByUserId };
 	if (target === "adopt" && row.subscriptionId) deps.capture("billing_resubscribed", who);
 	for (const e of events) {
-		// TODO(billing #22): `grace_started` → grace-start email to all owners.
 		if (e !== "grace_started") deps.capture(`billing_${e}`, who);
+	}
+	if (events.includes("grace_started")) {
+		await deps
+			.notifyGraceStart(after)
+			.catch((error) => console.error("grace-start email failed", row.organizationId, error));
 	}
 }
 
