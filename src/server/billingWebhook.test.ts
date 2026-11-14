@@ -102,6 +102,17 @@ describe("POST /api/billing/webhook", () => {
 		expect(sqlite.prepare("SELECT count(*) c FROM billingWebhookEvent").get()).toEqual({ c: 0 });
 	});
 
+	it("dev unsafe mode: unsigned event is processed (dodo wh trigger)", async () => {
+		dodoSubs.sub_a = sub({ subscription_id: "sub_a", has_payment_method: true });
+		const req = signed({ type: "subscription.active", data: dodoSubs.sub_a });
+		req.headers.delete("webhook-signature");
+		expect((await handleBillingWebhook(new Request(req.url, { method: "POST", headers: req.headers, body: await req.clone().text() }), deps)).status).toBe(401);
+
+		const res = await handleBillingWebhook(req, { ...deps, unsafe: true });
+		expect(res.status).toBe(200);
+		expect(await row()).toMatchObject({ hasPaymentMethod: true });
+	});
+
 	it("card added → row mirrors Dodo, billing_subscribed fired", async () => {
 		dodoSubs.sub_a = sub({ subscription_id: "sub_a", has_payment_method: true });
 		const res = await handleBillingWebhook(

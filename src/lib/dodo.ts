@@ -21,6 +21,14 @@ export function createDodo(e: DodoEnv = env): DodoPayments {
 	});
 }
 
+/**
+ * Dev only: accept unsigned webhooks (`dodo wh trigger`). Needs Test Mode AND an explicit
+ * `DODO_WEBHOOK_UNSAFE=1`; never on in live mode.
+ */
+export const dodoWebhookUnsafe = (
+	e: Partial<Pick<Env, "DODO_PAYMENTS_ENVIRONMENT" | "DODO_WEBHOOK_UNSAFE">> = env
+) => e.DODO_PAYMENTS_ENVIRONMENT === "test_mode" && e.DODO_WEBHOOK_UNSAFE === "1";
+
 /** Dodo product id of the single `Standard` plan. */
 export const dodoProductId = (e: Pick<Env, "DODO_PRODUCT_ID"> = env) => e.DODO_PRODUCT_ID;
 

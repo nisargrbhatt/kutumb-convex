@@ -15,8 +15,13 @@ type Db = BaseSQLiteDatabase<"async", any, any>;
 export type BillingWebhookDeps = {
 	db: Db;
 	dodo: DodoSubscriptions & {
-		webhooks: { unwrap(body: string, opts: { headers: Record<string, string> }): unknown };
+		webhooks: {
+			unwrap(body: string, opts: { headers: Record<string, string> }): unknown;
+			unsafeUnwrap(body: string): unknown;
+		};
 	};
+	/** Dev only (`dodoWebhookUnsafe`): skip signature verification. */
+	unsafe?: boolean;
 	capture: (event: BillingAnalyticsEvent, p: { organizationId: string; userId: string }) => void;
 	/** Grace-start email to all owners (spec: Reminders); best effort, never fails the webhook. */
 	notifyGraceStart: (row: typeof orgBilling.$inferSelect) => Promise<unknown>;
@@ -47,9 +52,11 @@ export async function handleBillingWebhook(
 	const body = await request.text();
 	let event: { type: string; data: Payload };
 	try {
-		event = deps.dodo.webhooks.unwrap(body, {
-			headers: Object.fromEntries(request.headers),
-		}) as typeof event;
+		event = (
+			deps.unsafe
+				? deps.dodo.webhooks.unsafeUnwrap(body)
+				: deps.dodo.webhooks.unwrap(body, { headers: Object.fromEntries(request.headers) })
+		) as typeof event;
 	} catch {
 		return new Response("invalid signature", { status: 401 });
 	}

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { db } from "@/db";
-import { createDodo } from "@/lib/dodo";
+import { createDodo, dodoWebhookUnsafe } from "@/lib/dodo";
 import { captureBillingEvent } from "@/lib/posthog-server";
 import { notifyGraceStart } from "@/server/billingSweep";
 import { handleBillingWebhook } from "@/server/billingWebhook";
@@ -15,6 +15,7 @@ export const Route = createFileRoute("/api/billing/webhook")({
 					dodo: createDodo(),
 					capture: captureBillingEvent,
 					notifyGraceStart,
+					unsafe: dodoWebhookUnsafe(),
 				}),
 		},
 	},
