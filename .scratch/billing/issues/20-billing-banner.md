@@ -1,6 +1,6 @@
 # Billing banner
 
-Status: ready-for-agent Blocked by: 19
+Status: resolved Blocked by: 19
 
 ## What to build
 

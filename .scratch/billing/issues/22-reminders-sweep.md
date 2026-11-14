@@ -1,6 +1,6 @@
 # Billing reminders and sweep
 
-Status: ready-for-agent Blocked by: 16
+Status: resolved Blocked by: 16
 
 ## What to build
 

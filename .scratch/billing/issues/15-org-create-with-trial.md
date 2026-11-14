@@ -1,6 +1,6 @@
 # Org create starts the Trial
 
-Status: ready-for-agent Blocked by: 14
+Status: resolved Blocked by: 14
 
 ## What to build
 

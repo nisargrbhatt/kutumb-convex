@@ -1,6 +1,6 @@
 # Lock screen and client signal
 
-Status: ready-for-agent Blocked by: 17, 19
+Status: resolved Blocked by: 17, 19
 
 ## What to build
 

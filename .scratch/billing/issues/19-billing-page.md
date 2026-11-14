@@ -1,6 +1,6 @@
 # Owner billing page
 
-Status: ready-for-agent Blocked by: 15, 16
+Status: resolved Blocked by: 15, 16
 
 ## What to build
 

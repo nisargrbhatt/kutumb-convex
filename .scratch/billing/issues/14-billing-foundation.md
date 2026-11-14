@@ -1,6 +1,6 @@
 # Billing foundation: tables, Dodo client, billingAccess
 
-Status: ready-for-agent Blocked by:
+Status: resolved Blocked by:
 
 ## What to build
 

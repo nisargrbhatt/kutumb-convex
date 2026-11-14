@@ -1,6 +1,6 @@
 # Org changes sync to the Dodo customer
 
-Status: ready-for-agent Blocked by: 15
+Status: resolved Blocked by: 15
 
 ## What to build
 
