@@ -1,5 +1,5 @@
 import { createSerializationAdapter } from "@tanstack/react-router";
-import { createStart } from "@tanstack/react-start";
+import { createCsrfMiddleware, createStart } from "@tanstack/react-start";
 import { AppError, type AppErrorKind } from "@/domain/errors";
 
 /**
@@ -15,6 +15,11 @@ const appErrorAdapter = createSerializationAdapter({
 		new AppError(v.kind, v.message, v.code ?? undefined),
 });
 
+const csrfMiddleware = createCsrfMiddleware({
+    filter: (ctx) => ctx.handlerType === 'serverFn',
+  })
+
 export const startInstance = createStart(() => ({
+	requestMiddleware: [csrfMiddleware],
 	serializationAdapters: [appErrorAdapter],
 }));

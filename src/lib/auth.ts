@@ -36,7 +36,6 @@ const createAuth = () =>
 	betterAuth({
 		database: drizzleAdapter(db, { provider: "sqlite" }),
 		plugins: [
-			tanstackStartCookies(),
 			organization({
 				ac: ac,
 				roles: { owner, admin, member },
@@ -77,6 +76,7 @@ const createAuth = () =>
 				}),
 				metadataProfile: "mcp-2026-07-28",
 			}),
+			tanstackStartCookies(),
 		],
 		hooks: mcpHooks,
 		// ADR 0006: the plugin's update-consent adds scopes (incl. community:write) with no consent
