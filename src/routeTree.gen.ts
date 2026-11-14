@@ -25,6 +25,7 @@ import { Route as publicTermOfServiceIndexRouteImport } from './routes/(public)/
 import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/privacy-policy/index'
 import { Route as publicAboutIndexRouteImport } from './routes/(public)/about/index'
 import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
+import { Route as ApiBillingWebhookRouteImport } from './routes/api/billing/webhook'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunitySettingsRouteImport } from './routes/_authed/_community/settings'
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
@@ -129,6 +130,11 @@ const publicAboutIndexRoute = publicAboutIndexRouteImport.update({
 const ApiPhSplatRoute = ApiPhSplatRouteImport.update({
   id: '/api/ph/$',
   path: '/api/ph/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingWebhookRoute = ApiBillingWebhookRouteImport.update({
+  id: '/api/billing/webhook',
+  path: '/api/billing/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -290,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/oauth/select-org': typeof OauthSelectOrgRoute
   '/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about/': typeof publicAboutIndexRoute
   '/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
@@ -330,6 +337,7 @@ export interface FileRoutesByTo {
   '/oauth/select-org': typeof OauthSelectOrgRoute
   '/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about': typeof publicAboutIndexRoute
   '/privacy-policy': typeof publicPrivacyPolicyIndexRoute
@@ -374,6 +382,7 @@ export interface FileRoutesById {
   '/oauth/select-org': typeof OauthSelectOrgRoute
   '/_authed/_community/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/(public)/about/': typeof publicAboutIndexRoute
   '/(public)/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
@@ -416,6 +425,7 @@ export interface FileRouteTypes {
     | '/oauth/select-org'
     | '/settings'
     | '/api/auth/$'
+    | '/api/billing/webhook'
     | '/api/ph/$'
     | '/about/'
     | '/privacy-policy/'
@@ -456,6 +466,7 @@ export interface FileRouteTypes {
     | '/oauth/select-org'
     | '/settings'
     | '/api/auth/$'
+    | '/api/billing/webhook'
     | '/api/ph/$'
     | '/about'
     | '/privacy-policy'
@@ -499,6 +510,7 @@ export interface FileRouteTypes {
     | '/oauth/select-org'
     | '/_authed/_community/settings'
     | '/api/auth/$'
+    | '/api/billing/webhook'
     | '/api/ph/$'
     | '/(public)/about/'
     | '/(public)/privacy-policy/'
@@ -541,6 +553,7 @@ export interface RootRouteChildren {
   OauthConsentRoute: typeof OauthConsentRoute
   OauthSelectOrgRoute: typeof OauthSelectOrgRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute
   ApiPhSplatRoute: typeof ApiPhSplatRoute
   DotwellKnownOauthProtectedResourceIndexRoute: typeof DotwellKnownOauthProtectedResourceIndexRoute
   DotwellKnownOauthAuthorizationServerApiAuthRoute: typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
@@ -660,6 +673,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ph/$'
       fullPath: '/api/ph/$'
       preLoaderRoute: typeof ApiPhSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/webhook': {
+      id: '/api/billing/webhook'
+      path: '/api/billing/webhook'
+      fullPath: '/api/billing/webhook'
+      preLoaderRoute: typeof ApiBillingWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -949,6 +969,7 @@ const rootRouteChildren: RootRouteChildren = {
   OauthConsentRoute: OauthConsentRoute,
   OauthSelectOrgRoute: OauthSelectOrgRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBillingWebhookRoute: ApiBillingWebhookRoute,
   ApiPhSplatRoute: ApiPhSplatRoute,
   DotwellKnownOauthProtectedResourceIndexRoute:
     DotwellKnownOauthProtectedResourceIndexRoute,
