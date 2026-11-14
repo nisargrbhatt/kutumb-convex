@@ -46,6 +46,16 @@ lifecycle hooks (e.g. `afterAddMember`) and invitation emails are wired inside t
 For any other reference, lookout for `/better-auth-best-practices`,
 `/better-auth-security-best-practices` skill for better planning and reasoning.
 
+### Billing Lock seam
+
+A Locked org (`billingAccess(orgBilling row, now).locked`, `src/domain/billing.ts`) is default-deny.
+`orgMiddleware` (`src/middleware/org.ts`) LEFT JOINs `orgBilling` into its member query (no KV, no
+extra round trip) and throws `AppError("Locked", lockReason)`; no row = locked. Use
+**`orgMiddlewareAllowLocked`** only for: billing read / sync / checkout / portal / resume / invoice
+PDF, delete org, transfer ownership, owner list for `/locked`. Other Lock checks: better-auth org
+hooks (`src/domain/lockGuard.ts`), MCP tool calls (`ConnectionActor.lock`), blob route, OAuth
+select-org. Shared queries in `src/domain/queries/orgLock.ts`.
+
 ### Routing (file-based, TanStack Router)
 
 Routes live in `src/routes`; `routeTree.gen.ts` is **generated — never edit by hand**. Key layout

@@ -10,7 +10,9 @@ export type AppErrorKind =
 	/** Domain rule broken (self-relation, duplicate pair, reassign a draft). */
 	| "Invalid"
 	/** MCP write refused: Connection is read only or the org turned AI writes off (`code` = reason). */
-	| "WriteNotAllowed";
+	| "WriteNotAllowed"
+	/** Org is Locked (billing); `message` and `code` = `LockReason`. */
+	| "Locked";
 
 export class AppError extends Error {
 	name = "AppError" as const;

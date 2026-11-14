@@ -10,6 +10,8 @@ import {
 } from "@/domain/mcpOauth";
 import type { Role } from "@/domain/permission";
 import { getAiClientWrites } from "@/domain/queries/orgSettings";
+import { AppError } from "@/domain/errors";
+import { listMemberOrgs, loadOrgMembership, type MemberOrg } from "@/domain/queries/orgLock";
 import { auth } from "@/lib/auth";
 import { markOrgPicked } from "@/lib/oauth-flow";
 import { safeAsync } from "@/lib/safe";
@@ -25,6 +27,8 @@ export type OauthClientInfo = {
 };
 
 export type OauthOrg = { id: string; name: string; slug: string; role: Role };
+/** `/oauth/select-org` row: `lockReason` set ⇒ shown disabled. */
+export type OauthSelectOrg = MemberOrg;
 
 async function loadClient(clientId: string): Promise<OauthClientInfo | null> {
 	const result = await safeAsync(
@@ -52,16 +56,9 @@ async function loadOrg(userId: string, organizationId: string): Promise<OauthOrg
 	return row ? { ...row.organization, role: row.role as Role } : null;
 }
 
-async function loadOrgs(userId: string): Promise<OauthOrg[]> {
-	const rows = await db.query.member.findMany({
-		where: (f, o) => o.eq(f.userId, userId),
-		columns: { role: true },
-		with: { organization: { columns: { id: true, name: true, slug: true } } },
-	});
-	return rows
-		.map((r) => ({ ...r.organization, role: r.role as Role }))
-		.sort((a, b) => a.name.localeCompare(b.name));
-}
+/** Locked orgs are listed (shown disabled), never pickable. */
+const loadOrgs = (userId: string): Promise<OauthSelectOrg[]> =>
+	listMemberOrgs(db, userId, new Date());
 
 /** Data for `/oauth/select-org`: the requesting client + every community the member belongs to. */
 export const getOauthSelectOrgFn = createServerFn({ method: "GET" })
@@ -103,6 +100,10 @@ export const pickOauthOrgFn = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
 	.validator(z.object({ organizationId: z.string().trim().min(1) }))
 	.handler(async ({ context, data }) => {
+		// A Locked org can't get a new Connection (spec: Lock enforcement > OAuth).
+		const m = await loadOrgMembership(db, data.organizationId, context.userId, new Date());
+		if (!m) throw new AppError("Forbidden", "Not a member of that organization");
+		if (m.lockReason) throw new AppError("Locked", m.lockReason, m.lockReason);
 		await auth.api.setActiveOrganization({
 			headers: getRequestHeaders(),
 			body: { organizationId: data.organizationId },
