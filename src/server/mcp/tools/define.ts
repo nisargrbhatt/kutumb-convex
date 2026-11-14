@@ -1,5 +1,7 @@
 import type { CallToolResult, McpServer, ServerContext } from "@modelcontextprotocol/server";
 import type { z } from "zod";
+import { AppError } from "@/domain/errors";
+import { orgLockedToolText } from "@/domain/lock";
 import type { WriteOutcome } from "@/domain/mcpWrite";
 import { captureMcpToolCalled } from "@/lib/posthog-server";
 import { getActor, type ConnectionActor } from "../actor";
@@ -47,6 +49,15 @@ function wrapTool<Out extends z.ZodObject, In extends z.ZodObject | undefined>(
 		let result: CallToolResult;
 		let outcome: WriteOutcome | undefined;
 		try {
+			// Locked org: `tools/list` still works, but no tool runs (spec: Lock enforcement > MCP).
+			if (actor.lock) {
+				const appOrigin = ctx.http?.authInfo?.resource?.origin ?? "";
+				throw new AppError(
+					"Locked",
+					orgLockedToolText({ ...actor.lock, appOrigin }),
+					actor.lock.reason
+				);
+			}
 			if (write) requireWrite(actor);
 			const input = (hasInput ? cbArgs[0] : undefined) as never;
 			const output = (await run(actor, input, { clientId })) as Record<string, unknown>;

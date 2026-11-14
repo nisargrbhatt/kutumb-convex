@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toCrossJSONAsync, fromCrossJSON } from "seroval";
-import { AppError, isAppError } from "./errors";
+import { AppError, isAppError, isLockedError } from "./errors";
 
 describe("isAppError", () => {
 	it("accepts an AppError instance", () => {
@@ -37,5 +37,13 @@ describe("isAppError", () => {
 		expect(revived.kind).toBe("Forbidden");
 		expect(revived.message).toBe("nope");
 		expect(revived.code).toBe("FORBIDDEN_CODE");
+	});
+});
+
+describe("isLockedError", () => {
+	it("true only for AppError kind Locked", () => {
+		expect(isLockedError(new AppError("Locked", "trial_ended", "trial_ended"))).toBe(true);
+		expect(isLockedError(new AppError("Forbidden"))).toBe(false);
+		expect(isLockedError(new Error("Locked"))).toBe(false);
 	});
 });

@@ -168,3 +168,24 @@ is permanent and leaves no record. It outlives its author's membership.
 
 An Org Member's single mark of appreciation on a Post, which they can take back. Who liked a Post is
 visible to its viewers. A Like outlives its author's membership. _Avoid_: "reaction".
+
+## Subscription
+
+An organization's paid plan: one per organization, existing from the moment the organization is
+created, billed to the organization, not to a user. A user in several organizations pays for each
+separately. Any owner of the organization manages it; admins and members never see it. The
+organization is the **customer**, named after it, with an owner's email as its billing contact.
+_Avoid_: "plan" for the organization's own Subscription, "account".
+
+## Trial
+
+The first 15 days of an organization's Subscription, free and with nothing to pay up front. An owner
+may add payment details at any point during it; nothing is charged before it ends. Ends either in
+the first charge or in a Lock. _Avoid_: "free tier".
+
+## Lock
+
+The state of an organization whose Trial ended with no Subscription, or whose Subscription stopped
+being paid. No one can use that organization: not in the app and not through a Connection. Its data
+is kept untouched, and starting or fixing the Subscription lifts the Lock at once. Members are told
+to ask an owner; owners see only how to pay. _Avoid_: "suspended", "read-only".

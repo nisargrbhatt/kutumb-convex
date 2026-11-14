@@ -21,6 +21,8 @@ function setup() {
 		INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES
 			('m9', 'o2', 'u-outsider', 'member', 0),
 			('m10', 'o2', 'u-member', 'member', 0);
+		INSERT INTO orgBilling (organizationId, createdByUserId, country, trialEndsAt, syncedAt) VALUES
+			('o2', 'u-outsider', 'IN', 99999999999999, 0);
 	`);
 	const r2 = fakeR2();
 	let n = 0;
@@ -124,6 +126,13 @@ describe("PUT /api/blob/<org>/<blob>/<variant>", () => {
 			height: 800,
 			sha256: sha(body),
 		});
+	});
+
+	it("locked org → 403, nothing lands", async () => {
+		s.h.fresh.sqlite.exec("UPDATE orgBilling SET trialEndsAt = 0 WHERE organizationId = 'o1'");
+		const res = await put(s, `/api/blob/o1/${blobId}/display`);
+		expect(res.status).toBe(403);
+		expect(await s.r2.bucket.get(`o1/${blobId}/display`)).toBeNull();
 	});
 
 	it("rejects a wrong Origin", async () => {
@@ -275,6 +284,13 @@ describe("GET /api/blob/<org>/<blob>/<variant>", () => {
 		);
 		expect(shapes[0]!.status).toBe(404);
 		for (const shape of shapes) expect(shape).toEqual(shapes[0]);
+	});
+
+	it("locked org → 403 for a member (non-member still 404)", async () => {
+		s.h.fresh.sqlite.exec("UPDATE orgBilling SET trialEndsAt = 0 WHERE organizationId = 'o1'");
+		const res = await get(s, "/api/blob/o1/b-p/avatar", MEMBER.userId);
+		expect(res.status).toBe(403);
+		expect((await get(s, "/api/blob/o1/b-p/avatar", "u-outsider")).status).toBe(404);
 	});
 
 	it("checks the URL's org, not an active org: member of o2 reads o2's Blob", async () => {

@@ -71,7 +71,16 @@ export const orgKeys = {
 	all: (orgId: string) => ["organization", orgId] as const,
 	usage: (orgId: string) => [...orgKeys.all(orgId), "usage"] as const,
 	invitations: (orgId: string) => [...orgKeys.all(orgId), "invitations"] as const,
+	members: (orgId: string) => [...orgKeys.all(orgId), "members"] as const,
 	aiSettings: (orgId: string) => [...orgKeys.all(orgId), "aiSettings"] as const,
+};
+
+export const billingKeys = {
+	all: (orgId: string) => ["billing", orgId] as const,
+	trial: (orgId: string) => [...billingKeys.all(orgId), "trial"] as const,
+	page: (orgId: string) => [...billingKeys.all(orgId), "page"] as const,
+	/** Active org's `billingAccess` + role + owners (gate, `/locked`, banner). */
+	access: (orgId: string) => [...billingKeys.all(orgId), "access"] as const,
 };
 
 /** User-scoped (not tenant-scoped): survives org switch. */

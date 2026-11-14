@@ -15,6 +15,10 @@ interface __BaseEnv_Env {
 	RESEND_API_KEY: string;
 	VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: string;
 	VITE_PUBLIC_POSTHOG_HOST: string;
+	DODO_PAYMENTS_API_KEY: string;
+	DODO_PAYMENTS_WEBHOOK_KEY: string;
+	DODO_PAYMENTS_ENVIRONMENT: string;
+	DODO_PRODUCT_ID: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -27,7 +31,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "BETTER_AUTH_SECRET" | "BETTER_AUTH_URL" | "BETTER_AUTH_DISABLE_SIGNUP" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" | "RESEND_API_KEY" | "VITE_PUBLIC_POSTHOG_PROJECT_TOKEN" | "VITE_PUBLIC_POSTHOG_HOST">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "BETTER_AUTH_SECRET" | "BETTER_AUTH_URL" | "BETTER_AUTH_DISABLE_SIGNUP" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" | "RESEND_API_KEY" | "VITE_PUBLIC_POSTHOG_PROJECT_TOKEN" | "VITE_PUBLIC_POSTHOG_HOST" | "DODO_PAYMENTS_API_KEY" | "DODO_PAYMENTS_WEBHOOK_KEY" | "DODO_PAYMENTS_ENVIRONMENT" | "DODO_PRODUCT_ID">> {}
 }
 
 // Begin runtime types

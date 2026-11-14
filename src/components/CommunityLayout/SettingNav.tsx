@@ -8,7 +8,13 @@ import {
 	useSidebar,
 } from "../ui/sidebar";
 import { useActor } from "@/hooks/useActor";
-import { IconAffiliate, IconInputSearch, IconRobot, IconUser } from "@tabler/icons-react";
+import {
+	IconAffiliate,
+	IconCreditCard,
+	IconInputSearch,
+	IconRobot,
+	IconUser,
+} from "@tabler/icons-react";
 
 export function SettingNav() {
 	const { toggleSidebar, isMobile, open } = useSidebar();
@@ -104,6 +110,27 @@ export function SettingNav() {
 					>
 						<IconRobot />
 						<span>AI</span>
+					</SidebarMenuButton>
+				</SidebarMenuItem>
+				<SidebarMenuItem
+					onClick={() => {
+						if (open && isMobile) {
+							toggleSidebar();
+						}
+					}}
+				>
+					<SidebarMenuButton
+						render={
+							<Link
+								to={"/settings/billing"}
+								activeProps={{
+									className: "bg-muted",
+								}}
+							/>
+						}
+					>
+						<IconCreditCard />
+						<span>Billing</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 			</SidebarMenu>

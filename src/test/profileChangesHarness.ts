@@ -63,6 +63,8 @@ export function profileChangesHarness() {
 			('m2', 'o1', 'u-admin', 'admin', 0),
 			('m3', 'o1', 'u-member', 'member', 0),
 			('m4', 'o1', 'u-other', 'member', 0);
+		INSERT INTO orgBilling (organizationId, createdByUserId, country, trialEndsAt, syncedAt) VALUES
+			('o1', 'u-owner', 'IN', 99999999999999, 0);
 	`);
 	let t = 1000;
 	let n = 0;

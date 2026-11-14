@@ -24,6 +24,8 @@ import {
 	GENDERS,
 	ORGANIZATION_ROLES,
 	POST_KIND,
+	BILLING_NOTICE_KIND,
+	DODO_SUBSCRIPTION_STATUSES,
 	enumValues,
 } from "./constants";
 import { relations } from "drizzle-orm";
@@ -417,4 +419,60 @@ export const mediaBlob = sqliteTable(
 		),
 		index("blob_status_created_idx").on(table.status, table.createdAt),
 	]
+);
+
+// Billing: one row per org mirroring its Dodo Subscription (spec: billing > Data). Lock is computed
+// from this row by `billingAccess`, never stored.
+export const orgBilling = sqliteTable("orgBilling", {
+	organizationId: text("organizationId")
+		.primaryKey()
+		.references(() => organization.id, { onDelete: "cascade" }),
+	/** Org creator; analytics only. */
+	createdByUserId: text("createdByUserId").notNull(),
+	/** ISO-2 from the create form; needed to retry sub creation. */
+	country: text("country").notNull(),
+	/** Null only if customer create failed. */
+	dodoCustomerId: text("dodoCustomerId"),
+	/** Current sub only; replaced on re-subscribe. */
+	subscriptionId: text("subscriptionId"),
+	/** Raw Dodo status. */
+	status: text("status", { mode: "text", enum: enumValues(DODO_SUBSCRIPTION_STATUSES) }),
+	/** Set once: sub `created_at + trial_period_days`, or org `createdAt + 15d` while no sub. */
+	trialEndsAt: integer("trialEndsAt", { mode: "timestamp_ms" }).notNull(),
+	nextBillingDate: integer("nextBillingDate", { mode: "timestamp_ms" }),
+	cancelAtNextBillingDate: integer("cancelAtNextBillingDate", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	/** From the `subscription.past_due` webhook only (GET lacks it). */
+	pastDueEndsAt: integer("pastDueEndsAt", { mode: "timestamp_ms" }),
+	hasPaymentMethod: integer("hasPaymentMethod", { mode: "boolean" }).notNull().default(false),
+	/** Cents; display only. */
+	recurringPreTaxAmount: integer("recurringPreTaxAmount"),
+	/** True until a sub exists. */
+	needsSubscription: integer("needsSubscription", { mode: "boolean" }).notNull().default(true),
+	/** Last pull from Dodo. */
+	syncedAt: integer("syncedAt", { mode: "timestamp_ms" }).notNull(),
+	/** Set once when the row is first seen Locked, cleared on unlock: stable `locked` notice anchor. */
+	lockedAt: integer("lockedAt", { mode: "timestamp_ms" }),
+});
+
+/** Dodo webhook dedupe: insert-or-ignore on `webhookId`. */
+export const billingWebhookEvent = sqliteTable("billingWebhookEvent", {
+	webhookId: text("webhookId").primaryKey(),
+	type: text("type").notNull(),
+	receivedAt: integer("receivedAt", { mode: "timestamp_ms" }).notNull(),
+});
+
+/** Sent reminder emails; insert-or-ignore dedupes. `anchor` = ISO deadline the notice is about. */
+export const billingNotice = sqliteTable(
+	"billingNotice",
+	{
+		organizationId: text("organizationId")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		kind: text("kind", { mode: "text", enum: enumValues(BILLING_NOTICE_KIND) }).notNull(),
+		anchor: text("anchor").notNull(),
+		sentAt: integer("sentAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [primaryKey({ columns: [table.organizationId, table.kind, table.anchor] })]
 );

@@ -1,13 +1,14 @@
 import handler from "@tanstack/react-start/server-entry";
 import { BLOB_PATH_PREFIX } from "@/domain/blob";
 import { blobRoute } from "@/server/blobRoute";
+import { billingSweep } from "@/server/billingSweep";
 import { blobSweep } from "@/server/blobSweep";
 
 const SIGN_OUT_PATH = "/api/auth/sign-out";
 
 /**
  * Worker entry. Blob routes run here, ahead of TanStack (spec: Serving). `scheduled` hosts the
- * hourly sweep (spec: Blobs > Sweep).
+ * hourly sweeps (spec: Blobs > Sweep; billing > Reminders).
  */
 export default {
 	async fetch(request) {
@@ -23,7 +24,9 @@ export default {
 		return response;
 	},
 	async scheduled() {
-		const result = await blobSweep.run();
-		console.info("blob sweep", result);
+		// Independent; both never throw.
+		const [blob, billing] = await Promise.all([blobSweep.run(), billingSweep.run()]);
+		console.info("blob sweep", blob);
+		console.info("billing sweep", billing);
 	},
 } satisfies ExportedHandler<Env>;

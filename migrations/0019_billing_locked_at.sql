@@ -1,0 +1,1 @@
+ALTER TABLE `orgBilling` ADD `lockedAt` integer;

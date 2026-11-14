@@ -4,6 +4,7 @@ import {
 	accountKeys,
 	addressKeys,
 	auditKeys,
+	billingKeys,
 	changeRequestKeys,
 	feedKeys,
 	fieldKeys,
@@ -22,6 +23,7 @@ const factories = {
 	changeRequestKeys,
 	auditKeys,
 	feedKeys,
+	billingKeys,
 };
 
 // Sample args per factory name; orgId is always the first arg.

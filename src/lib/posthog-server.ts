@@ -3,6 +3,7 @@ import { env, waitUntil } from "cloudflare:workers";
 import type { LimitKind } from "@/domain/limits";
 import type { RegistrationKind } from "@/domain/mcpOauth";
 import type { WriteOutcome } from "@/domain/mcpWrite";
+import type { BillingAnalyticsEvent } from "@/domain/billingEvents";
 
 let posthogClient: PostHog | null = null;
 
@@ -18,10 +19,15 @@ export function getPostHogClient() {
 }
 
 /** Fire-and-forget capture + flush; analytics never throws into the caller. */
-function capture(event: string, distinctId: string, properties: Record<string, unknown>) {
+function capture(
+	event: string,
+	distinctId: string,
+	properties: Record<string, unknown>,
+	groups?: Record<string, string>
+) {
 	try {
 		const client = getPostHogClient();
-		client.capture({ distinctId, event, properties });
+		client.capture({ distinctId, event, properties, ...(groups && { groups }) });
 		waitUntil(client.flush());
 	} catch (error) {
 		console.error(`Failed to capture ${event} event`, error);
@@ -104,6 +110,28 @@ export function captureConnectionDowngraded(props: {
 		orgId: props.organizationId,
 		clientId: props.clientId,
 	});
+}
+
+/**
+ * Billing analytics (spec: Analytics), on the org group. `userId` = org creator for webhook,
+ * sweep and `billing_trial_started` events, the acting owner for `billing_checkout_opened`
+ * (`kind`: Dodo page opened). `billing_trial_started.subscribed`: Dodo sub exists, else own clock
+ * (ADR 0013).
+ */
+export function captureBillingEvent(
+	event: BillingAnalyticsEvent | "billing_checkout_opened" | "billing_trial_started",
+	{
+		organizationId,
+		userId,
+		...extra
+	}: {
+		organizationId: string;
+		userId: string;
+		kind?: "checkout" | "portal";
+		subscribed?: boolean;
+	}
+) {
+	capture(event, userId, { orgId: organizationId, ...extra }, { organization: organizationId });
 }
 
 /** The owner switched "AI Client writes" for the community. Carries no names or values. */
