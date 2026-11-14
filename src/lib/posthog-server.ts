@@ -3,6 +3,7 @@ import { env, waitUntil } from "cloudflare:workers";
 import type { LimitKind } from "@/domain/limits";
 import type { RegistrationKind } from "@/domain/mcpOauth";
 import type { WriteOutcome } from "@/domain/mcpWrite";
+import type { BillingAnalyticsEvent } from "@/domain/billingEvents";
 
 let posthogClient: PostHog | null = null;
 
@@ -137,6 +138,25 @@ export function captureBillingCheckoutOpened(props: {
 		{ orgId: props.organizationId, kind: props.kind },
 		{ organization: props.organizationId }
 	);
+}
+
+/** Billing analytics (spec: Analytics), on the org group. `userId` = org creator. */
+export function captureBillingEvent(
+	event: BillingAnalyticsEvent,
+	props: { organizationId: string; userId: string }
+) {
+	try {
+		const client = getPostHogClient();
+		client.capture({
+			distinctId: props.userId,
+			event,
+			groups: { organization: props.organizationId },
+			properties: { orgId: props.organizationId },
+		});
+		waitUntil(client.flush());
+	} catch (error) {
+		console.error(`Failed to capture ${event} event`, error);
+	}
 }
 
 /** The owner switched "AI Client writes" for the community. Carries no names or values. */

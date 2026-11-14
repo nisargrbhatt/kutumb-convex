@@ -5,7 +5,7 @@ import type DodoPayments from "dodopayments";
 import type { CountryCode } from "dodopayments/resources/misc";
 import { db as defaultDb } from "@/db";
 import { orgBilling, organization, user } from "@/db/schema";
-import { ownClockTrialEndsAt } from "@/domain/billing";
+import { billingAccess, ownClockTrialEndsAt } from "@/domain/billing";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
 import type { QueryDb } from "@/domain/queries/db";
@@ -13,7 +13,7 @@ import { pullSubscriptionIntoRow } from "@/lib/billing-sync";
 import { createDodo, dodoProductId } from "@/lib/dodo";
 import { captureBillingCheckoutOpened, captureBillingTrialStarted } from "@/lib/posthog-server";
 import { safeAsync } from "@/lib/safe";
-import { orgMiddleware } from "@/middleware/org";
+import { orgMiddlewareAllowLocked } from "@/middleware/org";
 
 export type BillingDeps = {
 	db: QueryDb;
@@ -79,7 +79,7 @@ export async function ensureSubscription(organizationId: string, deps: Partial<B
 				await save({ subscriptionId });
 			}
 
-			return pullSubscriptionIntoRow({ db, dodo, organizationId, subscriptionId, now });
+			return pullSubscriptionIntoRow(db, dodo, { organizationId, subscriptionId, now: now() });
 		})()
 	);
 	if (!result.success) console.error("ensureSubscription failed", organizationId, result.error);
@@ -120,7 +120,7 @@ export async function startOrgBilling(
 
 /** Owner-only Trial facts for the Trial started dialog; retries `ensureSubscription` if needed. */
 export const getTrialSummaryFn = createServerFn({ method: "GET" })
-	.middleware([orgMiddleware])
+	.middleware([orgMiddlewareAllowLocked])
 	.handler(async ({ context }) => {
 		assertCan(context.actor, { billing: ["manage"] });
 		const { organizationId } = context.actor;
@@ -135,7 +135,7 @@ export const getTrialSummaryFn = createServerFn({ method: "GET" })
 
 /** Owner-only: a 24h Dodo customer portal link (add / update card). Client navigates to it. */
 export const openPortalFn = createServerFn({ method: "POST" })
-	.middleware([orgMiddleware])
+	.middleware([orgMiddlewareAllowLocked])
 	.handler(async ({ context }) => {
 		assertCan(context.actor, { billing: ["manage"] });
 		const { organizationId, userId } = context.actor;
@@ -148,4 +148,27 @@ export const openPortalFn = createServerFn({ method: "POST" })
 		});
 		captureBillingCheckoutOpened({ userId, organizationId, kind: "portal" });
 		return { url: link };
+	});
+
+/**
+ * Owner, back from Dodo (`?from=dodo`): pull the current sub and overwrite the row, so the page
+ * doesn't wait for the webhook. Returns the fresh access.
+ */
+export const syncBillingFn = createServerFn({ method: "POST" })
+	.middleware([orgMiddlewareAllowLocked])
+	.handler(async ({ context }) => {
+		assertCan(context.actor, { billing: ["manage"] });
+		const { organizationId } = context.actor;
+		let row = await billingRow(defaultDb, organizationId);
+		if (!row) throw new AppError("NotFound", "No billing for this organization");
+		const now = new Date();
+		if (row.subscriptionId) {
+			row =
+				(await pullSubscriptionIntoRow(defaultDb, createDodo(), {
+					organizationId,
+					subscriptionId: row.subscriptionId,
+					now,
+				})) ?? row;
+		}
+		return billingAccess(row, now);
 	});

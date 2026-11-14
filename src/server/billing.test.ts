@@ -7,7 +7,7 @@ vi.mock("@/db", () => ({ db: {} }));
 vi.mock("cloudflare:workers", () => ({ env: {} }));
 
 vi.mock("@/lib/posthog-server", () => ({ captureBillingTrialStarted: vi.fn() }));
-vi.mock("@/middleware/org", () => ({ orgMiddleware: {} }));
+vi.mock("@/middleware/org", () => ({ orgMiddleware: {}, orgMiddlewareAllowLocked: {} }));
 
 const { ensureSubscription, startOrgBilling } = await import("./billing");
 
@@ -24,6 +24,7 @@ function fakeDodo() {
 			create: vi.fn(async (_: unknown) => ({ subscription_id: "sub_1" })),
 			retrieve: vi.fn(async (id: string) => ({
 				subscription_id: id,
+				customer: { customer_id: "cus_1" },
 				status: "active",
 				created_at: SUB_CREATED,
 				trial_period_days: 15,

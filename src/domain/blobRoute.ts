@@ -1,6 +1,6 @@
 import { and, eq, gte, not, or, sql } from "drizzle-orm";
 import { mediaBlob } from "@/db/app-schema";
-import { changeRequest, communityProfile, post } from "@/db/schema";
+import { changeRequest, communityProfile, member, orgBilling, post } from "@/db/schema";
 import {
 	BLOB_MEDIA_KIND,
 	BLOB_STATUS,
@@ -26,6 +26,7 @@ import { verifyVideo } from "./video";
 import type { Actor, Role } from "./permission";
 import { visibleProfileWhere } from "./queries/profiles";
 import type { QueryDb } from "./queries/db";
+import { loadOrgMembership, lockFromJoined, orgBillingAccessColumns } from "./queries/orgLock";
 
 /** Header carrying the browser-computed hex sha256 of a `profilePhoto` `display`. */
 export const SHA256_HEADER = "x-blob-sha256";
@@ -209,13 +210,23 @@ const servedType = (variant: BlobVariant, object: BlobObject) => {
  * one variant of a `pending` Blob; `GET` serves an attached one after the full owning-record check.
  */
 export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps) {
-	/** `sha256(session cookie)` → user and role per org. */
-	const sessions = ttlMemo<{ userId: string; roles: Record<string, Role> }>(now);
+	/** `sha256(session cookie)` → user, role per org, and the orgs Locked at load. */
+	const sessions = ttlMemo<{
+		userId: string;
+		roles: Record<string, Role>;
+		locked: Record<string, true>;
+	}>(now);
 	/** `orgId` → restricted Blob ids. */
 	const restricted = ttlMemo<Set<string>>(now);
 
-	/** Actor in the URL's org via the memo; on a miss reads the session and memberships live. */
-	async function memoActor(request: Request, organizationId: string): Promise<Actor | null> {
+	/**
+	 * Actor in the URL's org via the memo; on a miss reads the session and memberships (⋈
+	 * `orgBilling`) live. Lock lags by the memo TTL at most.
+	 */
+	async function memoActor(
+		request: Request,
+		organizationId: string
+	): Promise<(Actor & { locked: boolean }) | null> {
 		const token = sessionToken(request);
 		if (!token) return null;
 		const key = await sha256Hex(token);
@@ -223,20 +234,36 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 		if (!session) {
 			const userId = await getUserId(request);
 			if (!userId) return null;
-			const rows = await db.query.member.findMany({
-				where: (f, o) => o.eq(f.userId, userId),
-				columns: { organizationId: true, role: true },
-			});
+			const rows = await db
+				.select({
+					organizationId: member.organizationId,
+					role: member.role,
+					...orgBillingAccessColumns,
+				})
+				.from(member)
+				.leftJoin(orgBilling, eq(orgBilling.organizationId, member.organizationId))
+				.where(eq(member.userId, userId));
+			const at = now();
 			session = {
 				userId,
 				roles: Object.fromEntries(rows.map((r) => [r.organizationId, r.role as Role])),
+				locked: Object.fromEntries(
+					rows.filter((r) => lockFromJoined(r, at)).map((r) => [r.organizationId, true] as const)
+				),
 			};
 			sessions.set(key, session);
 		}
 		const role = Object.hasOwn(session.roles, organizationId)
 			? session.roles[organizationId]
 			: undefined;
-		return role ? { userId: session.userId, organizationId, role } : null;
+		return role
+			? {
+					userId: session.userId,
+					organizationId,
+					role,
+					locked: Object.hasOwn(session.locked, organizationId),
+				}
+			: null;
 	}
 
 	async function isRestricted(organizationId: string, blobId: string) {
@@ -246,15 +273,6 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 			restricted.set(organizationId, ids);
 		}
 		return ids.has(blobId);
-	}
-
-	/** Actor in the URL's org (never the active org), or null for a non-member. */
-	async function actorIn(organizationId: string, userId: string): Promise<Actor | null> {
-		const m = await db.query.member.findFirst({
-			where: (f, o) => o.and(o.eq(f.organizationId, organizationId), o.eq(f.userId, userId)),
-			columns: { role: true },
-		});
-		return m ? { userId, organizationId, role: m.role as Role } : null;
 	}
 
 	async function upload(
@@ -268,7 +286,10 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 
 		const userId = await getUserId(request);
 		if (!userId) return plain(401, "Sign in to upload");
-		if (!(await actorIn(organizationId, userId))) return notFound();
+		// The URL's org (never the active org); a non-member is 404.
+		const membership = await loadOrgMembership(db, organizationId, userId, now());
+		if (!membership) return notFound();
+		if (membership.lockReason) return plain(403, "Organization locked");
 
 		const row = await db.query.mediaBlob.findFirst({
 			where: (f, o) => o.and(o.eq(f.id, blobId), o.eq(f.organizationId, organizationId)),
@@ -375,6 +396,7 @@ export function makeBlobRoute({ db, bucket, getUserId, sessionToken, now }: Deps
 	) {
 		const actor = await memoActor(request, organizationId);
 		if (!actor) return notFound();
+		if (actor.locked) return plain(403, "Organization locked");
 
 		// Unrestricted plus member: no D1. Content type comes from the object's `httpMetadata`.
 		if (await isRestricted(organizationId, blobId)) {

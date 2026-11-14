@@ -1,50 +1,55 @@
 import { eq } from "drizzle-orm";
-import type DodoPayments from "dodopayments";
+import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import type { Subscription } from "dodopayments/resources/subscriptions";
 import { orgBilling } from "@/db/schema";
-import type { QueryDb } from "@/domain/queries/db";
+
+type Db = BaseSQLiteDatabase<"async", any, any>;
+export type OrgBillingRecord = typeof orgBilling.$inferSelect;
+
+/** The one Dodo read the mirror needs; `DodoPayments` satisfies it. */
+export type DodoSubscriptions = {
+	subscriptions: { retrieve(id: string): PromiseLike<Subscription> };
+};
 
 const DAY_MS = 86_400_000;
 
-type OrgBillingRow = typeof orgBilling.$inferSelect;
-
-/** Dodo-mirrored columns of `orgBilling` from one Subscription. `pastDueEndsAt` is webhook-only. */
-export function subscriptionColumns(sub: Subscription, syncedAt: Date) {
-	return {
-		subscriptionId: sub.subscription_id,
-		status: sub.status,
-		trialEndsAt: new Date(new Date(sub.created_at).getTime() + sub.trial_period_days * DAY_MS),
-		nextBillingDate: sub.next_billing_date ? new Date(sub.next_billing_date) : null,
-		cancelAtNextBillingDate: sub.cancel_at_next_billing_date,
-		hasPaymentMethod: sub.has_payment_method,
-		recurringPreTaxAmount: sub.recurring_pre_tax_amount,
-		needsSubscription: false,
-		syncedAt,
-	} satisfies Partial<OrgBillingRow>;
-}
-
 /**
- * Retrieve `subscriptionId` from Dodo and overwrite the org's `orgBilling` row with it
- * (order-independent: always the latest Dodo state). Throws on Dodo failure. Returns the new row.
+ * Pull `subscriptionId` from Dodo and overwrite the org's `orgBilling` row with it (it becomes the
+ * row's current sub). Order-independent: the row ends in Dodo's latest state whatever event
+ * triggered it. `pastDueEndsAt` comes from a webhook payload only (GET lacks it); kept while the sub
+ * stays `past_due`, cleared otherwise. Dodo errors propagate. Returns the new row, or null if the
+ * org has no row.
  */
-export async function pullSubscriptionIntoRow({
-	db,
-	dodo,
-	organizationId,
-	subscriptionId,
-	now = () => new Date(),
-}: {
-	db: QueryDb;
-	dodo: Pick<DodoPayments, "subscriptions">;
-	organizationId: string;
-	subscriptionId: string;
-	now?: () => Date;
-}): Promise<OrgBillingRow | undefined> {
-	const sub = await dodo.subscriptions.retrieve(subscriptionId);
+export async function pullSubscriptionIntoRow(
+	db: Db,
+	dodo: DodoSubscriptions,
+	args: {
+		organizationId: string;
+		subscriptionId: string;
+		pastDueEndsAt?: Date;
+		now?: Date;
+	}
+): Promise<OrgBillingRecord | null> {
+	const sub = await dodo.subscriptions.retrieve(args.subscriptionId);
+	const pastDue = sub.status === "past_due";
 	const [row] = await db
 		.update(orgBilling)
-		.set(subscriptionColumns(sub, now()))
-		.where(eq(orgBilling.organizationId, organizationId))
+		.set({
+			subscriptionId: sub.subscription_id,
+			dodoCustomerId: sub.customer.customer_id,
+			status: sub.status,
+			trialEndsAt: new Date(Date.parse(sub.created_at) + sub.trial_period_days * DAY_MS),
+			nextBillingDate: new Date(sub.next_billing_date),
+			cancelAtNextBillingDate: sub.cancel_at_next_billing_date,
+			hasPaymentMethod: sub.has_payment_method,
+			recurringPreTaxAmount: sub.recurring_pre_tax_amount,
+			needsSubscription: false,
+			syncedAt: args.now ?? new Date(),
+			...(!pastDue
+				? { pastDueEndsAt: null }
+				: args.pastDueEndsAt && { pastDueEndsAt: args.pastDueEndsAt }),
+		})
+		.where(eq(orgBilling.organizationId, args.organizationId))
 		.returning();
-	return row;
+	return row ?? null;
 }

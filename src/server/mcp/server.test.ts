@@ -243,4 +243,27 @@ describe("MCP server (stateless, 2025 Streamable HTTP)", () => {
 		expect(result).toMatchObject({ isError: true, content: [{ text: "Internal error" }] });
 		expect(JSON.stringify(result)).not.toContain("secret detail");
 	});
+
+	it("locked org: tools/list still works, every tool call → isError OrgLocked text", async () => {
+		authInfo = {
+			...authInfo,
+			resource: new URL("https://kutumb.example.org/api/mcp"),
+			extra: { actor: { ...ACTOR, lock: { reason: "canceled", orgName: "Patel Parivar" } } },
+		} as typeof authInfo;
+		const { result: list } = await rpc("tools/list");
+		expect(list.tools.length).toBeGreaterThan(0);
+
+		const { result } = await rpc("tools/call", { name: "whoami", arguments: {} });
+		expect(result).toEqual({
+			isError: true,
+			content: [
+				{
+					type: "text",
+					text: `OrgLocked (canceled): "Patel Parivar" is locked: its subscription ended. Its data is safe. Tell the user an owner must subscribe at https://kutumb.example.org/locked; retrying won't help.`,
+				},
+			],
+		});
+		expect(mocks.org).not.toHaveBeenCalled();
+		expect(mocks.capture).toHaveBeenCalledWith(expect.objectContaining({ isError: true }));
+	});
 });

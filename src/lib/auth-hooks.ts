@@ -4,6 +4,8 @@ import type { OrganizationOptions } from "better-auth/plugins";
 import { env } from "cloudflare:workers";
 import { db } from "@/db";
 import { removeMemberConnections } from "@/domain/queries/connections";
+import { loadOrgLock } from "@/domain/queries/orgLock";
+import { makeLockGuard } from "@/domain/lockGuard";
 import { LIMIT_COPY, LimitError } from "@/domain/limits";
 import { ONBOARDING_INVITATIONS_PATH, loginHref } from "@/domain/authRoutes";
 import { grantedWrite, inferApplicationType, registrationKind } from "@/domain/mcpOauth";
@@ -31,11 +33,25 @@ async function dropConnections(userId: string, organizationId: string) {
 	if (!result.success) console.error("Failed to drop Connections of removed member", result.error);
 }
 
+const lockGuard = makeLockGuard((organizationId) => loadOrgLock(db, organizationId, new Date()));
+
 export const organizationHooks = {
 	beforeAcceptInvitation: async ({ user }) =>
 		limitGuard(() => limits.assertOrgSlot(user.id), LIMIT_COPY.orgAccept.description),
-	beforeCreateInvitation: async ({ organization }) =>
-		limitGuard(() => limits.assertMemberSlot(organization.id), LIMIT_COPY.memberInvite.description),
+	beforeCreateInvitation: async ({ organization }) => {
+		await lockGuard.invite({ organization });
+		await limitGuard(
+			() => limits.assertMemberSlot(organization.id),
+			LIMIT_COPY.memberInvite.description
+		);
+	},
+	beforeUpdateOrganization: async ({ member }) => {
+		await lockGuard.updateOrganization({ member });
+	},
+	// Under Lock only ownership transfer may change roles.
+	beforeUpdateMemberRole: async ({ member, newRole, organization }) => {
+		await lockGuard.updateMemberRole({ member, newRole, organization });
+	},
 	// A Connection ends with the member's membership (ADR 0004).
 	afterRemoveMember: async ({ user, organization }) => {
 		await dropConnections(user.id, organization.id);
