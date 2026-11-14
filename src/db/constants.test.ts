@@ -11,6 +11,7 @@ describe("auditActionsInCategory", () => {
 			"profile.reactivated",
 			"profile.reassigned",
 			"profile.deleted",
+			"profile.photo_changed",
 		]);
 		expect(auditActionsInCategory("relation")).toEqual(["relation.added", "relation.removed"]);
 		expect(auditActionsInCategory("address")).toEqual([

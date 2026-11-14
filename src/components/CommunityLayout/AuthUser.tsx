@@ -18,11 +18,19 @@ import {
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { useActor } from "@/hooks/useActor";
+import { blobUrl } from "@/domain/blob";
+import { useMyPhotoBlobId } from "@/queries/communityProfile";
 
 export function AuthUser() {
 	const { data: session } = authClient.useSession();
 	const actor = useActor();
 	const { isMobile } = useSidebar();
+	// Active org's linked profile photo, else the account image.
+	const photoBlobId = useMyPhotoBlobId(actor?.organizationId);
+	const image =
+		photoBlobId && actor
+			? blobUrl(actor.organizationId, photoBlobId, "avatar")
+			: (session?.user?.image ?? undefined);
 
 	return (
 		<SidebarMenu>
@@ -37,7 +45,7 @@ export function AuthUser() {
 						}
 					>
 						<Avatar className="h-8 w-8 rounded-lg">
-							<AvatarImage src={session?.user?.image ?? undefined} />
+							<AvatarImage key={image} src={image} alt="" />
 							<AvatarFallback className="rounded-lg">
 								{(session?.user?.name ?? session?.user?.email)?.at(0)?.toUpperCase()}
 							</AvatarFallback>
@@ -60,7 +68,7 @@ export function AuthUser() {
 							<DropdownMenuLabel className="p-0 font-normal">
 								<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
 									<Avatar className="h-8 w-8 rounded-lg">
-										<AvatarImage src={session?.user?.image ?? undefined} />
+										<AvatarImage key={image} src={image} alt="" />
 										<AvatarFallback className="rounded-lg">
 											{(session?.user?.name ?? session?.user?.email)?.at(0)?.toUpperCase()}
 										</AvatarFallback>

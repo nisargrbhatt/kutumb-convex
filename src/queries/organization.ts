@@ -6,8 +6,10 @@ import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/domain/limits";
 import type { Role } from "@/domain/permission";
 import { useActor } from "@/hooks/useActor";
 import { authClient } from "@/lib/auth-client";
-import { getMyOrganizationCount, getOrgUsage } from "@/server/organization";
-import { accountKeys, orgKeys } from "./keys";
+import { isAppError } from "@/domain/errors";
+import { SLUG_TAKEN, type CreateOrganizationInput } from "@/domain/organization";
+import { createOrganizationFn, getMyOrganizationCount, getOrgUsage } from "@/server/organization";
+import { accountKeys, billingKeys, orgKeys } from "./keys";
 import { toastMutationError, unwrap, useOrgId } from "./mutation";
 
 export const myOrganizationCountQuery = (userId: string) =>
@@ -38,8 +40,8 @@ function useResetToOrg() {
 	const qc = useQueryClient();
 	const router = useRouter();
 	const previousOrgId = useActor()?.organizationId;
-	return async (to: "/dashboard" | "/onboarding/create") => {
-		await router.navigate({ to });
+	return async (to: "/dashboard" | "/onboarding/create", search?: { trialStarted: 1 }) => {
+		await router.navigate({ to, search });
 		await router.invalidate();
 		if (previousOrgId) qc.removeQueries({ predicate: (q) => q.queryKey[1] === previousOrgId });
 	};
@@ -57,27 +59,32 @@ export function useSwitchOrganization() {
 	};
 }
 
-type OrgInput = { name: string; slug: string };
-
-const SLUG_TAKEN = "SLUG_TAKEN";
+/**
+ * Share link: switch to `organization` and stay on the current page (`invalidate` re-runs root
+ * `beforeLoad` + loaders under the new org), then drop the old tenant's cache. True on success.
+ */
+export function useSwitchOrganizationInPlace() {
+	const qc = useQueryClient();
+	const router = useRouter();
+	const previousOrgId = useActor()?.organizationId;
+	return async (organization: { id: string; name: string }) => {
+		const { error } = await authClient.organization.setActive({ organizationId: organization.id });
+		if (error) {
+			toastMutationError("Organization", "Could not switch organization")(error);
+			return false;
+		}
+		await router.invalidate();
+		if (previousOrgId) qc.removeQueries({ predicate: (q) => q.queryKey[1] === previousOrgId });
+		toast.success(`Switched to ${organization.name}`);
+		return true;
+	};
+}
 
 export function useCreateOrganization() {
 	const posthog = usePostHog();
 	const reset = useResetToOrg();
 	return useMutation({
-		mutationFn: async (values: OrgInput) => {
-			const { data } = await authClient.organization.checkSlug({ slug: values.slug });
-			if (!data?.status) {
-				throw Object.assign(new Error("Organization slug already exist"), { code: SLUG_TAKEN });
-			}
-			return unwrap(
-				authClient.organization.create({
-					...values,
-					keepCurrentActiveOrganization: false,
-					metadata: {},
-				})
-			);
-		},
+		mutationFn: (values: CreateOrganizationInput) => createOrganizationFn({ data: values }),
 		onSuccess: async (_data, values) => {
 			posthog.capture("organization_created", {
 				organization_name: values.name,
@@ -86,11 +93,10 @@ export function useCreateOrganization() {
 			toast.success("Organization created successfully", {
 				description: "You can now access your organization. Redirecting you to dashboard",
 			});
-			await reset("/dashboard");
+			await reset("/dashboard", { trialStarted: 1 });
 		},
 		onError: (error, values) => {
-			const code = (error as { code?: string }).code;
-			if (code === SLUG_TAKEN) {
+			if (isSlugTaken(error)) {
 				posthog.capture("organization_create_failed", {
 					reason: "slug_conflict",
 					slug: values.slug,
@@ -98,6 +104,7 @@ export function useCreateOrganization() {
 				toast.error("Organization slug already exist", { description: "Please try another slug." });
 				return;
 			}
+			const code = isAppError(error) ? error.code : undefined;
 			posthog.capture("organization_create_failed", {
 				reason: code === LIMIT_ERROR_CODES.org ? "org_limit" : "server_error",
 				name: values.name,
@@ -112,7 +119,7 @@ export function useCreateOrganization() {
 	});
 }
 
-export const isSlugTaken = (error: unknown) => (error as { code?: string })?.code === SLUG_TAKEN;
+export const isSlugTaken = (error: unknown) => isAppError(error) && error.code === SLUG_TAKEN;
 
 export function useUpdateOrganization() {
 	const posthog = usePostHog();
@@ -142,6 +149,58 @@ export function useDeleteOrganization() {
 		onError: toastMutationError("Failed to delete organization", "Please try again later."),
 	});
 }
+
+/** Leave the active org (works under Lock); then off to whatever org is next. */
+export function useLeaveOrganization() {
+	const posthog = usePostHog();
+	const orgId = useOrgId();
+	const reset = useResetToOrg();
+	return useMutation({
+		mutationFn: () => unwrap(authClient.organization.leave({ organizationId: orgId })),
+		onSuccess: async () => {
+			posthog.capture("organization_left", { organization_id: orgId });
+			toast.success("Organization", { description: "You left the organization" });
+			await reset("/dashboard");
+		},
+		onError: toastMutationError("Couldn't leave the organization", "Please try again later."),
+	});
+}
+
+/**
+ * Owner → owner handoff (allowed under Lock): promote `memberId` to owner, then step down to
+ * admin. `selfMemberId` = the caller's member row.
+ */
+export function useTransferOwnership() {
+	const posthog = usePostHog();
+	const router = useRouter();
+	const qc = useQueryClient();
+	const orgId = useOrgId();
+	return useMutation({
+		mutationFn: async (v: { memberId: string; selfMemberId: string }) => {
+			await unwrap(
+				authClient.organization.updateMemberRole({ memberId: v.memberId, role: "owner" })
+			);
+			await unwrap(
+				authClient.organization.updateMemberRole({ memberId: v.selfMemberId, role: "admin" })
+			);
+		},
+		onSuccess: async () => {
+			posthog.capture("organization_ownership_transferred", { organization_id: orgId });
+			toast.success("Ownership transferred");
+			await qc.invalidateQueries({ queryKey: billingKeys.all(orgId) });
+			await router.invalidate();
+		},
+		onError: toastMutationError("Couldn't transfer ownership", "Please try again later."),
+	});
+}
+
+/** Members of the active org (better-auth; works under Lock). */
+export const orgMembersQuery = (orgId: string) =>
+	queryOptions({
+		queryKey: orgKeys.members(orgId),
+		queryFn: () =>
+			unwrap(authClient.organization.listMembers({ query: { organizationId: orgId } })),
+	});
 
 type InviteInput = { email: string; role: Role };
 

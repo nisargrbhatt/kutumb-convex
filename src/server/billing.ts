@@ -1,0 +1,115 @@
+import { createServerFn } from "@tanstack/react-start";
+import z from "zod";
+import { db as defaultDb } from "@/db";
+import { AppError } from "@/domain/errors";
+import { assertCan } from "@/domain/permission";
+import { loadActiveOrgBilling } from "@/domain/queries/activeOrgBilling";
+import {
+	billingRow,
+	ensureSubscription,
+	loadBillingPage,
+	returnUrl,
+	setCancelAtPeriodEnd,
+	startCheckout,
+	syncBilling,
+} from "@/lib/billing";
+import { appUrl, createDodo } from "@/lib/dodo";
+import { captureBillingEvent } from "@/lib/posthog-server";
+import { orgMiddleware, orgMiddlewareAllowLocked } from "@/middleware/org";
+
+/*
+ * Billing server fns only. Logic lives in `@/lib/billing`: plain exports here would drag `@/db`
+ * and `cloudflare:workers` into the client bundle (only `createServerFn` handlers are stripped).
+ */
+
+/**
+ * Billing for the active org, any role (Lock-exempt): `_community` gate, `/locked` (owner list),
+ * banner. Price only for owners.
+ */
+export const getActiveOrgBillingFn = createServerFn({ method: "GET" })
+	.middleware([orgMiddlewareAllowLocked])
+	.handler(async ({ context }) => {
+		const { organizationId, userId } = context.actor;
+		const r = await loadActiveOrgBilling(defaultDb, organizationId, userId, new Date());
+		if (!r) throw new AppError("Forbidden", "Not a member of the active organization");
+		return r;
+	});
+
+/** Owner-only Trial facts for the Trial started dialog; retries `ensureSubscription` if needed. */
+export const getTrialSummaryFn = createServerFn({ method: "GET" })
+	.middleware([orgMiddlewareAllowLocked])
+	.handler(async ({ context }) => {
+		assertCan(context.actor, { billing: ["manage"] });
+		const { organizationId } = context.actor;
+		let row = await billingRow(defaultDb, organizationId);
+		if (!row) throw new AppError("NotFound", "Billing not found");
+		if (row.needsSubscription) {
+			const retried = await ensureSubscription(organizationId);
+			if (retried.success && retried.data) row = retried.data;
+		}
+		return { trialEndsAt: row.trialEndsAt, hasPaymentMethod: row.hasPaymentMethod };
+	});
+
+/** Owner billing page data. */
+export const getBillingFn = createServerFn({ method: "GET" })
+	.middleware([orgMiddlewareAllowLocked])
+	.handler(({ context }) => {
+		assertCan(context.actor, { billing: ["manage"] });
+		return loadBillingPage(context.actor.organizationId);
+	});
+
+/**
+ * Owner-only: a 24h Dodo customer portal link (add / update card). Client navigates to it and
+ * comes back to `returnTo` (billing page by default, or `/locked`).
+ */
+export const openPortalFn = createServerFn({ method: "POST" })
+	.middleware([orgMiddlewareAllowLocked])
+	.validator(z.object({ returnTo: z.enum(["billing", "locked"]) }).optional())
+	.handler(async ({ context, data }) => {
+		assertCan(context.actor, { billing: ["manage"] });
+		const { organizationId, userId } = context.actor;
+		const row = await billingRow(defaultDb, organizationId);
+		if (!row?.dodoCustomerId) {
+			throw new AppError("Conflict", "Billing is still being set up. Try again in a minute.");
+		}
+		const { link } = await createDodo().customers.customerPortal.create(row.dodoCustomerId, {
+			return_url: returnUrl(appUrl(), data?.returnTo ?? "billing"),
+		});
+		captureBillingEvent("billing_checkout_opened", { userId, organizationId, kind: "portal" });
+		return { url: link };
+	});
+
+/** Owner-only, ended sub: Dodo checkout URL to re-subscribe. Client navigates to it. */
+export const startCheckoutFn = createServerFn({ method: "POST" })
+	.middleware([orgMiddlewareAllowLocked])
+	.handler(async ({ context }) => {
+		assertCan(context.actor, { billing: ["manage"] });
+		const { organizationId, userId } = context.actor;
+		const url = await startCheckout(organizationId);
+		captureBillingEvent("billing_checkout_opened", { userId, organizationId, kind: "checkout" });
+		return { url };
+	});
+
+/** Owner-only: cancel at period end (not Lock-exempt: a Locked org has nothing to cancel). */
+export const cancelSubscriptionFn = createServerFn({ method: "POST" })
+	.middleware([orgMiddleware])
+	.handler(({ context }) => {
+		assertCan(context.actor, { billing: ["manage"] });
+		return setCancelAtPeriodEnd(context.actor.organizationId, true);
+	});
+
+/** Owner-only: undo a pending cancel. */
+export const resumeSubscriptionFn = createServerFn({ method: "POST" })
+	.middleware([orgMiddlewareAllowLocked])
+	.handler(({ context }) => {
+		assertCan(context.actor, { billing: ["manage"] });
+		return setCancelAtPeriodEnd(context.actor.organizationId, false);
+	});
+
+/** Owner, back from Dodo (`?from=dodo`): see `syncBilling`. Returns the fresh access. */
+export const syncBillingFn = createServerFn({ method: "POST" })
+	.middleware([orgMiddlewareAllowLocked])
+	.handler(({ context }) => {
+		assertCan(context.actor, { billing: ["manage"] });
+		return syncBilling(context.actor.organizationId);
+	});

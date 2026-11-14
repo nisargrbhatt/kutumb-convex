@@ -17,6 +17,7 @@ const KIND_LABEL: Record<ChangeRequestKind, string> = {
 	address_add: "Add address",
 	address_edit: "Edit address",
 	address_remove: "Remove address",
+	photo: "Photo",
 };
 
 export const requestKindLabel = (kind: ChangeRequestKind) => KIND_LABEL[kind];
@@ -61,5 +62,17 @@ export function requestDiff(r: TypedPayload): RequestDiff {
 			return { tone: "add", rows: relationRows(r.payload) };
 		case "relation_remove":
 			return { tone: "remove", rows: relationRows(r.payload) };
+		// Text only: the proposed image is shown side by side while pending, never once closed.
+		case "photo":
+			return {
+				tone: "change",
+				rows: [
+					{
+						label: "Photo",
+						before: r.payload.base ? "Current photo" : null,
+						after: r.payload.proposed ? "Photo proposed" : "Removal proposed",
+					},
+				],
+			};
 	}
 }

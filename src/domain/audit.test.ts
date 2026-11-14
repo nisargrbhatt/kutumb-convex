@@ -97,3 +97,42 @@ describe("diffRows", () => {
 		expect(diffRows(null)).toEqual([]);
 	});
 });
+
+describe("profile.photo_changed", () => {
+	const photo = { blobId: "b1", sha256: "ab".repeat(32), size: 94_208, width: 1024, height: 1024 };
+
+	it("summary names the profile", () => {
+		expect(groupSummary([ev("profile.photo_changed", { payload: [null, photo] })])).toBe(
+			"Changed photo of Ravi Patel"
+		);
+	});
+
+	it("[before, after] metadata → one Photo row, dimensions and size only", () => {
+		expect(diffRows([null, photo])).toEqual([
+			{ label: "Photo", before: null, after: "1024×1024, 92 KB" },
+		]);
+		expect(diffRows([photo, null])).toEqual([
+			{ label: "Photo", before: "1024×1024, 92 KB", after: null },
+		]);
+		// Metadata without dimensions still reads as a photo.
+		expect(diffRows([{ blobId: "b0" }, photo])).toEqual([
+			{ label: "Photo", before: "Photo", after: "1024×1024, 92 KB" },
+		]);
+	});
+
+	it("deleted snapshot's `photo` → one Photo value row; null photo → no row", () => {
+		expect(diffRows({ firstName: "Asha", photo })).toEqual([
+			{ label: "First name", value: "Asha" },
+			{ label: "Photo", value: "1024×1024, 92 KB" },
+		]);
+		expect(diffRows({ firstName: "Asha", photo: null })).toEqual([
+			{ label: "First name", value: "Asha" },
+		]);
+	});
+
+	it("submitted photo request `{ kind, photo: [before, after] }` → one Photo change row", () => {
+		expect(diffRows({ kind: "photo", photo: [null, photo] })).toEqual([
+			{ label: "Photo", before: null, after: "1024×1024, 92 KB" },
+		]);
+	});
+});

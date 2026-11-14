@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { member, invitation } from "@/db/auth-schema";
 import { communityProfile } from "@/db/app-schema";
 import { and, count, eq } from "drizzle-orm";
+import { memberPendingBytes, orgAttachedBytes } from "@/domain/queries/blobs";
 
 export async function countUserMemberships(userId: string): Promise<number> {
 	const [result] = await db.select({ n: count() }).from(member).where(eq(member.userId, userId));
@@ -26,3 +27,9 @@ export async function countOrgProfiles(organizationId: string): Promise<number> 
 		.where(eq(communityProfile.organizationId, organizationId));
 	return result?.n ?? 0;
 }
+
+export const countMemberPendingBytes = (organizationId: string, userId: string, since: Date) =>
+	memberPendingBytes(db, organizationId, userId, since);
+
+export const countOrgStorageBytes = (organizationId: string) =>
+	orgAttachedBytes(db, organizationId);

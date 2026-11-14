@@ -3,7 +3,7 @@
 	"name": "kutumb",
 	"compatibility_date": "2026-02-24",
 	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
-	"main": "@tanstack/react-start/server-entry",
+	"main": "src/server.ts",
 	"observability": {
 		"enabled": true,
 		"logs": {
@@ -37,6 +37,17 @@
 			"simple": { "limit": 10, "period": 60 },
 		},
 	],
+	// Private blob store (spec: Blobs > R2). No `remote: true`; no `cache` block (it would skip the gate).
+	"r2_buckets": [
+		{
+			"binding": "BLOBS",
+			"bucket_name": "kutumb-blobs",
+		},
+	],
+	// Hourly blob sweep, `scheduled` in src/server.ts.
+	"triggers": {
+		"crons": ["0 * * * *"],
+	},
 	"preview_urls": false,
 	"workers_dev": true,
 	"keep_vars": true,

@@ -16,6 +16,8 @@ import {
 	EmptyMedia,
 	EmptyTitle,
 } from "@/components/ui/empty";
+import { PhotoAvatar } from "@/components/profile/ProfileName";
+import { nameInitials } from "@/domain/communityProfile";
 import { can } from "@/domain/permission";
 import { reviewQueueQuery } from "@/queries/changeRequest";
 import type { ReviewGroup } from "./-components/ReviewDrawer";
@@ -49,20 +51,28 @@ const columns = (open: (profileId: string) => void): ColumnDef<ReviewGroup>[] =>
 		accessorKey: "profileName",
 		header: "Profile",
 		cell: ({ row }) => (
-			<div className="flex min-w-0 flex-col">
-				<span className="font-medium break-words">{row.original.profileName}</span>
-				{row.original.profileStatus === "draft" ? (
-					<span className="text-xs text-muted-foreground">Draft</span>
-				) : null}
-				{/* Kinds + age collapse into the profile cell below md / sm. */}
-				<span className="mt-1 flex flex-wrap gap-1 md:hidden">
-					{row.original.kinds.map((k) => (
-						<KindBadge key={k} kind={k} />
-					))}
-				</span>
-				<span className="mt-1 text-xs text-muted-foreground sm:hidden">
-					Oldest {formatDistanceToNow(row.original.oldestAt, { addSuffix: true })}
-				</span>
+			<div className="flex min-w-0 items-start gap-3">
+				<PhotoAvatar
+					initials={nameInitials(row.original.profileName)}
+					photoBlobId={row.original.photoBlobId}
+					className="size-8 shrink-0"
+					fallbackClassName="text-xs"
+				/>
+				<div className="flex min-w-0 flex-col">
+					<span className="font-medium break-words">{row.original.profileName}</span>
+					{row.original.profileStatus === "draft" ? (
+						<span className="text-xs text-muted-foreground">Draft</span>
+					) : null}
+					{/* Kinds + age collapse into the profile cell below md / sm. */}
+					<span className="mt-1 flex flex-wrap gap-1 md:hidden">
+						{row.original.kinds.map((k) => (
+							<KindBadge key={k} kind={k} />
+						))}
+					</span>
+					<span className="mt-1 text-xs text-muted-foreground sm:hidden">
+						Oldest {formatDistanceToNow(row.original.oldestAt, { addSuffix: true })}
+					</span>
+				</div>
 			</div>
 		),
 	},

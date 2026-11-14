@@ -94,11 +94,17 @@ export function CommunityNav() {
 						<span>Community Tree</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
-				<SidebarMenuItem>
+				<SidebarMenuItem
+					onClick={() => {
+						if (open && isMobile) {
+							toggleSidebar();
+						}
+					}}
+				>
 					<SidebarMenuButton
 						render={
 							<Link
-								to={"/memories"}
+								to={"/feed"}
 								activeProps={{
 									className: "bg-muted",
 								}}
@@ -106,7 +112,7 @@ export function CommunityNav() {
 						}
 					>
 						<IconPhoto />
-						<span>Memories</span>
+						<span>Feed</span>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 				<SidebarMenuItem

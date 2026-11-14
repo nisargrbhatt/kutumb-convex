@@ -16,7 +16,7 @@ import {
 	getOauthSelectOrgFn,
 	pickOauthOrgFn,
 	type OauthClientInfo,
-	type OauthOrg,
+	type OauthSelectOrg,
 } from "@/server/oauth";
 
 export const Route = createFileRoute("/oauth/select-org")({
@@ -35,13 +35,15 @@ function RouteComponent() {
 
 type SelectOrgProps = {
 	client: OauthClientInfo;
-	orgs: OauthOrg[];
+	orgs: OauthSelectOrg[];
 	activeOrganizationId: string | null;
 	email: string;
 };
 
 function SelectOrg({ client, orgs, activeOrganizationId, email }: SelectOrgProps) {
-	const preselected = orgs.find((o) => o.id === activeOrganizationId) ?? orgs[0];
+	// Locked orgs are listed but can't be picked.
+	const pickable = orgs.filter((o) => !o.lockReason);
+	const preselected = pickable.find((o) => o.id === activeOrganizationId) ?? pickable[0];
 	const [orgId, setOrgId] = useState(preselected?.id ?? "");
 	const { pending, setPending, run } = useOauthStep();
 
@@ -96,16 +98,18 @@ function SelectOrg({ client, orgs, activeOrganizationId, email }: SelectOrgProps
 					{orgs.map((o) => (
 						<label
 							key={o.id}
-							className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-data-checked:border-primary has-data-checked:bg-muted"
+							className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-disabled:cursor-not-allowed has-disabled:opacity-60 has-data-checked:border-primary has-data-checked:bg-muted"
 						>
-							<RadioGroupItem value={o.id} />
+							<RadioGroupItem value={o.id} disabled={!!o.lockReason} />
 							<OrgCardIcon />
 							<div className="flex min-w-0 flex-1 flex-col">
 								<span className="truncate text-sm font-medium">{o.name}</span>
-								<span className="truncate text-xs text-muted-foreground">{o.slug}</span>
+								<span className="truncate text-xs text-muted-foreground">
+									{o.lockReason ? "Locked: an owner must subscribe" : o.slug}
+								</span>
 							</div>
-							<Badge variant="outline" className="capitalize">
-								{o.role}
+							<Badge variant={o.lockReason ? "secondary" : "outline"} className="capitalize">
+								{o.lockReason ? "Locked" : o.role}
 							</Badge>
 						</label>
 					))}

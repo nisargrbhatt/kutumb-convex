@@ -10,7 +10,9 @@ export type AppErrorKind =
 	/** Domain rule broken (self-relation, duplicate pair, reassign a draft). */
 	| "Invalid"
 	/** MCP write refused: Connection is read only or the org turned AI writes off (`code` = reason). */
-	| "WriteNotAllowed";
+	| "WriteNotAllowed"
+	/** Org is Locked (billing); `message` and `code` = `LockReason`. */
+	| "Locked";
 
 export class AppError extends Error {
 	name = "AppError" as const;
@@ -26,3 +28,6 @@ export class AppError extends Error {
 
 export const isAppError = (e: unknown): e is AppError =>
 	typeof e === "object" && e !== null && (e as { name?: unknown }).name === "AppError";
+
+/** Org became Locked mid-session: the client re-runs route gates (→ `/locked`). */
+export const isLockedError = (e: unknown) => isAppError(e) && e.kind === "Locked";

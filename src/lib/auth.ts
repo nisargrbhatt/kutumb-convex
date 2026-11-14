@@ -36,7 +36,6 @@ const createAuth = () =>
 	betterAuth({
 		database: drizzleAdapter(db, { provider: "sqlite" }),
 		plugins: [
-			tanstackStartCookies(),
 			organization({
 				ac: ac,
 				roles: { owner, admin, member },
@@ -77,11 +76,14 @@ const createAuth = () =>
 				}),
 				metadataProfile: "mcp-2026-07-28",
 			}),
+			tanstackStartCookies(),
 		],
 		hooks: mcpHooks,
 		// ADR 0006: the plugin's update-consent adds scopes (incl. community:write) with no consent
 		// screen. Write is gained only by reconnecting through the consent screen.
-		disabledPaths: ["/oauth2/update-consent"],
+		// Org create only via `createOrganizationFn` (server `auth.api` call, not routed): it also
+		// inserts the org's `orgBilling` row, which a direct HTTP create would skip.
+		disabledPaths: ["/oauth2/update-consent", "/organization/create"],
 		// 🔒 account.accountLinking.requireLocalEmailVerified defaults to true — left unset,
 		// never set to false. It's the only thing blocking pre-registration takeover now that
 		// requireEmailVerification is off (attacker registers unverified password account on

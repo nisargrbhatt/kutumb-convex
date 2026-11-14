@@ -306,3 +306,11 @@ export const initials = (p: Pick<NameParts, "firstName" | "lastName">) => {
 	const last = Array.from(p.lastName.trim())[0] ?? "";
 	return (first + last).toUpperCase() || "?";
 };
+
+/** Initials of a snapshot name: first letter of the first and last word, `?` when blank. */
+export function nameInitials(name: string) {
+	const words = name.trim().split(/\s+/).filter(Boolean);
+	const first = Array.from(words[0] ?? "")[0] ?? "";
+	const last = words.length > 1 ? (Array.from(words.at(-1)!)[0] ?? "") : "";
+	return (first + last).toUpperCase() || "?";
+}

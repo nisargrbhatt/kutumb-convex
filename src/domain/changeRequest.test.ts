@@ -34,6 +34,15 @@ describe("staleReasonText", () => {
 		).toBe("Changed since requested: Line 1, Postal code, DIGIPIN");
 	});
 
+	it("photo base changed reads as Photo", () => {
+		expect(
+			staleReasonText(
+				{ code: "fields_changed", fields: ["photo"] },
+				{ kind: "photo", payload: { base: null, proposed: "b1" } }
+			)
+		).toBe("Changed since requested: Photo");
+	});
+
 	it("non-field reasons read as sentences", () => {
 		const request = { kind: "relation_add" as const, payload: null as never };
 		expect(staleReasonText({ code: "counterpart_not_active" }, request)).toBe(

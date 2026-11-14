@@ -19,36 +19,41 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthSelectOrgRouteImport } from './routes/oauth/select-org'
 import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
+import { Route as AuthedLockedRouteImport } from './routes/_authed/locked'
 import { Route as AuthedCommunityRouteImport } from './routes/_authed/_community'
 import { Route as DotwellKnownOauthProtectedResourceIndexRouteImport } from './routes/[.]well-known/oauth-protected-resource/index'
 import { Route as publicTermOfServiceIndexRouteImport } from './routes/(public)/term-of-service/index'
 import { Route as publicPrivacyPolicyIndexRouteImport } from './routes/(public)/privacy-policy/index'
 import { Route as publicAboutIndexRouteImport } from './routes/(public)/about/index'
 import { Route as ApiPhSplatRouteImport } from './routes/api/ph/$'
+import { Route as ApiBillingWebhookRouteImport } from './routes/api/billing/webhook'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedCommunitySettingsRouteImport } from './routes/_authed/_community/settings'
 import { Route as AuthedOnboardingInvitationsIndexRouteImport } from './routes/_authed/onboarding/invitations/index'
 import { Route as AuthedOnboardingCreateIndexRouteImport } from './routes/_authed/onboarding/create/index'
 import { Route as AuthedCommunityReviewsIndexRouteImport } from './routes/_authed/_community/reviews/index'
 import { Route as AuthedCommunityMyRequestsIndexRouteImport } from './routes/_authed/_community/my-requests/index'
-import { Route as AuthedCommunityMemoriesIndexRouteImport } from './routes/_authed/_community/memories/index'
 import { Route as AuthedCommunityMembersIndexRouteImport } from './routes/_authed/_community/members/index'
+import { Route as AuthedCommunityFeedIndexRouteImport } from './routes/_authed/_community/feed/index'
 import { Route as AuthedCommunityDashboardIndexRouteImport } from './routes/_authed/_community/dashboard/index'
 import { Route as AuthedCommunityCommunityTreeIndexRouteImport } from './routes/_authed/_community/community-tree/index'
 import { Route as AuthedCommunityAuditLogIndexRouteImport } from './routes/_authed/_community/audit-log/index'
 import { Route as publicDocsMcpIndexRouteImport } from './routes/(public)/docs/mcp/index'
+import { Route as ApiBillingInvoicePaymentIdRouteImport } from './routes/api/billing/invoice/$paymentId'
 import { Route as DotwellKnownOpenidConfigurationApiAuthRouteImport } from './routes/[.]well-known/openid-configuration/api/auth'
 import { Route as DotwellKnownOauthProtectedResourceApiMcpRouteImport } from './routes/[.]well-known/oauth-protected-resource/api/mcp'
 import { Route as DotwellKnownOauthAuthorizationServerApiAuthRouteImport } from './routes/[.]well-known/oauth-authorization-server/api/auth'
 import { Route as AuthedCommunitySettingsOverviewIndexRouteImport } from './routes/_authed/_community/settings/overview/index'
 import { Route as AuthedCommunitySettingsMembersIndexRouteImport } from './routes/_authed/_community/settings/members/index'
 import { Route as AuthedCommunitySettingsFieldsIndexRouteImport } from './routes/_authed/_community/settings/fields/index'
+import { Route as AuthedCommunitySettingsBillingIndexRouteImport } from './routes/_authed/_community/settings/billing/index'
 import { Route as AuthedCommunitySettingsAiIndexRouteImport } from './routes/_authed/_community/settings/ai/index'
 import { Route as AuthedCommunityProfileRelationshipsIndexRouteImport } from './routes/_authed/_community/profile/relationships/index'
 import { Route as AuthedCommunityProfileInfoIndexRouteImport } from './routes/_authed/_community/profile/info/index'
 import { Route as AuthedCommunityProfileAiIndexRouteImport } from './routes/_authed/_community/profile/ai/index'
 import { Route as AuthedCommunityProfileAddressesIndexRouteImport } from './routes/_authed/_community/profile/addresses/index'
 import { Route as AuthedCommunityMembersIdIndexRouteImport } from './routes/_authed/_community/members/$id/index'
+import { Route as AuthedCommunityFeedPostIdIndexRouteImport } from './routes/_authed/_community/feed/$postId/index'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -98,6 +103,11 @@ const ApiMcpRoute = ApiMcpRouteImport.update({
   path: '/api/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedLockedRoute = AuthedLockedRouteImport.update({
+  id: '/locked',
+  path: '/locked',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedCommunityRoute = AuthedCommunityRouteImport.update({
   id: '/_community',
   getParentRoute: () => AuthedRoute,
@@ -128,6 +138,11 @@ const publicAboutIndexRoute = publicAboutIndexRouteImport.update({
 const ApiPhSplatRoute = ApiPhSplatRouteImport.update({
   id: '/api/ph/$',
   path: '/api/ph/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingWebhookRoute = ApiBillingWebhookRouteImport.update({
+  id: '/api/billing/webhook',
+  path: '/api/billing/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -164,16 +179,16 @@ const AuthedCommunityMyRequestsIndexRoute =
     path: '/my-requests/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
-const AuthedCommunityMemoriesIndexRoute =
-  AuthedCommunityMemoriesIndexRouteImport.update({
-    id: '/memories/',
-    path: '/memories/',
-    getParentRoute: () => AuthedCommunityRoute,
-  } as any)
 const AuthedCommunityMembersIndexRoute =
   AuthedCommunityMembersIndexRouteImport.update({
     id: '/members/',
     path: '/members/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
+const AuthedCommunityFeedIndexRoute =
+  AuthedCommunityFeedIndexRouteImport.update({
+    id: '/feed/',
+    path: '/feed/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
 const AuthedCommunityDashboardIndexRoute =
@@ -199,6 +214,12 @@ const publicDocsMcpIndexRoute = publicDocsMcpIndexRouteImport.update({
   path: '/docs/mcp/',
   getParentRoute: () => publicRouteRoute,
 } as any)
+const ApiBillingInvoicePaymentIdRoute =
+  ApiBillingInvoicePaymentIdRouteImport.update({
+    id: '/api/billing/invoice/$paymentId',
+    path: '/api/billing/invoice/$paymentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DotwellKnownOpenidConfigurationApiAuthRoute =
   DotwellKnownOpenidConfigurationApiAuthRouteImport.update({
     id: '/.well-known/openid-configuration/api/auth',
@@ -233,6 +254,12 @@ const AuthedCommunitySettingsFieldsIndexRoute =
   AuthedCommunitySettingsFieldsIndexRouteImport.update({
     id: '/fields/',
     path: '/fields/',
+    getParentRoute: () => AuthedCommunitySettingsRoute,
+  } as any)
+const AuthedCommunitySettingsBillingIndexRoute =
+  AuthedCommunitySettingsBillingIndexRouteImport.update({
+    id: '/billing/',
+    path: '/billing/',
     getParentRoute: () => AuthedCommunitySettingsRoute,
   } as any)
 const AuthedCommunitySettingsAiIndexRoute =
@@ -271,6 +298,12 @@ const AuthedCommunityMembersIdIndexRoute =
     path: '/members/$id/',
     getParentRoute: () => AuthedCommunityRoute,
   } as any)
+const AuthedCommunityFeedPostIdIndexRoute =
+  AuthedCommunityFeedPostIdIndexRouteImport.update({
+    id: '/feed/$postId/',
+    path: '/feed/$postId/',
+    getParentRoute: () => AuthedCommunityRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -278,11 +311,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/locked': typeof AuthedLockedRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/select-org': typeof OauthSelectOrgRoute
   '/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about/': typeof publicAboutIndexRoute
   '/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
@@ -291,22 +326,25 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  '/api/billing/invoice/$paymentId': typeof ApiBillingInvoicePaymentIdRoute
   '/docs/mcp/': typeof publicDocsMcpIndexRoute
   '/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard/': typeof AuthedCommunityDashboardIndexRoute
+  '/feed/': typeof AuthedCommunityFeedIndexRoute
   '/members/': typeof AuthedCommunityMembersIndexRoute
-  '/memories/': typeof AuthedCommunityMemoriesIndexRoute
   '/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
   '/reviews/': typeof AuthedCommunityReviewsIndexRoute
   '/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
+  '/feed/$postId/': typeof AuthedCommunityFeedPostIdIndexRoute
   '/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
   '/profile/ai/': typeof AuthedCommunityProfileAiIndexRoute
   '/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
   '/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
   '/settings/ai/': typeof AuthedCommunitySettingsAiIndexRoute
+  '/settings/billing/': typeof AuthedCommunitySettingsBillingIndexRoute
   '/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
   '/settings/members/': typeof AuthedCommunitySettingsMembersIndexRoute
   '/settings/overview/': typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -317,11 +355,13 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/locked': typeof AuthedLockedRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/select-org': typeof OauthSelectOrgRoute
   '/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/about': typeof publicAboutIndexRoute
   '/privacy-policy': typeof publicPrivacyPolicyIndexRoute
@@ -330,22 +370,25 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  '/api/billing/invoice/$paymentId': typeof ApiBillingInvoicePaymentIdRoute
   '/docs/mcp': typeof publicDocsMcpIndexRoute
   '/audit-log': typeof AuthedCommunityAuditLogIndexRoute
   '/community-tree': typeof AuthedCommunityCommunityTreeIndexRoute
   '/dashboard': typeof AuthedCommunityDashboardIndexRoute
+  '/feed': typeof AuthedCommunityFeedIndexRoute
   '/members': typeof AuthedCommunityMembersIndexRoute
-  '/memories': typeof AuthedCommunityMemoriesIndexRoute
   '/my-requests': typeof AuthedCommunityMyRequestsIndexRoute
   '/reviews': typeof AuthedCommunityReviewsIndexRoute
   '/onboarding/create': typeof AuthedOnboardingCreateIndexRoute
   '/onboarding/invitations': typeof AuthedOnboardingInvitationsIndexRoute
+  '/feed/$postId': typeof AuthedCommunityFeedPostIdIndexRoute
   '/members/$id': typeof AuthedCommunityMembersIdIndexRoute
   '/profile/addresses': typeof AuthedCommunityProfileAddressesIndexRoute
   '/profile/ai': typeof AuthedCommunityProfileAiIndexRoute
   '/profile/info': typeof AuthedCommunityProfileInfoIndexRoute
   '/profile/relationships': typeof AuthedCommunityProfileRelationshipsIndexRoute
   '/settings/ai': typeof AuthedCommunitySettingsAiIndexRoute
+  '/settings/billing': typeof AuthedCommunitySettingsBillingIndexRoute
   '/settings/fields': typeof AuthedCommunitySettingsFieldsIndexRoute
   '/settings/members': typeof AuthedCommunitySettingsMembersIndexRoute
   '/settings/overview': typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -360,11 +403,13 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authed/_community': typeof AuthedCommunityRouteWithChildren
+  '/_authed/locked': typeof AuthedLockedRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/select-org': typeof OauthSelectOrgRoute
   '/_authed/_community/settings': typeof AuthedCommunitySettingsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/ph/$': typeof ApiPhSplatRoute
   '/(public)/about/': typeof publicAboutIndexRoute
   '/(public)/privacy-policy/': typeof publicPrivacyPolicyIndexRoute
@@ -373,22 +418,25 @@ export interface FileRoutesById {
   '/.well-known/oauth-authorization-server/api/auth': typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/.well-known/openid-configuration/api/auth': typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  '/api/billing/invoice/$paymentId': typeof ApiBillingInvoicePaymentIdRoute
   '/(public)/docs/mcp/': typeof publicDocsMcpIndexRoute
   '/_authed/_community/audit-log/': typeof AuthedCommunityAuditLogIndexRoute
   '/_authed/_community/community-tree/': typeof AuthedCommunityCommunityTreeIndexRoute
   '/_authed/_community/dashboard/': typeof AuthedCommunityDashboardIndexRoute
+  '/_authed/_community/feed/': typeof AuthedCommunityFeedIndexRoute
   '/_authed/_community/members/': typeof AuthedCommunityMembersIndexRoute
-  '/_authed/_community/memories/': typeof AuthedCommunityMemoriesIndexRoute
   '/_authed/_community/my-requests/': typeof AuthedCommunityMyRequestsIndexRoute
   '/_authed/_community/reviews/': typeof AuthedCommunityReviewsIndexRoute
   '/_authed/onboarding/create/': typeof AuthedOnboardingCreateIndexRoute
   '/_authed/onboarding/invitations/': typeof AuthedOnboardingInvitationsIndexRoute
+  '/_authed/_community/feed/$postId/': typeof AuthedCommunityFeedPostIdIndexRoute
   '/_authed/_community/members/$id/': typeof AuthedCommunityMembersIdIndexRoute
   '/_authed/_community/profile/addresses/': typeof AuthedCommunityProfileAddressesIndexRoute
   '/_authed/_community/profile/ai/': typeof AuthedCommunityProfileAiIndexRoute
   '/_authed/_community/profile/info/': typeof AuthedCommunityProfileInfoIndexRoute
   '/_authed/_community/profile/relationships/': typeof AuthedCommunityProfileRelationshipsIndexRoute
   '/_authed/_community/settings/ai/': typeof AuthedCommunitySettingsAiIndexRoute
+  '/_authed/_community/settings/billing/': typeof AuthedCommunitySettingsBillingIndexRoute
   '/_authed/_community/settings/fields/': typeof AuthedCommunitySettingsFieldsIndexRoute
   '/_authed/_community/settings/members/': typeof AuthedCommunitySettingsMembersIndexRoute
   '/_authed/_community/settings/overview/': typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -401,11 +449,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/locked'
     | '/api/mcp'
     | '/oauth/consent'
     | '/oauth/select-org'
     | '/settings'
     | '/api/auth/$'
+    | '/api/billing/webhook'
     | '/api/ph/$'
     | '/about/'
     | '/privacy-policy/'
@@ -414,22 +464,25 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/api/auth'
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
+    | '/api/billing/invoice/$paymentId'
     | '/docs/mcp/'
     | '/audit-log/'
     | '/community-tree/'
     | '/dashboard/'
+    | '/feed/'
     | '/members/'
-    | '/memories/'
     | '/my-requests/'
     | '/reviews/'
     | '/onboarding/create/'
     | '/onboarding/invitations/'
+    | '/feed/$postId/'
     | '/members/$id/'
     | '/profile/addresses/'
     | '/profile/ai/'
     | '/profile/info/'
     | '/profile/relationships/'
     | '/settings/ai/'
+    | '/settings/billing/'
     | '/settings/fields/'
     | '/settings/members/'
     | '/settings/overview/'
@@ -440,11 +493,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/locked'
     | '/api/mcp'
     | '/oauth/consent'
     | '/oauth/select-org'
     | '/settings'
     | '/api/auth/$'
+    | '/api/billing/webhook'
     | '/api/ph/$'
     | '/about'
     | '/privacy-policy'
@@ -453,22 +508,25 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/api/auth'
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
+    | '/api/billing/invoice/$paymentId'
     | '/docs/mcp'
     | '/audit-log'
     | '/community-tree'
     | '/dashboard'
+    | '/feed'
     | '/members'
-    | '/memories'
     | '/my-requests'
     | '/reviews'
     | '/onboarding/create'
     | '/onboarding/invitations'
+    | '/feed/$postId'
     | '/members/$id'
     | '/profile/addresses'
     | '/profile/ai'
     | '/profile/info'
     | '/profile/relationships'
     | '/settings/ai'
+    | '/settings/billing'
     | '/settings/fields'
     | '/settings/members'
     | '/settings/overview'
@@ -482,11 +540,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authed/_community'
+    | '/_authed/locked'
     | '/api/mcp'
     | '/oauth/consent'
     | '/oauth/select-org'
     | '/_authed/_community/settings'
     | '/api/auth/$'
+    | '/api/billing/webhook'
     | '/api/ph/$'
     | '/(public)/about/'
     | '/(public)/privacy-policy/'
@@ -495,22 +555,25 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/api/auth'
     | '/.well-known/oauth-protected-resource/api/mcp'
     | '/.well-known/openid-configuration/api/auth'
+    | '/api/billing/invoice/$paymentId'
     | '/(public)/docs/mcp/'
     | '/_authed/_community/audit-log/'
     | '/_authed/_community/community-tree/'
     | '/_authed/_community/dashboard/'
+    | '/_authed/_community/feed/'
     | '/_authed/_community/members/'
-    | '/_authed/_community/memories/'
     | '/_authed/_community/my-requests/'
     | '/_authed/_community/reviews/'
     | '/_authed/onboarding/create/'
     | '/_authed/onboarding/invitations/'
+    | '/_authed/_community/feed/$postId/'
     | '/_authed/_community/members/$id/'
     | '/_authed/_community/profile/addresses/'
     | '/_authed/_community/profile/ai/'
     | '/_authed/_community/profile/info/'
     | '/_authed/_community/profile/relationships/'
     | '/_authed/_community/settings/ai/'
+    | '/_authed/_community/settings/billing/'
     | '/_authed/_community/settings/fields/'
     | '/_authed/_community/settings/members/'
     | '/_authed/_community/settings/overview/'
@@ -528,11 +591,13 @@ export interface RootRouteChildren {
   OauthConsentRoute: typeof OauthConsentRoute
   OauthSelectOrgRoute: typeof OauthSelectOrgRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute
   ApiPhSplatRoute: typeof ApiPhSplatRoute
   DotwellKnownOauthProtectedResourceIndexRoute: typeof DotwellKnownOauthProtectedResourceIndexRoute
   DotwellKnownOauthAuthorizationServerApiAuthRoute: typeof DotwellKnownOauthAuthorizationServerApiAuthRoute
   DotwellKnownOauthProtectedResourceApiMcpRoute: typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   DotwellKnownOpenidConfigurationApiAuthRoute: typeof DotwellKnownOpenidConfigurationApiAuthRoute
+  ApiBillingInvoicePaymentIdRoute: typeof ApiBillingInvoicePaymentIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -607,6 +672,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMcpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/locked': {
+      id: '/_authed/locked'
+      path: '/locked'
+      fullPath: '/locked'
+      preLoaderRoute: typeof AuthedLockedRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/_community': {
       id: '/_authed/_community'
       path: ''
@@ -647,6 +719,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ph/$'
       fullPath: '/api/ph/$'
       preLoaderRoute: typeof ApiPhSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/webhook': {
+      id: '/api/billing/webhook'
+      path: '/api/billing/webhook'
+      fullPath: '/api/billing/webhook'
+      preLoaderRoute: typeof ApiBillingWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -691,18 +770,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityMyRequestsIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
-    '/_authed/_community/memories/': {
-      id: '/_authed/_community/memories/'
-      path: '/memories'
-      fullPath: '/memories/'
-      preLoaderRoute: typeof AuthedCommunityMemoriesIndexRouteImport
-      parentRoute: typeof AuthedCommunityRoute
-    }
     '/_authed/_community/members/': {
       id: '/_authed/_community/members/'
       path: '/members'
       fullPath: '/members/'
       preLoaderRoute: typeof AuthedCommunityMembersIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
+    '/_authed/_community/feed/': {
+      id: '/_authed/_community/feed/'
+      path: '/feed'
+      fullPath: '/feed/'
+      preLoaderRoute: typeof AuthedCommunityFeedIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
     '/_authed/_community/dashboard/': {
@@ -732,6 +811,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/docs/mcp/'
       preLoaderRoute: typeof publicDocsMcpIndexRouteImport
       parentRoute: typeof publicRouteRoute
+    }
+    '/api/billing/invoice/$paymentId': {
+      id: '/api/billing/invoice/$paymentId'
+      path: '/api/billing/invoice/$paymentId'
+      fullPath: '/api/billing/invoice/$paymentId'
+      preLoaderRoute: typeof ApiBillingInvoicePaymentIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/.well-known/openid-configuration/api/auth': {
       id: '/.well-known/openid-configuration/api/auth'
@@ -773,6 +859,13 @@ declare module '@tanstack/react-router' {
       path: '/fields'
       fullPath: '/settings/fields/'
       preLoaderRoute: typeof AuthedCommunitySettingsFieldsIndexRouteImport
+      parentRoute: typeof AuthedCommunitySettingsRoute
+    }
+    '/_authed/_community/settings/billing/': {
+      id: '/_authed/_community/settings/billing/'
+      path: '/billing'
+      fullPath: '/settings/billing/'
+      preLoaderRoute: typeof AuthedCommunitySettingsBillingIndexRouteImport
       parentRoute: typeof AuthedCommunitySettingsRoute
     }
     '/_authed/_community/settings/ai/': {
@@ -817,6 +910,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCommunityMembersIdIndexRouteImport
       parentRoute: typeof AuthedCommunityRoute
     }
+    '/_authed/_community/feed/$postId/': {
+      id: '/_authed/_community/feed/$postId/'
+      path: '/feed/$postId'
+      fullPath: '/feed/$postId/'
+      preLoaderRoute: typeof AuthedCommunityFeedPostIdIndexRouteImport
+      parentRoute: typeof AuthedCommunityRoute
+    }
   }
 }
 
@@ -840,6 +940,7 @@ const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
 
 interface AuthedCommunitySettingsRouteChildren {
   AuthedCommunitySettingsAiIndexRoute: typeof AuthedCommunitySettingsAiIndexRoute
+  AuthedCommunitySettingsBillingIndexRoute: typeof AuthedCommunitySettingsBillingIndexRoute
   AuthedCommunitySettingsFieldsIndexRoute: typeof AuthedCommunitySettingsFieldsIndexRoute
   AuthedCommunitySettingsMembersIndexRoute: typeof AuthedCommunitySettingsMembersIndexRoute
   AuthedCommunitySettingsOverviewIndexRoute: typeof AuthedCommunitySettingsOverviewIndexRoute
@@ -848,6 +949,8 @@ interface AuthedCommunitySettingsRouteChildren {
 const AuthedCommunitySettingsRouteChildren: AuthedCommunitySettingsRouteChildren =
   {
     AuthedCommunitySettingsAiIndexRoute: AuthedCommunitySettingsAiIndexRoute,
+    AuthedCommunitySettingsBillingIndexRoute:
+      AuthedCommunitySettingsBillingIndexRoute,
     AuthedCommunitySettingsFieldsIndexRoute:
       AuthedCommunitySettingsFieldsIndexRoute,
     AuthedCommunitySettingsMembersIndexRoute:
@@ -866,10 +969,11 @@ interface AuthedCommunityRouteChildren {
   AuthedCommunityAuditLogIndexRoute: typeof AuthedCommunityAuditLogIndexRoute
   AuthedCommunityCommunityTreeIndexRoute: typeof AuthedCommunityCommunityTreeIndexRoute
   AuthedCommunityDashboardIndexRoute: typeof AuthedCommunityDashboardIndexRoute
+  AuthedCommunityFeedIndexRoute: typeof AuthedCommunityFeedIndexRoute
   AuthedCommunityMembersIndexRoute: typeof AuthedCommunityMembersIndexRoute
-  AuthedCommunityMemoriesIndexRoute: typeof AuthedCommunityMemoriesIndexRoute
   AuthedCommunityMyRequestsIndexRoute: typeof AuthedCommunityMyRequestsIndexRoute
   AuthedCommunityReviewsIndexRoute: typeof AuthedCommunityReviewsIndexRoute
+  AuthedCommunityFeedPostIdIndexRoute: typeof AuthedCommunityFeedPostIdIndexRoute
   AuthedCommunityMembersIdIndexRoute: typeof AuthedCommunityMembersIdIndexRoute
   AuthedCommunityProfileAddressesIndexRoute: typeof AuthedCommunityProfileAddressesIndexRoute
   AuthedCommunityProfileAiIndexRoute: typeof AuthedCommunityProfileAiIndexRoute
@@ -883,10 +987,11 @@ const AuthedCommunityRouteChildren: AuthedCommunityRouteChildren = {
   AuthedCommunityCommunityTreeIndexRoute:
     AuthedCommunityCommunityTreeIndexRoute,
   AuthedCommunityDashboardIndexRoute: AuthedCommunityDashboardIndexRoute,
+  AuthedCommunityFeedIndexRoute: AuthedCommunityFeedIndexRoute,
   AuthedCommunityMembersIndexRoute: AuthedCommunityMembersIndexRoute,
-  AuthedCommunityMemoriesIndexRoute: AuthedCommunityMemoriesIndexRoute,
   AuthedCommunityMyRequestsIndexRoute: AuthedCommunityMyRequestsIndexRoute,
   AuthedCommunityReviewsIndexRoute: AuthedCommunityReviewsIndexRoute,
+  AuthedCommunityFeedPostIdIndexRoute: AuthedCommunityFeedPostIdIndexRoute,
   AuthedCommunityMembersIdIndexRoute: AuthedCommunityMembersIdIndexRoute,
   AuthedCommunityProfileAddressesIndexRoute:
     AuthedCommunityProfileAddressesIndexRoute,
@@ -902,12 +1007,14 @@ const AuthedCommunityRouteWithChildren = AuthedCommunityRoute._addFileChildren(
 
 interface AuthedRouteChildren {
   AuthedCommunityRoute: typeof AuthedCommunityRouteWithChildren
+  AuthedLockedRoute: typeof AuthedLockedRoute
   AuthedOnboardingCreateIndexRoute: typeof AuthedOnboardingCreateIndexRoute
   AuthedOnboardingInvitationsIndexRoute: typeof AuthedOnboardingInvitationsIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCommunityRoute: AuthedCommunityRouteWithChildren,
+  AuthedLockedRoute: AuthedLockedRoute,
   AuthedOnboardingCreateIndexRoute: AuthedOnboardingCreateIndexRoute,
   AuthedOnboardingInvitationsIndexRoute: AuthedOnboardingInvitationsIndexRoute,
 }
@@ -927,6 +1034,7 @@ const rootRouteChildren: RootRouteChildren = {
   OauthConsentRoute: OauthConsentRoute,
   OauthSelectOrgRoute: OauthSelectOrgRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBillingWebhookRoute: ApiBillingWebhookRoute,
   ApiPhSplatRoute: ApiPhSplatRoute,
   DotwellKnownOauthProtectedResourceIndexRoute:
     DotwellKnownOauthProtectedResourceIndexRoute,
@@ -936,6 +1044,7 @@ const rootRouteChildren: RootRouteChildren = {
     DotwellKnownOauthProtectedResourceApiMcpRoute,
   DotwellKnownOpenidConfigurationApiAuthRoute:
     DotwellKnownOpenidConfigurationApiAuthRoute,
+  ApiBillingInvoicePaymentIdRoute: ApiBillingInvoicePaymentIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

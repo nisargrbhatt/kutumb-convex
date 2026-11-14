@@ -10,11 +10,16 @@ import { AppError } from "@/domain/errors";
 
 export const statement = {
 	...defaultStatements,
-	communityProfile: ["create", "delete", "reassign"],
+	/** `removePhoto`: take down a linked profile's photo (never set it). */
+	communityProfile: ["create", "delete", "reassign", "removePhoto"],
 	customFields: ["create", "read", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
 	orgSetting: ["update"],
+	/** Feed: remove anyone's Post or comment. No role hierarchy: an admin may remove an owner's. */
+	post: ["moderate"],
+	/** Subscription: view prices, pay, cancel, resume. Owners only. */
+	billing: ["manage"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -28,19 +33,22 @@ export const member = ac.newRole({
 
 export const admin = ac.newRole({
 	...adminAc.statements,
-	communityProfile: ["create", "reassign"],
+	communityProfile: ["create", "reassign", "removePhoto"],
 	customFields: ["read"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
+	post: ["moderate"],
 });
 
 export const owner = ac.newRole({
 	...ownerAc.statements,
-	communityProfile: ["create", "delete", "reassign"],
+	communityProfile: ["create", "delete", "reassign", "removePhoto"],
 	customFields: ["read", "create", "delete"],
 	changeRequest: ["create", "review"],
 	auditEvent: ["read"],
 	orgSetting: ["update"],
+	post: ["moderate"],
+	billing: ["manage"],
 });
 
 const roles = { owner, admin, member };
@@ -60,3 +68,6 @@ export function assertCan(actor: Actor, perms: Permissions): void {
 		throw new AppError("Forbidden", "You do not have permission to perform this action");
 	}
 }
+
+/** better-auth stores multi-roles comma-joined ("admin,owner"): true if any of them is `owner`. */
+export const isOwnerRole = (role: string) => role.split(",").some((r) => r.trim() === "owner");

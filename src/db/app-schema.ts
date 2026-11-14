@@ -1,6 +1,19 @@
-import { integer, sqliteTable, text, blob, index } from "drizzle-orm/sqlite-core";
+import {
+	integer,
+	sqliteTable,
+	text,
+	blob,
+	index,
+	primaryKey,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import {
 	AUDIT_ACTION,
+	BLOB_MEDIA_KIND,
+	BLOB_OWNER_KIND,
+	BLOB_STATUS,
+	BLOB_VIDEO_CONTENT_TYPE,
+	type BlobVariant,
 	CHANGE_REQUEST_KIND,
 	CHANGE_REQUEST_STATUS,
 	COMMUNITY_ADDRESS_TYPE,
@@ -10,11 +23,15 @@ import {
 	CUSTOM_FIELD_TYPE,
 	GENDERS,
 	ORGANIZATION_ROLES,
+	POST_KIND,
+	BILLING_NOTICE_KIND,
+	DODO_SUBSCRIPTION_STATUSES,
 	enumValues,
 } from "./constants";
 import { relations } from "drizzle-orm";
 import { organization, user } from "./auth-schema";
 import type { CustomFieldValues } from "@/domain/customFields";
+import type { DescriptionDoc } from "@/domain/memoryDescription";
 
 export const communityProfileCustomField = sqliteTable("communityProfileCustomField", {
 	id: text("id").primaryKey(),
@@ -66,6 +83,8 @@ export const communityProfile = sqliteTable(
 			})
 			.notNull(),
 		customFieldData: blob({ mode: "json" }).$type<CustomFieldValues>(),
+		/** Current Profile Photo (`blob.id`, `profilePhoto`). No FK: the Blob row outlives it. */
+		photoBlobId: text("photoBlobId"),
 		/** Optimistic-concurrency counter, bumped on every write. */
 		version: integer("version").notNull().default(0),
 	},
@@ -153,27 +172,88 @@ export const communityRelationRelations = relations(communityRelation, ({ one })
 	}),
 }));
 
-export const communityMemory = sqliteTable("communityMemory", {
-	id: text("id").primaryKey(),
-	createdBy: text("createdBy").references(() => communityProfile.id, {
-		onDelete: "cascade",
-	}),
-	organizationId: text("organizationId").references(() => organization.id, {
-		onDelete: "cascade",
-	}),
-	content: text("content").notNull(),
+// Feed Post base row (ADR 0010): one per Post, whatever its kind. Author name is a frozen
+// `user.name` snapshot; no FK to `user`, so a Post outlives its author's membership.
+export const post = sqliteTable(
+	"post",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organizationId")
+			.references(() => organization.id, { onDelete: "cascade" })
+			.notNull(),
+		kind: text("kind", { mode: "text", enum: enumValues(POST_KIND) }).notNull(),
+		authorUserId: text("authorUserId").notNull(),
+		authorName: text("authorName").notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+		editedAt: integer("editedAt", { mode: "timestamp_ms" }),
+	},
+	(table) => [index("post_org_created_id_idx").on(table.organizationId, table.createdAt, table.id)]
+);
+
+// Memory kind row. `description` is the Markdown source of truth; `descriptionDoc` (detail) and
+// `descriptionText` (cards) are Worker-derived from it at save (ADR 0012).
+export const postMemory = sqliteTable("postMemory", {
+	postId: text("postId")
+		.primaryKey()
+		.references(() => post.id, { onDelete: "cascade" }),
+	title: text("title").notNull(),
+	description: text("description"),
+	descriptionDoc: text("descriptionDoc", { mode: "json" }).$type<DescriptionDoc>(),
+	descriptionText: text("descriptionText"),
 });
 
-export const communityMemoryRelations = relations(communityMemory, ({ one }) => ({
-	communityProfile: one(communityProfile, {
-		fields: [communityMemory.createdBy],
-		references: [communityProfile.id],
-	}),
-	organization: one(organization, {
-		fields: [communityMemory.organizationId],
-		references: [organization.id],
-	}),
-}));
+// Memory gallery: ordered Blobs of one Memory (0 to 5). No FK to `blob`: the Blob row holds the
+// owner fields (`ownerKind` memory, `ownerId` postId) for the gate and the sweep.
+export const postMemoryMedia = sqliteTable(
+	"postMemoryMedia",
+	{
+		postId: text("postId")
+			.references(() => post.id, { onDelete: "cascade" })
+			.notNull(),
+		blobId: text("blobId").notNull(),
+		position: integer("position").notNull(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.postId, table.position] }),
+		uniqueIndex("postMemoryMedia_blob_uidx").on(table.blobId),
+	]
+);
+
+// One like per Org Member per Post. `userName` is a frozen `user.name` snapshot, no FK to `user`:
+// a like outlives its member. Counts are computed at read (no counter column).
+export const postLike = sqliteTable(
+	"postLike",
+	{
+		id: text("id").primaryKey(),
+		postId: text("postId")
+			.references(() => post.id, { onDelete: "cascade" })
+			.notNull(),
+		userId: text("userId").notNull(),
+		userName: text("userName").notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [
+		uniqueIndex("postLike_post_user_uidx").on(table.postId, table.userId),
+		index("postLike_post_created_id_idx").on(table.postId, table.createdAt, table.id),
+	]
+);
+
+// Flat, plain-text comment on a Post. `authorName` is a frozen `user.name` snapshot, no FK to
+// `user`: a comment outlives its author. No editing. Counts are computed at read.
+export const postComment = sqliteTable(
+	"postComment",
+	{
+		id: text("id").primaryKey(),
+		postId: text("postId")
+			.references(() => post.id, { onDelete: "cascade" })
+			.notNull(),
+		authorUserId: text("authorUserId").notNull(),
+		authorName: text("authorName").notNull(),
+		body: text("body").notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [index("postComment_post_created_id_idx").on(table.postId, table.createdAt, table.id)]
+);
 
 // Change Request: a proposed profile change awaiting Review. FK to org only; profile/user are
 // snapshotted so the row survives profile hard-delete (My requests still shows the outcome).
@@ -292,3 +372,107 @@ export const orgSetting = sqliteTable("orgSetting", {
 		.references(() => organization.id, { onDelete: "cascade" }),
 	aiClientWrites: integer("aiClientWrites", { mode: "boolean" }).notNull().default(true),
 });
+
+// Blob: one piece of private media in R2 (spec: Blobs > Record). Table `blob`; exported as
+// `mediaBlob` since `blob` is drizzle's column builder. No FKs on purpose: org delete must not take
+// the rows that locate the bytes (the sweep needs them).
+export const mediaBlob = sqliteTable(
+	"blob",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organizationId").notNull(),
+		mediaKind: text("mediaKind", { mode: "text", enum: enumValues(BLOB_MEDIA_KIND) }).notNull(),
+		status: text("status", { mode: "text", enum: enumValues(BLOB_STATUS) })
+			.notNull()
+			.default(BLOB_STATUS.pending),
+		/** Null while `pending`. */
+		ownerKind: text("ownerKind", { mode: "text", enum: enumValues(BLOB_OWNER_KIND) }),
+		ownerId: text("ownerId"),
+		uploadedByUserId: text("uploadedByUserId").notNull(),
+		/** Reservation while `pending`; real sum of landed variants once attached. */
+		size: integer("size").notNull(),
+		/** Landed variants and their real sizes. */
+		variants: text("variants", { mode: "json" })
+			.$type<Partial<Record<BlobVariant, number>>>()
+			.notNull()
+			.default({}),
+		/** Worker-read from `display` (images) or the video track. Never from the client. */
+		width: integer("width"),
+		height: integer("height"),
+		durationMs: integer("durationMs"),
+		/** Video only. */
+		contentType: text("contentType", {
+			mode: "text",
+			enum: enumValues(BLOB_VIDEO_CONTENT_TYPE),
+		}),
+		/** `profilePhoto` only, hex sha256 of `display` (ADR 0009). */
+		sha256: text("sha256"),
+		/** `pending` expires 24h after this. */
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [
+		index("blob_org_status_idx").on(table.organizationId, table.status),
+		index("blob_org_uploader_status_idx").on(
+			table.organizationId,
+			table.uploadedByUserId,
+			table.status
+		),
+		index("blob_status_created_idx").on(table.status, table.createdAt),
+	]
+);
+
+// Billing: one row per org mirroring its Dodo Subscription (spec: billing > Data). Lock is computed
+// from this row by `billingAccess`, never stored.
+export const orgBilling = sqliteTable("orgBilling", {
+	organizationId: text("organizationId")
+		.primaryKey()
+		.references(() => organization.id, { onDelete: "cascade" }),
+	/** Org creator; analytics only. */
+	createdByUserId: text("createdByUserId").notNull(),
+	/** ISO-2 from the create form; needed to retry sub creation. */
+	country: text("country").notNull(),
+	/** Null only if customer create failed. */
+	dodoCustomerId: text("dodoCustomerId"),
+	/** Current sub only; replaced on re-subscribe. */
+	subscriptionId: text("subscriptionId"),
+	/** Raw Dodo status. */
+	status: text("status", { mode: "text", enum: enumValues(DODO_SUBSCRIPTION_STATUSES) }),
+	/** Set once: sub `created_at + trial_period_days`, or org `createdAt + 15d` while no sub. */
+	trialEndsAt: integer("trialEndsAt", { mode: "timestamp_ms" }).notNull(),
+	nextBillingDate: integer("nextBillingDate", { mode: "timestamp_ms" }),
+	cancelAtNextBillingDate: integer("cancelAtNextBillingDate", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	/** From the `subscription.past_due` webhook only (GET lacks it). */
+	pastDueEndsAt: integer("pastDueEndsAt", { mode: "timestamp_ms" }),
+	hasPaymentMethod: integer("hasPaymentMethod", { mode: "boolean" }).notNull().default(false),
+	/** Cents; display only. */
+	recurringPreTaxAmount: integer("recurringPreTaxAmount"),
+	/** True until a sub exists. */
+	needsSubscription: integer("needsSubscription", { mode: "boolean" }).notNull().default(true),
+	/** Last pull from Dodo. */
+	syncedAt: integer("syncedAt", { mode: "timestamp_ms" }).notNull(),
+	/** Set once when the row is first seen Locked, cleared on unlock: stable `locked` notice anchor. */
+	lockedAt: integer("lockedAt", { mode: "timestamp_ms" }),
+});
+
+/** Dodo webhook dedupe: insert-or-ignore on `webhookId`. */
+export const billingWebhookEvent = sqliteTable("billingWebhookEvent", {
+	webhookId: text("webhookId").primaryKey(),
+	type: text("type").notNull(),
+	receivedAt: integer("receivedAt", { mode: "timestamp_ms" }).notNull(),
+});
+
+/** Sent reminder emails; insert-or-ignore dedupes. `anchor` = ISO deadline the notice is about. */
+export const billingNotice = sqliteTable(
+	"billingNotice",
+	{
+		organizationId: text("organizationId")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		kind: text("kind", { mode: "text", enum: enumValues(BILLING_NOTICE_KIND) }).notNull(),
+		anchor: text("anchor").notNull(),
+		sentAt: integer("sentAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [primaryKey({ columns: [table.organizationId, table.kind, table.anchor] })]
+);

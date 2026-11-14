@@ -74,6 +74,12 @@ export const updateProfileInfo = createServerFn({ method: "POST" })
 	)
 	.handler(({ context, data }) => profileChanges.submit(context.actor, { kind: "info", ...data }));
 
+/** Set / replace (`blobId` of an uploaded `profilePhoto`) or remove (`null`) a Profile Photo. */
+export const setProfilePhoto = createServerFn({ method: "POST" })
+	.middleware([orgMiddleware])
+	.validator(z.object({ profileId, blobId: z.string().min(1).max(64).nullable() }))
+	.handler(({ context, data }) => profileChanges.submit(context.actor, { kind: "photo", ...data }));
+
 export const getActiveProfilesForRelation = createServerFn({ method: "GET" })
 	.middleware([orgMiddleware])
 	.validator(

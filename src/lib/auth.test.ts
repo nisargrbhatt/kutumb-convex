@@ -46,3 +46,16 @@ describe("better-auth OAuth routes", () => {
 		expect(res.status).toBe(200);
 	});
 });
+
+describe("better-auth organization routes", () => {
+	it("/organization/create over HTTP is disabled (only createOrganizationFn creates orgs + billing)", async () => {
+		const res = await auth.handler(
+			new Request("https://kutumb.example.org/api/auth/organization/create", {
+				method: "POST",
+				headers: { "content-type": "application/json", origin: "https://kutumb.example.org" },
+				body: JSON.stringify({ name: "Acme", slug: "acme" }),
+			})
+		);
+		expect(res.status).toBe(404);
+	});
+});

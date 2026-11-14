@@ -74,6 +74,7 @@ export const CHANGE_REQUEST_KIND = {
 	address_add: "address_add",
 	address_edit: "address_edit",
 	address_remove: "address_remove",
+	photo: "photo",
 } as const;
 
 export const CHANGE_REQUEST_STATUS = {
@@ -92,6 +93,7 @@ export const AUDIT_ACTION = {
 	"profile.reactivated": "profile.reactivated",
 	"profile.reassigned": "profile.reassigned",
 	"profile.deleted": "profile.deleted",
+	"profile.photo_changed": "profile.photo_changed",
 	"relation.added": "relation.added",
 	"relation.removed": "relation.removed",
 	"address.added": "address.added",
@@ -125,6 +127,83 @@ const AUDIT_CATEGORY_PREFIX: Record<AuditCategory, string> = {
 /** Audit Actions in a filter category, for `action IN (...)`. */
 export const auditActionsInCategory = (category: AuditCategory): AuditAction[] =>
 	Object.values(AUDIT_ACTION).filter((a) => a.startsWith(AUDIT_CATEGORY_PREFIX[category]));
+
+/** What a Blob holds; sets its variants (spec: Blobs > Variants). */
+export const BLOB_MEDIA_KIND = {
+	profilePhoto: "profilePhoto",
+	memoryImage: "memoryImage",
+	memoryVideo: "memoryVideo",
+} as const;
+
+export type BlobMediaKind = (typeof BLOB_MEDIA_KIND)[keyof typeof BLOB_MEDIA_KIND];
+
+/** `pending → attached → deleted`. */
+export const BLOB_STATUS = {
+	pending: "pending",
+	attached: "attached",
+	deleted: "deleted",
+} as const;
+
+export type BlobStatus = (typeof BLOB_STATUS)[keyof typeof BLOB_STATUS];
+
+/** Kind of record that owns an attached Blob. */
+export const BLOB_OWNER_KIND = {
+	profile: "profile",
+	memory: "memory",
+	changeRequest: "changeRequest",
+} as const;
+
+export type BlobOwnerKind = (typeof BLOB_OWNER_KIND)[keyof typeof BLOB_OWNER_KIND];
+
+/** Objects under one Blob, R2 key `<orgId>/<blobId>/<variant>`. */
+export const BLOB_VARIANT = {
+	avatar: "avatar",
+	display: "display",
+	thumb: "thumb",
+	video: "video",
+	poster: "poster",
+} as const;
+
+export type BlobVariant = (typeof BLOB_VARIANT)[keyof typeof BLOB_VARIANT];
+
+/** Allow-listed stored video types (`blob.contentType`). */
+export const BLOB_VIDEO_CONTENT_TYPE = {
+	mp4: "video/mp4",
+	quicktime: "video/quicktime",
+} as const;
+
+/** Kind of a Feed Post, fixed at posting (ADR 0010). A new kind is a new table plus a value here. */
+export const POST_KIND = {
+	memory: "memory",
+} as const;
+
+export type PostKind = (typeof POST_KIND)[keyof typeof POST_KIND];
+
+/** Raw Dodo Subscription status, mirrored on `orgBilling.status` (SDK `SubscriptionStatus`). */
+export const DODO_SUBSCRIPTION_STATUSES = {
+	pending: "pending",
+	active: "active",
+	on_hold: "on_hold",
+	paused: "paused",
+	cancelled: "cancelled",
+	failed: "failed",
+	expired: "expired",
+	past_due: "past_due",
+} as const;
+
+export type DodoSubscriptionStatus =
+	(typeof DODO_SUBSCRIPTION_STATUSES)[keyof typeof DODO_SUBSCRIPTION_STATUSES];
+
+/** Reminder email kinds; one `billingNotice` row per (org, kind, anchor). */
+export const BILLING_NOTICE_KIND = {
+	trial_t3: "trial_t3",
+	trial_t1: "trial_t1",
+	grace_start: "grace_start",
+	grace_t2: "grace_t2",
+	locked: "locked",
+} as const;
+
+export type BillingNoticeKind = (typeof BILLING_NOTICE_KIND)[keyof typeof BILLING_NOTICE_KIND];
 
 /** Non-empty tuple of an enum-like const's values, for Drizzle `text({ enum })`. */
 export const enumValues = <T extends Record<string, string>>(o: T) =>

@@ -4,7 +4,9 @@ import {
 	accountKeys,
 	addressKeys,
 	auditKeys,
+	billingKeys,
 	changeRequestKeys,
+	feedKeys,
 	fieldKeys,
 	orgKeys,
 	profileKeys,
@@ -20,6 +22,8 @@ const factories = {
 	orgKeys,
 	changeRequestKeys,
 	auditKeys,
+	feedKeys,
+	billingKeys,
 };
 
 // Sample args per factory name; orgId is always the first arg.
@@ -32,6 +36,7 @@ const ARGS: Record<string, unknown[]> = {
 	forProfile: ["p1"],
 	log: [{}],
 	profile: ["p1", {}],
+	post: ["p1"],
 };
 
 describe("org-scoped key factories", () => {

@@ -5,13 +5,16 @@ import { VerifyEmailNag } from "./VerifyEmailNag";
 
 interface Props {
 	children: ReactNode;
+	/** Full-width strip above the page (billing banner). */
+	banner?: ReactNode;
 }
 
-export function CommunityLayout({ children }: Props) {
+export function CommunityLayout({ children, banner }: Props) {
 	return (
 		<SidebarProvider>
 			<AppSidebar />
-			<main className="w-full">
+			<main className="w-full min-w-0">
+				{banner}
 				<VerifyEmailNag />
 				{children}
 			</main>

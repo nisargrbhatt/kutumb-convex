@@ -19,7 +19,7 @@ const LIMIT_HINT =
 	"Retrying will not help until something is freed or time passes: tell the user instead of retrying.";
 
 /**
- * Tool failure → `isError` result. NotFound/Forbidden/Invalid carry their (short, user-safe)
+ * Tool failure → `isError` result. NotFound/Forbidden/Invalid/Locked carry their (short, user-safe)
  * message (an `Invalid` message includes its hint, e.g. the allowed ops or valid fields);
  * WriteNotAllowed adds its reason and a static reconnect/owner hint; Stale / Conflict / LimitReached
  * carry a static "what to do next" hint (LimitReached shows its limit copy, or the write-quota
@@ -29,7 +29,10 @@ const LIMIT_HINT =
 export function toolErrorResult(error: unknown): CallToolResult {
 	if (
 		isAppError(error) &&
-		(error.kind === "NotFound" || error.kind === "Forbidden" || error.kind === "Invalid")
+		(error.kind === "NotFound" ||
+			error.kind === "Forbidden" ||
+			error.kind === "Invalid" ||
+			error.kind === "Locked")
 	) {
 		return text(error.message);
 	}

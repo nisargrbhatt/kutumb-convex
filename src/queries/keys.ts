@@ -55,11 +55,32 @@ export const auditKeys = {
 		[...auditKeys.all(orgId), "profile", profileId, filter] as const,
 };
 
+export const feedKeys = {
+	all: (orgId: string) => ["feed", orgId] as const,
+	list: (orgId: string) => [...feedKeys.all(orgId), "list"] as const,
+	post: (orgId: string, postId: string) => [...feedKeys.all(orgId), "post", postId] as const,
+	likers: (orgId: string, postId: string) => [...feedKeys.all(orgId), "likers", postId] as const,
+	comments: (orgId: string, postId: string) =>
+		[...feedKeys.all(orgId), "comments", postId] as const,
+	/** A Memory's editable source (title + description), for the edit Drawer. */
+	memoryEdit: (orgId: string, postId: string) =>
+		[...feedKeys.post(orgId, postId), "memoryEdit"] as const,
+};
+
 export const orgKeys = {
 	all: (orgId: string) => ["organization", orgId] as const,
 	usage: (orgId: string) => [...orgKeys.all(orgId), "usage"] as const,
 	invitations: (orgId: string) => [...orgKeys.all(orgId), "invitations"] as const,
+	members: (orgId: string) => [...orgKeys.all(orgId), "members"] as const,
 	aiSettings: (orgId: string) => [...orgKeys.all(orgId), "aiSettings"] as const,
+};
+
+export const billingKeys = {
+	all: (orgId: string) => ["billing", orgId] as const,
+	trial: (orgId: string) => [...billingKeys.all(orgId), "trial"] as const,
+	page: (orgId: string) => [...billingKeys.all(orgId), "page"] as const,
+	/** Active org's `billingAccess` + role + owners (gate, `/locked`, banner). */
+	access: (orgId: string) => [...billingKeys.all(orgId), "access"] as const,
 };
 
 /** User-scoped (not tenant-scoped): survives org switch. */

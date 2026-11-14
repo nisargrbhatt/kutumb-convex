@@ -19,6 +19,7 @@ describe("loadConnectionActor", () => {
 			INSERT INTO oauth_client (id, client_id, redirect_uris) VALUES ('oc1', 'c1', '[]'), ('oc2', 'c2', '[]');
 			INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ('m1', 'o1', 'u1', 'member', 0);
 			INSERT INTO oauth_consent (id, client_id, user_id, reference_id, scopes) VALUES ('k1', 'c1', 'u1', 'o1', 'community:read');
+			INSERT INTO orgBilling (organizationId, createdByUserId, country, trialEndsAt, syncedAt) VALUES ('o1', 'u1', 'IN', 99999999999999, 0);
 		`);
 	});
 
@@ -63,6 +64,23 @@ describe("loadConnectionActor", () => {
 			"INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ('m3', 'o1', 'u2', 'owner', 0)"
 		);
 		await expect(loadConnectionActor(db, { ...KEY, userId: "u2" })).resolves.toBeNull();
+	});
+
+	it("locked org still authenticates; Actor carries the lock", async () => {
+		sqlite.exec(
+			"UPDATE orgBilling SET trialEndsAt = 0 WHERE organizationId = 'o1'" // trial long over
+		);
+		await expect(loadConnectionActor(db, KEY)).resolves.toMatchObject({
+			role: "member",
+			lock: { reason: "trial_ended", orgName: "Org 1" },
+		});
+	});
+
+	it("no billing row → locked (default-deny)", async () => {
+		sqlite.exec("DELETE FROM orgBilling");
+		await expect(loadConnectionActor(db, KEY)).resolves.toMatchObject({
+			lock: { reason: "trial_ended", orgName: "Org 1" },
+		});
 	});
 });
 

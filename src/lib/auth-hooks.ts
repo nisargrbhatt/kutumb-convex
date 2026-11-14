@@ -4,9 +4,17 @@ import type { OrganizationOptions } from "better-auth/plugins";
 import { env } from "cloudflare:workers";
 import { db } from "@/db";
 import { removeMemberConnections } from "@/domain/queries/connections";
+import { loadOrgLock } from "@/domain/queries/orgLock";
+import { makeLockGuard } from "@/domain/lockGuard";
 import { LIMIT_COPY, LimitError } from "@/domain/limits";
 import { ONBOARDING_INVITATIONS_PATH, loginHref } from "@/domain/authRoutes";
 import { grantedWrite, inferApplicationType, registrationKind } from "@/domain/mcpOauth";
+import { isOwnerRole } from "@/domain/permission";
+import {
+	cancelSubscriptionForDelete,
+	syncBillingEmail,
+	syncCustomerName,
+} from "@/server/billingCustomerSync";
 import InviteEmail from "@/emails/InviteEmail";
 import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
 import VerifyEmail from "@/emails/VerifyEmail";
@@ -31,14 +39,41 @@ async function dropConnections(userId: string, organizationId: string) {
 	if (!result.success) console.error("Failed to drop Connections of removed member", result.error);
 }
 
+const lockGuard = makeLockGuard((organizationId) => loadOrgLock(db, organizationId, new Date()));
+
 export const organizationHooks = {
 	beforeAcceptInvitation: async ({ user }) =>
 		limitGuard(() => limits.assertOrgSlot(user.id), LIMIT_COPY.orgAccept.description),
-	beforeCreateInvitation: async ({ organization }) =>
-		limitGuard(() => limits.assertMemberSlot(organization.id), LIMIT_COPY.memberInvite.description),
+	beforeCreateInvitation: async ({ organization }) => {
+		await lockGuard.invite({ organization });
+		await limitGuard(
+			() => limits.assertMemberSlot(organization.id),
+			LIMIT_COPY.memberInvite.description
+		);
+	},
+	beforeUpdateOrganization: async ({ member }) => {
+		await lockGuard.updateOrganization({ member });
+	},
+	afterUpdateOrganization: async ({ organization }) => {
+		if (organization) await syncCustomerName(organization.id, organization.name);
+	},
+	// Live sub cancelled first; Dodo error refuses the delete.
+	beforeDeleteOrganization: async ({ organization }) => {
+		await cancelSubscriptionForDelete(organization.id);
+	},
+	// Under Lock only ownership transfer may change roles.
+	beforeUpdateMemberRole: async ({ member, newRole, organization }) => {
+		await lockGuard.updateMemberRole({ member, newRole, organization });
+	},
+	afterUpdateMemberRole: async ({ member, previousRole, user, organization }) => {
+		if (isOwnerRole(previousRole) && !isOwnerRole(member.role)) {
+			await syncBillingEmail(organization.id, user.email);
+		}
+	},
 	// A Connection ends with the member's membership (ADR 0004).
-	afterRemoveMember: async ({ user, organization }) => {
+	afterRemoveMember: async ({ member, user, organization }) => {
 		await dropConnections(user.id, organization.id);
+		if (isOwnerRole(member.role)) await syncBillingEmail(organization.id, user.email);
 	},
 } satisfies NonNullable<OrganizationOptions["organizationHooks"]>;
 
@@ -125,7 +160,10 @@ export const mcpHooks = {
 			const organizationId = (ctx.body as { organizationId?: unknown } | undefined)?.organizationId;
 			if (typeof organizationId !== "string" || ctx.context.returned instanceof Error) return;
 			const session = await getSessionFromCtx(ctx);
-			if (session) await dropConnections(session.user.id, organizationId);
+			if (!session) return;
+			await dropConnections(session.user.id, organizationId);
+			// Role is gone by now; no-op unless the leaver held the billing email.
+			await syncBillingEmail(organizationId, session.user.email);
 			return;
 		}
 		if (ctx.path !== "/oauth2/consent" || ctx.body?.accept !== true) return;

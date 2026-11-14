@@ -23,6 +23,30 @@ export function profileEditMode(
 	return "none";
 }
 
+/**
+ * Profile Photo controls on a member detail page. Userless: whoever edits it directly (owner/admin,
+ * draft creator) sets, replaces and removes; a member on an `active` one files a `photo` Change
+ * Request (`request`). Linked: owner/admin may only remove (`communityProfile: ["removePhoto"]`).
+ */
+export function photoEditMode(
+	viewer: { canReview: boolean; canRemovePhoto: boolean },
+	profile: { userId: string | null; status: string; photoBlobId?: string | null }
+): PhotoEditMode {
+	if (profile.userId != null) {
+		return viewer.canRemovePhoto && profile.photoBlobId ? "remove" : "none";
+	}
+	switch (profileEditMode(viewer, profile)) {
+		case "direct":
+			return "edit";
+		case "suggest":
+			return "request";
+		case "none":
+			return "none";
+	}
+}
+
+export type PhotoEditMode = "edit" | "request" | "remove" | "none";
+
 export type Feedback = { type: "success" | "info"; title: string; description?: string };
 
 /** Toast after a profile / relation / address submit, by the seam's `SubmitResult.outcome`. */

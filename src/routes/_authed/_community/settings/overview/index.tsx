@@ -27,6 +27,7 @@ import {
 	useUpdateOrganization,
 } from "@/queries/organization";
 import { cn } from "@/lib/utils";
+import { formatBytes } from "@/domain/blob";
 
 export const Route = createFileRoute("/_authed/_community/settings/overview/")({
 	loader: async ({ context }) => {
@@ -134,6 +135,10 @@ function UsageCard() {
 						</ProgressValue>
 					</Progress>
 				))}
+				<div className="flex items-center justify-between text-sm">
+					<span className="font-medium">Storage used</span>
+					<span className="font-mono">{formatBytes(usage.storageBytes)}</span>
+				</div>
 			</CardContent>
 		</Card>
 	);

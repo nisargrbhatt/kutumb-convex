@@ -3,13 +3,24 @@ import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { NotFound } from "./components/NotFound";
 import { DefaultCatchBoundary } from "./components/DefaultCatchBoundary";
-import { QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
+import { isLockedError } from "./domain/errors";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 
 // Create a new router instance
 export const getRouter = () => {
 	// Per router = per SSR request: a module singleton would share cache across users/tenants.
-	const queryClient = new QueryClient();
+	// Org Locked mid-session: drop cached billing and re-run route gates (`_community` → `/locked`).
+	const onError = (error: unknown) => {
+		if (!isLockedError(error)) return;
+		void queryClient
+			.invalidateQueries({ queryKey: ["billing"], refetchType: "none" })
+			.then(() => router.invalidate());
+	};
+	const queryClient: QueryClient = new QueryClient({
+		queryCache: new QueryCache({ onError }),
+		mutationCache: new MutationCache({ onError }),
+	});
 	const router = createRouter({
 		routeTree,
 		context: {
