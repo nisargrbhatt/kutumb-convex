@@ -2,7 +2,7 @@ import { and, asc, eq, like } from "drizzle-orm";
 import { member, orgBilling, organization, user } from "@/db/schema";
 import { billingAccess, type BillingAccess } from "../billing";
 import { priceLabel } from "../billingCopy";
-import type { Role } from "../permission";
+import { isOwnerRole, type Role } from "../permission";
 import type { QueryDb } from "./db";
 
 export type ActiveOrgBilling = {
@@ -16,7 +16,6 @@ export type ActiveOrgBilling = {
 	access: BillingAccess;
 };
 
-const hasOwner = (role: string) => role.split(",").some((r) => r.trim() === "owner");
 
 /**
  * Billing for the user's active org, for the `_community` gate, `/locked` and the banner. `null`
@@ -37,14 +36,14 @@ export async function loadActiveOrgBilling(
 			.where(and(eq(member.organizationId, organizationId), eq(member.userId, userId)))
 			.limit(1),
 		db
-			.select({ name: user.name })
+			.select({ name: user.name, role: member.role })
 			.from(member)
 			.innerJoin(user, eq(user.id, member.userId))
 			.where(and(eq(member.organizationId, organizationId), like(member.role, "%owner%")))
 			.orderBy(asc(member.createdAt)),
 	]);
 	if (!row) return null;
-	const isOwner = hasOwner(row.role);
+	const isOwner = isOwnerRole(row.role);
 	const access: BillingAccess = row.billing
 		? billingAccess(row.billing, now)
 		: {
@@ -58,7 +57,7 @@ export async function loadActiveOrgBilling(
 		orgName: row.orgName,
 		role: row.role as Role,
 		isOwner,
-		ownerNames: owners.map((o) => o.name),
+		ownerNames: owners.filter((o) => isOwnerRole(o.role)).map((o) => o.name),
 		price: isOwner ? priceLabel(row.billing?.recurringPreTaxAmount) : null,
 		access,
 	};

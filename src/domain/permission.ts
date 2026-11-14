@@ -68,3 +68,6 @@ export function assertCan(actor: Actor, perms: Permissions): void {
 		throw new AppError("Forbidden", "You do not have permission to perform this action");
 	}
 }
+
+/** better-auth stores multi-roles comma-joined ("admin,owner"): true if any of them is `owner`. */
+export const isOwnerRole = (role: string) => role.split(",").some((r) => r.trim() === "owner");

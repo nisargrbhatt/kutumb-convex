@@ -1,4 +1,5 @@
 import { billingAccess, type LockReason, type OrgBillingRow } from "./billing";
+import { isOwnerRole } from "./permission";
 
 /** Path of the lock screen (outside `_community`). */
 export const LOCKED_PATH = "/locked";
@@ -15,7 +16,6 @@ export function orgLockReason(
 	return billingAccess(row, now).lockReason;
 }
 
-const hasOwner = (role: string) => role.split(",").some((r) => r.trim() === "owner");
 
 /**
  * Under Lock only ownership transfer may change roles: the change grants or removes `owner`
@@ -27,7 +27,7 @@ export const lockAllowsRoleChange = ({
 }: {
 	currentRole: string;
 	newRole: string;
-}) => hasOwner(currentRole) || hasOwner(newRole);
+}) => isOwnerRole(currentRole) || isOwnerRole(newRole);
 
 const LOCK_REASON_TEXT: Record<LockReason, string> = {
 	trial_ended: "its free trial has ended",

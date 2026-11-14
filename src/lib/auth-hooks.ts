@@ -9,9 +9,9 @@ import { makeLockGuard } from "@/domain/lockGuard";
 import { LIMIT_COPY, LimitError } from "@/domain/limits";
 import { ONBOARDING_INVITATIONS_PATH, loginHref } from "@/domain/authRoutes";
 import { grantedWrite, inferApplicationType, registrationKind } from "@/domain/mcpOauth";
+import { isOwnerRole } from "@/domain/permission";
 import {
 	cancelSubscriptionForDelete,
-	isOwnerRole,
 	syncBillingEmail,
 	syncCustomerName,
 } from "@/server/billingCustomerSync";

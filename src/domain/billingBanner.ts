@@ -1,5 +1,6 @@
 import type { BillingAccess, BillingState } from "./billing";
 import { formatBillingDate, formatOwnerNames } from "./billingCopy";
+import { isOwnerRole } from "./permission";
 
 /** Billing banner above `_community` pages (spec: UI > Banner). Pure, client-safe. */
 
@@ -23,10 +24,9 @@ export type BannerContext = {
 /** Trial days left at which the banner turns `warning` and members get a heads-up. */
 export const BANNER_TRIAL_WARNING_DAYS = 3;
 
-const isOwner = (role: string) => role.split(",").some((r) => r.trim() === "owner");
 
 export function bannerFor(a: BillingAccess, role: string, ctx: BannerContext): Banner | null {
-	return isOwner(role) ? ownerBanner(a, ctx) : memberBanner(a, ctx);
+	return isOwnerRole(role) ? ownerBanner(a, ctx) : memberBanner(a, ctx);
 }
 
 function ownerBanner(a: BillingAccess, { price }: BannerContext): Banner | null {

@@ -129,6 +129,22 @@ describe("billing sweep", () => {
 		]);
 	});
 
+	it("multi-role owner (\"admin,owner\") gets the email", async () => {
+		seedOrg("o1", ["u1"]);
+		sqlite.exec("UPDATE member SET role = 'admin,owner' WHERE user_id = 'u1'");
+		await sweep();
+		expect(sent.map((s) => s.to)).toEqual(["u1@x.test"]);
+	});
+
+	it("no owner to email: notice not marked sent, retried once an owner exists", async () => {
+		seedOrg("o1", ["u1"]);
+		sqlite.exec("UPDATE member SET role = 'admin' WHERE user_id = 'u1'");
+		expect(await sweep()).toMatchObject({ sent: 0, failed: 1 });
+		sqlite.exec("UPDATE member SET role = 'owner' WHERE user_id = 'u1'");
+		await sweep();
+		expect(sent.map((s) => s.to)).toEqual(["u1@x.test"]);
+	});
+
 	it("retries ensureSubscription for needsSubscription rows only", async () => {
 		seedOrg("o1", ["u1"]);
 		seedOrg("o2", ["u2"], "needsSubscription = 0, status = 'active', subscriptionId = 'sub_2'");

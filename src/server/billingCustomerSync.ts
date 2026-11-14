@@ -4,6 +4,7 @@ import type DodoPayments from "dodopayments";
 import { db as defaultDb } from "@/db";
 import { member, orgBilling } from "@/db/schema";
 import { isTerminalStatus } from "@/domain/billingEvents";
+import { isOwnerRole } from "@/domain/permission";
 import type { QueryDb } from "@/domain/queries/db";
 import { createDodo } from "@/lib/dodo";
 import { safeAsync } from "@/lib/safe";
@@ -41,7 +42,6 @@ export const syncCustomerName = (
 		await dodo.customers.update(row.dodoCustomerId, { name });
 	});
 
-export const isOwnerRole = (role: string) => role.split(",").some((r) => r.trim() === "owner");
 const sameEmail = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 /**

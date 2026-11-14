@@ -1,8 +1,8 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, like } from "drizzle-orm";
 import { member, organization, user } from "@/db/auth-schema";
 import { billingNotice, orgBilling } from "@/db/app-schema";
-import { ORGANIZATION_ROLES } from "@/db/constants";
 import { billingAccess, type LockReason } from "./billing";
+import { isOwnerRole } from "./permission";
 import { dueNotices, noticeKey, type BillingNotice } from "./billingNotices";
 import { inChunks, type QueryDb } from "./queries/db";
 
@@ -49,17 +49,15 @@ export function makeBillingNotifier({ db, now, email, capture }: NotifierDeps) {
 
 			let ok = false;
 			try {
-				const owners = await db
-					.select({ email: user.email, organizationName: organization.name })
+				const members = await db
+					.select({ email: user.email, role: member.role, organizationName: organization.name })
 					.from(member)
 					.innerJoin(user, eq(user.id, member.userId))
 					.innerJoin(organization, eq(organization.id, member.organizationId))
 					.where(
-						and(
-							eq(member.organizationId, organizationId),
-							eq(member.role, ORGANIZATION_ROLES.owner)
-						)
+						and(eq(member.organizationId, organizationId), like(member.role, "%owner%"))
 					);
+				const owners = members.filter((m) => isOwnerRole(m.role));
 				const content: BillingEmail = {
 					kind: notice.kind,
 					organizationName: owners[0]?.organizationName ?? "",
@@ -70,7 +68,8 @@ export function makeBillingNotifier({ db, now, email, capture }: NotifierDeps) {
 				const results = await Promise.all(
 					owners.map((o) => email(o.email, content).catch(() => false))
 				);
-				ok = results.every(Boolean);
+				// No owner reached = not sent: keep it due for the next sweep.
+				ok = owners.length > 0 && results.every(Boolean);
 			} catch (error) {
 				console.error("billing notice failed", notice.kind, organizationId, error);
 			}
