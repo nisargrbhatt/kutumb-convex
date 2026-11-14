@@ -1,6 +1,6 @@
 # Dodo dashboard and env setup (Test Mode)
 
-Status: ready-for-human Blocked by:
+Status: resolved Blocked by:
 
 ## What to build
 
@@ -13,6 +13,6 @@ locally.
 
 ## Done when
 
-- [ ] Product, Subscriptions, Recovery, Email toggles set as listed.
-- [ ] Test webhook endpoint created (tunnel URL), 11 events subscribed.
-- [ ] `.dev.vars` has the four `DODO_*` values; `PROBE_EMAIL` removed.
+- [x] Product, Subscriptions, Recovery, Email toggles set as listed.
+- [x] Test webhook endpoint created (tunnel URL), 11 events subscribed.
+- [x] `.dev.vars` has the four `DODO_*` values; `PROBE_EMAIL` removed.
