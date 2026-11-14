@@ -6,7 +6,9 @@ import { LIMIT_COPY, LIMIT_ERROR_CODES } from "@/domain/limits";
 import type { Role } from "@/domain/permission";
 import { useActor } from "@/hooks/useActor";
 import { authClient } from "@/lib/auth-client";
-import { getMyOrganizationCount, getOrgUsage } from "@/server/organization";
+import { isAppError } from "@/domain/errors";
+import { SLUG_TAKEN, type CreateOrganizationInput } from "@/domain/organization";
+import { createOrganizationFn, getMyOrganizationCount, getOrgUsage } from "@/server/organization";
 import { accountKeys, orgKeys } from "./keys";
 import { toastMutationError, unwrap, useOrgId } from "./mutation";
 
@@ -38,8 +40,8 @@ function useResetToOrg() {
 	const qc = useQueryClient();
 	const router = useRouter();
 	const previousOrgId = useActor()?.organizationId;
-	return async (to: "/dashboard" | "/onboarding/create") => {
-		await router.navigate({ to });
+	return async (to: "/dashboard" | "/onboarding/create", search?: { trialStarted: 1 }) => {
+		await router.navigate({ to, search });
 		await router.invalidate();
 		if (previousOrgId) qc.removeQueries({ predicate: (q) => q.queryKey[1] === previousOrgId });
 	};
@@ -78,27 +80,11 @@ export function useSwitchOrganizationInPlace() {
 	};
 }
 
-type OrgInput = { name: string; slug: string };
-
-const SLUG_TAKEN = "SLUG_TAKEN";
-
 export function useCreateOrganization() {
 	const posthog = usePostHog();
 	const reset = useResetToOrg();
 	return useMutation({
-		mutationFn: async (values: OrgInput) => {
-			const { data } = await authClient.organization.checkSlug({ slug: values.slug });
-			if (!data?.status) {
-				throw Object.assign(new Error("Organization slug already exist"), { code: SLUG_TAKEN });
-			}
-			return unwrap(
-				authClient.organization.create({
-					...values,
-					keepCurrentActiveOrganization: false,
-					metadata: {},
-				})
-			);
-		},
+		mutationFn: (values: CreateOrganizationInput) => createOrganizationFn({ data: values }),
 		onSuccess: async (_data, values) => {
 			posthog.capture("organization_created", {
 				organization_name: values.name,
@@ -107,11 +93,10 @@ export function useCreateOrganization() {
 			toast.success("Organization created successfully", {
 				description: "You can now access your organization. Redirecting you to dashboard",
 			});
-			await reset("/dashboard");
+			await reset("/dashboard", { trialStarted: 1 });
 		},
 		onError: (error, values) => {
-			const code = (error as { code?: string }).code;
-			if (code === SLUG_TAKEN) {
+			if (isSlugTaken(error)) {
 				posthog.capture("organization_create_failed", {
 					reason: "slug_conflict",
 					slug: values.slug,
@@ -119,6 +104,7 @@ export function useCreateOrganization() {
 				toast.error("Organization slug already exist", { description: "Please try another slug." });
 				return;
 			}
+			const code = isAppError(error) ? error.code : undefined;
 			posthog.capture("organization_create_failed", {
 				reason: code === LIMIT_ERROR_CODES.org ? "org_limit" : "server_error",
 				name: values.name,
@@ -133,7 +119,7 @@ export function useCreateOrganization() {
 	});
 }
 
-export const isSlugTaken = (error: unknown) => (error as { code?: string })?.code === SLUG_TAKEN;
+export const isSlugTaken = (error: unknown) => isAppError(error) && error.code === SLUG_TAKEN;
 
 export function useUpdateOrganization() {
 	const posthog = usePostHog();

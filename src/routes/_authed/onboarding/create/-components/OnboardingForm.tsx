@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import z from "zod";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
@@ -18,24 +17,21 @@ import { useId } from "react";
 import { Link } from "@tanstack/react-router";
 import { isSlugTaken, useCreateOrganization } from "@/queries/organization";
 import type { ReactNode } from "react";
+import {
+	Combobox,
+	ComboboxContent,
+	ComboboxEmpty,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxList,
+} from "@/components/ui/combobox";
+import { BILLING_COUNTRIES, countryName } from "@/domain/countries";
+import { createOrganizationSchema, type CreateOrganizationInput } from "@/domain/organization";
 
-const formSchema = z.object({
-	name: z
-		.string()
-		.trim()
-		.min(3, "Organization name must be at least 3 characters.")
-		.max(25, "Organization name must be at most 25 characters.")
-		.regex(
-			/^[a-zA-Z0-9_ ]+$/,
-			"Organization name can only contain letters, numbers, spaces and underscores."
-		),
-	slug: z
-		.string()
-		.trim()
-		.min(3, "Organization slug must be at least 3 characters.")
-		.max(10, "Organization slug must be at most 10 characters.")
-		.regex(/^[a-zA-Z0-9-]+$/, "Organization slug can only contain letters, numbers, and dashes."),
-});
+/** Sorted by English name for the picker. */
+const COUNTRY_CODES = [...BILLING_COUNTRIES].sort((a, b) =>
+	countryName(a).localeCompare(countryName(b))
+);
 
 type OnboardingFormProps = {
 	titleAdornment?: ReactNode;
@@ -47,12 +43,13 @@ export function OnboardingForm({ titleAdornment, beforeForm, disabled }: Onboard
 	const formId = useId();
 	const createOrg = useCreateOrganization();
 
-	const form = useForm<z.infer<typeof formSchema>>({
+	const form = useForm<CreateOrganizationInput>({
 		defaultValues: {
 			name: "",
 			slug: "",
+			country: undefined,
 		},
-		resolver: zodResolver(formSchema),
+		resolver: zodResolver(createOrganizationSchema),
 	});
 
 	const onSubmit = form.handleSubmit((values) =>
@@ -116,6 +113,40 @@ export function OnboardingForm({ titleAdornment, beforeForm, disabled }: Onboard
 												This is your public display name. Must be between 3 and 10 characters. Must
 												only contain letters, numbers, and dashes.
 											</FieldDescription>
+											{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+										</Field>
+									)}
+								/>
+								<Controller
+									control={form.control}
+									name="country"
+									render={({ field, fieldState }) => (
+										<Field data-invalid={fieldState.invalid}>
+											<FieldLabel htmlFor="form-rhf-input-country">Country</FieldLabel>
+											<Combobox
+												items={COUNTRY_CODES}
+												itemToStringLabel={(code: string) => (code ? countryName(code) : "")}
+												value={field.value ?? null}
+												onValueChange={(code) => field.onChange(code ?? undefined)}
+											>
+												<ComboboxInput
+													id="form-rhf-input-country"
+													placeholder="Select a country"
+													aria-invalid={fieldState.invalid}
+													onBlur={field.onBlur}
+												/>
+												<ComboboxContent>
+													<ComboboxEmpty>No countries found.</ComboboxEmpty>
+													<ComboboxList>
+														{(code: string) => (
+															<ComboboxItem key={code} value={code}>
+																{countryName(code)}
+															</ComboboxItem>
+														)}
+													</ComboboxList>
+												</ComboboxContent>
+											</Combobox>
+											<FieldDescription>Used for billing and tax.</FieldDescription>
 											{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
 										</Field>
 									)}

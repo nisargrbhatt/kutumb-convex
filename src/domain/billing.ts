@@ -33,6 +33,13 @@ export type BillingAccess = {
 
 const DAY_MS = 86_400_000;
 
+/** Trial length of the `Standard` product (Dodo owns the clock; ADR 0013). */
+export const TRIAL_DAYS = 15;
+
+/** Own-clock Trial end, used only while the org has no Dodo sub. */
+export const ownClockTrialEndsAt = (orgCreatedAt: Date) =>
+	new Date(orgCreatedAt.getTime() + TRIAL_DAYS * DAY_MS);
+
 /**
  * What an org may do right now, from its mirrored Dodo row (spec: billing > State). Pure; Lock is
  * computed here, never stored. First matching rule wins.

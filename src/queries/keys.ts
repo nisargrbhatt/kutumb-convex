@@ -74,6 +74,11 @@ export const orgKeys = {
 	aiSettings: (orgId: string) => [...orgKeys.all(orgId), "aiSettings"] as const,
 };
 
+export const billingKeys = {
+	all: (orgId: string) => ["billing", orgId] as const,
+	trial: (orgId: string) => [...billingKeys.all(orgId), "trial"] as const,
+};
+
 /** User-scoped (not tenant-scoped): survives org switch. */
 export const accountKeys = {
 	all: (userId: string) => ["account", userId] as const,

@@ -18,10 +18,15 @@ export function getPostHogClient() {
 }
 
 /** Fire-and-forget capture + flush; analytics never throws into the caller. */
-function capture(event: string, distinctId: string, properties: Record<string, unknown>) {
+function capture(
+	event: string,
+	distinctId: string,
+	properties: Record<string, unknown>,
+	groups?: Record<string, string>
+) {
 	try {
 		const client = getPostHogClient();
-		client.capture({ distinctId, event, properties });
+		client.capture({ distinctId, event, properties, ...(groups && { groups }) });
 		waitUntil(client.flush());
 	} catch (error) {
 		console.error(`Failed to capture ${event} event`, error);
@@ -104,6 +109,34 @@ export function captureConnectionDowngraded(props: {
 		orgId: props.organizationId,
 		clientId: props.clientId,
 	});
+}
+
+/** Org created; its Trial clock started (`subscribed`: Dodo sub exists, else own clock, ADR 0013). */
+export function captureBillingTrialStarted(props: {
+	createdByUserId: string;
+	organizationId: string;
+	subscribed: boolean;
+}) {
+	capture(
+		"billing_trial_started",
+		props.createdByUserId,
+		{ orgId: props.organizationId, subscribed: props.subscribed },
+		{ organization: props.organizationId }
+	);
+}
+
+/** Owner sent to a Dodo hosted page (portal or checkout). */
+export function captureBillingCheckoutOpened(props: {
+	userId: string;
+	organizationId: string;
+	kind: "checkout" | "portal";
+}) {
+	capture(
+		"billing_checkout_opened",
+		props.userId,
+		{ orgId: props.organizationId, kind: props.kind },
+		{ organization: props.organizationId }
+	);
 }
 
 /** The owner switched "AI Client writes" for the community. Carries no names or values. */

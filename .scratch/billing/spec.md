@@ -385,8 +385,10 @@ Test Mode customers `cus_0NrufShGuphTEdgi2NH1G`, `cus_0NrufSisdVIfp2WBSnsYS`, su
 
 ## Not verified
 
-- `POST /subscriptions` with `billing: { country }` only (probe sent a full dummy address). First
-  ticket confirms; fallback: send `country` + empty strings.
+- ~~`POST /subscriptions` with `billing: { country }` only~~ Verified 2026-11-14 (ticket 15, Test
+  Mode, `sub_0Nrv6MoekvDTcM5CdgeYT` on probe customer `cus_0NrufShGuphTEdgi2NH1G`): accepted, `active`,
+  `has_payment_method:false`, `trial_period_days:15`, next billing = created + 15d. Dodo echoed a
+  stored zipcode from that customer's earlier probe address.
 - Whether payment retries continue after grace → `on_hold` (docs: other statuses keep retrying).
   Harmless: a late success unlocks via webhook.
 - Dodo "Add Payment Method Reminder" timing and content.
