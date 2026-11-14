@@ -1,45 +1,63 @@
 import { describe, expect, it } from "vitest";
 import type { BillingAccess } from "./billing";
+import type { DodoSubscriptionStatus } from "@/db/constants";
 import { diffBillingAccess, subscriptionEventTarget } from "./billingEvents";
 
 describe("subscriptionEventTarget: adopt-or-ignore", () => {
-	const row = { subscriptionId: "sub_a", status: "active" as const };
+	const now = new Date("2026-12-10T00:00:00.000Z");
+	const row = {
+		subscriptionId: "sub_a" as string | null,
+		status: "active" as DodoSubscriptionStatus | null,
+		trialEndsAt: new Date("2026-11-01T00:00:00.000Z"),
+		nextBillingDate: new Date("2027-01-01T00:00:00.000Z") as Date | null,
+		cancelAtNextBillingDate: false,
+		pastDueEndsAt: null as Date | null,
+		hasPaymentMethod: true,
+		needsSubscription: false,
+	};
+	const target = (r: Partial<typeof row>, incoming: Parameters<typeof subscriptionEventTarget>[1]) =>
+		subscriptionEventTarget({ ...row, ...r }, incoming, now);
 
 	it("the row's own sub → current", () => {
-		expect(subscriptionEventTarget(row, { subscriptionId: "sub_a" })).toBe("current");
+		expect(target({}, { subscriptionId: "sub_a" })).toBe("current");
 	});
 
 	it("a stray sub while the current one is live → ignore", () => {
-		expect(subscriptionEventTarget(row, { subscriptionId: "sub_b", status: "active" })).toBe(
-			"ignore"
-		);
-		for (const status of ["past_due", "on_hold", "pending", "paused"] as const) {
-			expect(subscriptionEventTarget({ ...row, status }, { subscriptionId: "sub_b" })).toBe(
-				"ignore"
-			);
+		expect(target({}, { subscriptionId: "sub_b", status: "active" })).toBe("ignore");
+		for (const status of ["past_due", "on_hold", "pending"] as const) {
+			expect(target({ status }, { subscriptionId: "sub_b" })).toBe("ignore");
 		}
+		// Canceling, period not over yet: still live.
+		expect(target({ cancelAtNextBillingDate: true }, { subscriptionId: "sub_b" })).toBe("ignore");
 	});
 
 	it("re-subscribe: current sub terminal → adopt the new one", () => {
 		for (const status of ["cancelled", "expired", "failed"] as const) {
-			expect(
-				subscriptionEventTarget({ ...row, status }, { subscriptionId: "sub_b", status: "active" })
-			).toBe("adopt");
+			expect(target({ status }, { subscriptionId: "sub_b", status: "active" })).toBe("adopt");
 		}
 	});
 
-	it("no sub on the row yet → adopt", () => {
+	it("re-subscribe: any locked/canceled row (paused, cancel past period end) → adopt", () => {
+		expect(target({ status: "paused" }, { subscriptionId: "sub_b", status: "active" })).toBe(
+			"adopt"
+		);
 		expect(
-			subscriptionEventTarget({ subscriptionId: null, status: null }, { subscriptionId: "sub_b" })
+			target(
+				{ cancelAtNextBillingDate: true, nextBillingDate: new Date("2026-12-01T00:00:00.000Z") },
+				{ subscriptionId: "sub_b", status: "active" }
+			)
 		).toBe("adopt");
+	});
+
+	it("no sub on the row yet → adopt", () => {
+		expect(target({ subscriptionId: null, status: null }, { subscriptionId: "sub_b" })).toBe(
+			"adopt"
+		);
 	});
 
 	it("never adopts a sub that is itself terminal (stale event for an old sub)", () => {
 		expect(
-			subscriptionEventTarget(
-				{ ...row, status: "cancelled" },
-				{ subscriptionId: "sub_old", status: "cancelled" }
-			)
+			target({ status: "cancelled" }, { subscriptionId: "sub_old", status: "cancelled" })
 		).toBe("ignore");
 	});
 });

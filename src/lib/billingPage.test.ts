@@ -6,12 +6,11 @@ import { orgBilling, organization, user } from "@/db/schema";
 vi.mock("@/db", () => ({ db: {} }));
 vi.mock("cloudflare:workers", () => ({ env: {} }));
 vi.mock("@/lib/posthog-server", () => ({
-	captureBillingTrialStarted: vi.fn(),
 	captureBillingEvent: vi.fn(),
 }));
 vi.mock("@/middleware/org", () => ({ orgMiddleware: {}, orgMiddlewareAllowLocked: {} }));
 
-const { loadBillingPage, setCancelAtPeriodEnd, startCheckout, invoicePdf } =
+const { loadBillingPage, setCancelAtPeriodEnd, startCheckout, invoicePdf, syncBilling } =
 	await import("./billing");
 
 const DAY = 86_400_000;
@@ -54,6 +53,9 @@ function fakeDodo() {
 				trial_period_days: 15,
 				recurring_pre_tax_amount: 500,
 				...sub,
+			})),
+			list: vi.fn(async (_: unknown) => ({
+				items: [] as { subscription_id: string; status: string; created_at: string }[],
 			})),
 			update: vi.fn(async (_id: string, body: { cancel_at_next_billing_date?: boolean }) => {
 				if (body.cancel_at_next_billing_date !== undefined) {
@@ -260,6 +262,46 @@ describe("startCheckout", () => {
 		await setRow(subscribedRow);
 		await expect(startCheckout("o1", deps())).rejects.toMatchObject({ kind: "Conflict" });
 		expect(dodo.checkoutSessions.create).not.toHaveBeenCalled();
+	});
+});
+
+describe("syncBilling (back from Dodo)", () => {
+	it("pulls the row's current sub", async () => {
+		await setRow(subscribedRow);
+		dodo.sub.has_payment_method = true;
+
+		expect(await syncBilling("o1", deps())).toMatchObject({ hasPaymentMethod: true });
+		expect(dodo.subscriptions.list).not.toHaveBeenCalled();
+	});
+
+	it("re-subscribe checkout: finds the customer's new sub before the webhook and adopts it", async () => {
+		await setRow({ ...subscribedRow, status: "cancelled" });
+		dodo.sub.status = "cancelled";
+		const retrieve = dodo.subscriptions.retrieve.getMockImplementation()!;
+		dodo.subscriptions.retrieve.mockImplementation(async (id: string) => ({
+			...(await retrieve(id)),
+			...(id === "sub_2" && { status: "active" }),
+		}));
+		dodo.subscriptions.list.mockResolvedValueOnce({
+			items: [
+				{ subscription_id: "sub_2", status: "active", created_at: "2026-11-14T09:00:00.000Z" },
+				{ subscription_id: "sub_1", status: "cancelled", created_at: "2026-10-01T00:00:00.000Z" },
+			],
+		});
+
+		expect(await syncBilling("o1", deps())).toMatchObject({ locked: false });
+		expect(dodo.subscriptions.list).toHaveBeenCalledWith(
+			expect.objectContaining({ customer_id: "cus_1" })
+		);
+		expect(await row()).toMatchObject({ subscriptionId: "sub_2", status: "active" });
+	});
+
+	it("ended sub, no new one at Dodo yet: row unchanged, still locked", async () => {
+		await setRow({ ...subscribedRow, status: "cancelled" });
+		dodo.sub.status = "cancelled";
+
+		expect(await syncBilling("o1", deps())).toMatchObject({ lockReason: "canceled" });
+		expect(await row()).toMatchObject({ subscriptionId: "sub_1" });
 	});
 });
 

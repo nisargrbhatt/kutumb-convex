@@ -87,10 +87,11 @@ async function handleEvent(
 	const row = await findRow(deps.db, data);
 	if (!row) return;
 
-	const target = subscriptionEventTarget(row, {
-		subscriptionId,
-		...(isSub && data.status && { status: data.status }),
-	});
+	const target = subscriptionEventTarget(
+		row,
+		{ subscriptionId, ...(isSub && data.status && { status: data.status }) },
+		now
+	);
 	if (target === "ignore") return;
 
 	const after = await pullSubscriptionIntoRow(deps.db, deps.dodo, {

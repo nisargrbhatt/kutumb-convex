@@ -6,7 +6,7 @@ import { orgBilling, organization, user } from "@/db/schema";
 vi.mock("@/db", () => ({ db: {} }));
 vi.mock("cloudflare:workers", () => ({ env: {} }));
 
-vi.mock("@/lib/posthog-server", () => ({ captureBillingTrialStarted: vi.fn() }));
+vi.mock("@/lib/posthog-server", () => ({ captureBillingEvent: vi.fn() }));
 vi.mock("@/middleware/org", () => ({ orgMiddleware: {}, orgMiddlewareAllowLocked: {} }));
 
 const { ensureSubscription, startOrgBilling } = await import("./billing");

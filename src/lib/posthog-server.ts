@@ -112,31 +112,24 @@ export function captureConnectionDowngraded(props: {
 	});
 }
 
-/** Org created; its Trial clock started (`subscribed`: Dodo sub exists, else own clock, ADR 0013). */
-export function captureBillingTrialStarted(props: {
-	createdByUserId: string;
-	organizationId: string;
-	subscribed: boolean;
-}) {
-	capture(
-		"billing_trial_started",
-		props.createdByUserId,
-		{ orgId: props.organizationId, subscribed: props.subscribed },
-		{ organization: props.organizationId }
-	);
-}
-
 /**
- * Billing analytics (spec: Analytics), on the org group. `userId` = org creator for webhook
- * events, the acting owner for `billing_checkout_opened` (`kind`: Dodo page opened).
+ * Billing analytics (spec: Analytics), on the org group. `userId` = org creator for webhook,
+ * sweep and `billing_trial_started` events, the acting owner for `billing_checkout_opened`
+ * (`kind`: Dodo page opened). `billing_trial_started.subscribed`: Dodo sub exists, else own clock
+ * (ADR 0013).
  */
 export function captureBillingEvent(
-	event: BillingAnalyticsEvent | "billing_checkout_opened",
+	event: BillingAnalyticsEvent | "billing_checkout_opened" | "billing_trial_started",
 	{
 		organizationId,
 		userId,
 		...extra
-	}: { organizationId: string; userId: string; kind?: "checkout" | "portal" }
+	}: {
+		organizationId: string;
+		userId: string;
+		kind?: "checkout" | "portal";
+		subscribed?: boolean;
+	}
 ) {
 	capture(event, userId, { orgId: organizationId, ...extra }, { organization: organizationId });
 }

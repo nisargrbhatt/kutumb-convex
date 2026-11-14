@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { db as defaultDb } from "@/db";
-import { billingAccess } from "@/domain/billing";
 import { AppError } from "@/domain/errors";
 import { assertCan } from "@/domain/permission";
 import {
@@ -11,8 +10,8 @@ import {
 	returnUrl,
 	setCancelAtPeriodEnd,
 	startCheckout,
+	syncBilling,
 } from "@/lib/billing";
-import { pullSubscriptionIntoRow } from "@/lib/billing-sync";
 import { appUrl, createDodo } from "@/lib/dodo";
 import { captureBillingEvent } from "@/lib/posthog-server";
 import { orgMiddleware, orgMiddlewareAllowLocked } from "@/middleware/org";
@@ -93,25 +92,10 @@ export const resumeSubscriptionFn = createServerFn({ method: "POST" })
 		return setCancelAtPeriodEnd(context.actor.organizationId, false);
 	});
 
-/**
- * Owner, back from Dodo (`?from=dodo`): pull the current sub and overwrite the row, so the page
- * doesn't wait for the webhook. Returns the fresh access.
- */
+/** Owner, back from Dodo (`?from=dodo`): see `syncBilling`. Returns the fresh access. */
 export const syncBillingFn = createServerFn({ method: "POST" })
 	.middleware([orgMiddlewareAllowLocked])
-	.handler(async ({ context }) => {
+	.handler(({ context }) => {
 		assertCan(context.actor, { billing: ["manage"] });
-		const { organizationId } = context.actor;
-		let row = await billingRow(defaultDb, organizationId);
-		if (!row) throw new AppError("NotFound", "No billing for this organization");
-		const now = new Date();
-		if (row.subscriptionId) {
-			row =
-				(await pullSubscriptionIntoRow(defaultDb, createDodo(), {
-					organizationId,
-					subscriptionId: row.subscriptionId,
-					now,
-				})) ?? row;
-		}
-		return billingAccess(row, now);
+		return syncBilling(context.actor.organizationId);
 	});

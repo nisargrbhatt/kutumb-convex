@@ -7,9 +7,10 @@ import { billingAccess, ownClockTrialEndsAt } from "@/domain/billing";
 import type { CardSummary } from "@/domain/billingCopy";
 import { AppError } from "@/domain/errors";
 import type { QueryDb } from "@/domain/queries/db";
+import { subscriptionEnded, subscriptionEventTarget } from "@/domain/billingEvents";
 import { pullSubscriptionIntoRow } from "@/lib/billing-sync";
 import { appUrl, createDodo, dodoProductId } from "@/lib/dodo";
-import { captureBillingTrialStarted } from "@/lib/posthog-server";
+import { captureBillingEvent } from "@/lib/posthog-server";
 import { safeAsync } from "@/lib/safe";
 
 export type BillingDeps = {
@@ -114,8 +115,8 @@ export async function startOrgBilling(
 	});
 	const result = await ensureSubscription(org.organizationId, deps);
 	const subscribed = result.success;
-	captureBillingTrialStarted({
-		createdByUserId: org.createdByUserId,
+	captureBillingEvent("billing_trial_started", {
+		userId: org.createdByUserId,
 		organizationId: org.organizationId,
 		subscribed,
 	});
@@ -262,6 +263,48 @@ export async function startCheckout(organizationId: string, deps: Partial<Billin
 	});
 	if (!session.checkout_url) throw new Error("Dodo returned no checkout_url");
 	return session.checkout_url;
+}
+
+/**
+ * Owner back from Dodo (`?from=dodo`): pull the row's current sub so the page doesn't wait for the
+ * webhook. If that sub has ended (re-subscribe checkout), find the customer's new sub at Dodo and
+ * adopt it as the webhook would. Returns the fresh access.
+ */
+export async function syncBilling(organizationId: string, deps: Partial<BillingDeps> = {}) {
+	const d = withDefaults(deps);
+	let row = await billingRow(d.db, organizationId);
+	if (!row) throw new AppError("NotFound", "No billing for this organization");
+	const now = d.now();
+	const pull = (subscriptionId: string) =>
+		pullSubscriptionIntoRow(d.db, d.dodo, { organizationId, subscriptionId, now });
+	if (row.subscriptionId) row = (await pull(row.subscriptionId)) ?? row;
+	if (row.dodoCustomerId && subscriptionEnded(row, now)) {
+		const ended = row;
+		const { items } = await d.dodo.subscriptions.list({
+			customer_id: ended.dodoCustomerId!,
+			page_size: 10,
+		});
+		const [next] = items
+			.filter(
+				(s) =>
+					subscriptionEventTarget(
+						ended,
+						{ subscriptionId: s.subscription_id, status: s.status },
+						now
+					) === "adopt"
+			)
+			.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+		if (next) {
+			row = (await pull(next.subscription_id)) ?? row;
+			if (ended.subscriptionId) {
+				captureBillingEvent("billing_resubscribed", {
+					organizationId,
+					userId: ended.createdByUserId,
+				});
+			}
+		}
+	}
+	return billingAccess(row, now);
 }
 
 /**
