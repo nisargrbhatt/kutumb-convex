@@ -3,7 +3,7 @@ import { graceStartNotice } from "@/domain/billingNotices";
 import { makeBillingNotifier, makeBillingSweep } from "@/domain/billingSweep";
 import { sendBillingEmail } from "@/lib/billing-email";
 import { captureBillingEvent } from "@/lib/posthog-server";
-import { ensureSubscription } from "@/server/billing";
+import { ensureSubscription } from "@/lib/billing";
 
 const deps = {
 	db,
