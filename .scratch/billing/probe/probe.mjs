@@ -35,7 +35,13 @@ async function call(label, method, path, body) {
 	return json;
 }
 
-const billing = { country: "US", state: "CA", city: "San Francisco", street: "1 Test St", zipcode: "94105" };
+const billing = {
+	country: "US",
+	state: "CA",
+	city: "San Francisco",
+	street: "1 Test St",
+	zipcode: "94105",
+};
 
 // (4) product settings: trial / card-optional / period fields
 await call("product", "GET", `/products/${PRODUCT}`);
@@ -51,14 +57,19 @@ await call("list customers by email", "GET", `/customers?email=${encodeURICompon
 // (1) card-less trial sub, server-side, no checkout visit
 const customerId = c1?.customer_id;
 if (customerId) {
-	const sub = await call("subscription create (server-side, no payment link)", "POST", "/subscriptions", {
-		customer: { customer_id: customerId },
-		product_id: PRODUCT,
-		quantity: 1,
-		billing,
-		payment_link: false,
-		metadata: { organizationId: "probe-org-a" },
-	});
+	const sub = await call(
+		"subscription create (server-side, no payment link)",
+		"POST",
+		"/subscriptions",
+		{
+			customer: { customer_id: customerId },
+			product_id: PRODUCT,
+			quantity: 1,
+			billing,
+			payment_link: false,
+			metadata: { organizationId: "probe-org-a" },
+		}
+	);
 	if (sub?.subscription_id) {
 		await call("subscription get", "GET", `/subscriptions/${sub.subscription_id}`);
 	}
