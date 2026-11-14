@@ -16,7 +16,6 @@ export function orgLockReason(
 	return billingAccess(row, now).lockReason;
 }
 
-
 /**
  * Under Lock only ownership transfer may change roles: the change grants or removes `owner`
  * (better-auth already limits that to owners).

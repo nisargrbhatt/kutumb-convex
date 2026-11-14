@@ -24,7 +24,6 @@ export type BannerContext = {
 /** Trial days left at which the banner turns `warning` and members get a heads-up. */
 export const BANNER_TRIAL_WARNING_DAYS = 3;
 
-
 export function bannerFor(a: BillingAccess, role: string, ctx: BannerContext): Banner | null {
 	return isOwnerRole(role) ? ownerBanner(a, ctx) : memberBanner(a, ctx);
 }

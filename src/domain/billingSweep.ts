@@ -54,9 +54,7 @@ export function makeBillingNotifier({ db, now, email, capture }: NotifierDeps) {
 					.from(member)
 					.innerJoin(user, eq(user.id, member.userId))
 					.innerJoin(organization, eq(organization.id, member.organizationId))
-					.where(
-						and(eq(member.organizationId, organizationId), like(member.role, "%owner%"))
-					);
+					.where(and(eq(member.organizationId, organizationId), like(member.role, "%owner%")));
 				const owners = members.filter((m) => isOwnerRole(m.role));
 				const content: BillingEmail = {
 					kind: notice.kind,

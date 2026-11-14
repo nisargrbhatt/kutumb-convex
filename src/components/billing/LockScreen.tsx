@@ -15,17 +15,17 @@ import {
 	Users,
 } from "lucide-react";
 import z from "zod";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -34,14 +34,7 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import {
 	Select,
 	SelectContent,
@@ -89,46 +82,60 @@ export function LockScreen({
 	const confirm = useConfirmPayment(orgId, fromDodo && owner);
 
 	return (
-		<div className="flex min-h-svh w-full items-center justify-center bg-muted p-4 sm:p-6">
-			<Card className="w-full max-w-md text-center">
-				<CardHeader className="items-center">
-					<Lock className="mx-auto size-8" aria-hidden />
-					<CardTitle className="text-xl">
-						<h1>{copy.title}</h1>
-					</CardTitle>
-					<CardDescription>{copy.body}</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col items-center gap-4">
-					<p className="flex items-center gap-2 text-sm text-muted-foreground">
-						<ShieldCheck className="size-4 shrink-0 text-emerald-600" aria-hidden />
-						Your data is safe. Nothing is deleted while locked.
-					</p>
-					{confirm !== "idle" ? (
-						<p role="status" className="flex items-center gap-2 text-sm">
-							{confirm === "confirming" ? (
-								<>
-									<Spinner /> Confirming your payment…
-								</>
-							) : (
-								"Still processing; refresh in a minute."
-							)}
+		<div className="flex min-h-svh w-full flex-col bg-muted p-4 sm:p-6">
+			{/* No sidebar outside `_community`: plain crumbs (org › Locked). */}
+			<Breadcrumb className="min-w-0">
+				<BreadcrumbList>
+					<BreadcrumbItem className="min-w-0">
+						<span className="truncate">{billing.orgName}</span>
+					</BreadcrumbItem>
+					<BreadcrumbSeparator />
+					<BreadcrumbItem>
+						<BreadcrumbPage>Locked</BreadcrumbPage>
+					</BreadcrumbItem>
+				</BreadcrumbList>
+			</Breadcrumb>
+			<div className="flex flex-1 items-center justify-center py-4">
+				<Card className="w-full max-w-md text-center">
+					<CardHeader className="items-center">
+						<Lock className="mx-auto size-8" aria-hidden />
+						<CardTitle className="text-xl">
+							<h1>{copy.title}</h1>
+						</CardTitle>
+						<CardDescription>{copy.body}</CardDescription>
+					</CardHeader>
+					<CardContent className="flex flex-col items-center gap-4">
+						<p className="flex items-center gap-2 text-sm text-muted-foreground">
+							<ShieldCheck className="size-4 shrink-0 text-emerald-600" aria-hidden />
+							Your data is safe. Nothing is deleted while locked.
 						</p>
-					) : null}
-					{owner ? (
-						<div className="flex w-full flex-col items-center gap-3">
-							<OwnerPrimary billing={billing} disabled={confirm === "confirming"} />
-							<div className="flex flex-col gap-2 text-sm sm:flex-row sm:flex-wrap sm:justify-center">
-								<TransferOwnershipDialog orgId={orgId} />
-								<DeleteOrganizationDialog name={billing.orgName} />
+						{confirm !== "idle" ? (
+							<p role="status" className="flex items-center gap-2 text-sm">
+								{confirm === "confirming" ? (
+									<>
+										<Spinner /> Confirming your payment…
+									</>
+								) : (
+									"Still processing; refresh in a minute."
+								)}
+							</p>
+						) : null}
+						{owner ? (
+							<div className="flex w-full flex-col items-center gap-3">
+								<OwnerPrimary billing={billing} disabled={confirm === "confirming"} />
+								<div className="flex flex-col gap-2 text-sm sm:flex-row sm:flex-wrap sm:justify-center">
+									<TransferOwnershipDrawer orgId={orgId} />
+									<DeleteOrganizationDialog name={billing.orgName} />
+								</div>
 							</div>
-						</div>
-					) : (
-						<LeaveOrganizationDialog name={billing.orgName} />
-					)}
-					<Separator />
-					<OrgEscapes />
-				</CardContent>
-			</Card>
+						) : (
+							<LeaveOrganizationDialog name={billing.orgName} />
+						)}
+						<Separator />
+						<OrgEscapes />
+					</CardContent>
+				</Card>
+			</div>
 		</div>
 	);
 }
@@ -292,7 +299,7 @@ function LeaveOrganizationDialog({ name }: { name: string }) {
 
 const transferSchema = z.object({ memberId: z.string().min(1, "Pick a member") });
 
-function TransferOwnershipDialog({ orgId }: { orgId: string }) {
+function TransferOwnershipDrawer({ orgId }: { orgId: string }) {
 	const [open, setOpen] = useState(false);
 	const actor = useActor();
 	const { data, isLoading } = useQuery({ ...orgMembersQuery(orgId), enabled: open });
@@ -304,7 +311,7 @@ function TransferOwnershipDialog({ orgId }: { orgId: string }) {
 	const candidates = members.filter((m) => m.userId !== actor?.userId && !m.role.includes("owner"));
 	const items = Object.fromEntries(candidates.map((m) => [m.id, m.user.name || m.user.email]));
 
-	const onSubmit = form.handleSubmit(({ memberId }) => {
+	const onSubmit = ({ memberId }: { memberId: string }) => {
 		if (!self) return;
 		transfer.mutate(
 			{ memberId, selfMemberId: self.id },
@@ -315,72 +322,56 @@ function TransferOwnershipDialog({ orgId }: { orgId: string }) {
 				},
 			}
 		);
-	});
+	};
 
 	return (
-		<>
-			<Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-				Transfer ownership
-			</Button>
-			<Dialog open={open} onOpenChange={(next) => !transfer.isPending && setOpen(next)}>
-				<DialogContent>
-					<Form {...form}>
-						<form onSubmit={onSubmit} className="flex flex-col gap-4">
-							<DialogHeader>
-								<DialogTitle>Transfer ownership</DialogTitle>
-								<DialogDescription>
-									The member becomes an owner and you become an admin. The new owner manages
-									billing.
-								</DialogDescription>
-							</DialogHeader>
-							{!isLoading && candidates.length === 0 ? (
-								<p className="text-sm text-muted-foreground">No other members to transfer to.</p>
-							) : (
-								<FormField
-									control={form.control}
-									name="memberId"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>New owner</FormLabel>
-											<Select items={items} onValueChange={field.onChange} value={field.value}>
-												<FormControl>
-													<SelectTrigger className="w-full">
-														<SelectValue
-															placeholder={isLoading ? "Loading..." : "Select a member"}
-														/>
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{candidates.map((m) => (
-														<SelectItem key={m.id} value={m.id}>
-															{items[m.id]}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							)}
-							<DialogFooter>
-								<Button
-									type="button"
-									variant="outline"
-									disabled={transfer.isPending}
-									onClick={() => setOpen(false)}
-								>
-									Cancel
-								</Button>
-								<Button type="submit" disabled={transfer.isPending || candidates.length === 0}>
-									{transfer.isPending ? <Spinner /> : <Check />}
-									Transfer
-								</Button>
-							</DialogFooter>
-						</form>
-					</Form>
-				</DialogContent>
-			</Dialog>
-		</>
+		<FormDrawer
+			open={open}
+			onOpenChange={(next) => !transfer.isPending && setOpen(next)}
+			trigger={
+				<Button variant="ghost" size="sm">
+					Transfer ownership
+				</Button>
+			}
+			title="Transfer ownership"
+			description="The member becomes an owner and you become an admin. The new owner manages billing."
+			form={form}
+			onSubmit={onSubmit}
+			submitLabel={
+				<>
+					<Check /> Transfer
+				</>
+			}
+			isPending={transfer.isPending}
+		>
+			{!isLoading && candidates.length === 0 ? (
+				<p className="text-sm text-muted-foreground">No other members to transfer to.</p>
+			) : (
+				<FormField
+					control={form.control}
+					name="memberId"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>New owner</FormLabel>
+							<Select items={items} onValueChange={field.onChange} value={field.value}>
+								<FormControl>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder={isLoading ? "Loading..." : "Select a member"} />
+									</SelectTrigger>
+								</FormControl>
+								<SelectContent>
+									{candidates.map((m) => (
+										<SelectItem key={m.id} value={m.id}>
+											{items[m.id]}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+			)}
+		</FormDrawer>
 	);
 }

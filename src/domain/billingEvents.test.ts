@@ -15,8 +15,10 @@ describe("subscriptionEventTarget: adopt-or-ignore", () => {
 		hasPaymentMethod: true,
 		needsSubscription: false,
 	};
-	const target = (r: Partial<typeof row>, incoming: Parameters<typeof subscriptionEventTarget>[1]) =>
-		subscriptionEventTarget({ ...row, ...r }, incoming, now);
+	const target = (
+		r: Partial<typeof row>,
+		incoming: Parameters<typeof subscriptionEventTarget>[1]
+	) => subscriptionEventTarget({ ...row, ...r }, incoming, now);
 
 	it("the row's own sub → current", () => {
 		expect(target({}, { subscriptionId: "sub_a" })).toBe("current");

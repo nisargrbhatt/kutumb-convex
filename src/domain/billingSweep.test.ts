@@ -129,7 +129,7 @@ describe("billing sweep", () => {
 		]);
 	});
 
-	it("multi-role owner (\"admin,owner\") gets the email", async () => {
+	it('multi-role owner ("admin,owner") gets the email', async () => {
 		seedOrg("o1", ["u1"]);
 		sqlite.exec("UPDATE member SET role = 'admin,owner' WHERE user_id = 'u1'");
 		await sweep();

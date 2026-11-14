@@ -16,7 +16,6 @@ export type ActiveOrgBilling = {
 	access: BillingAccess;
 };
 
-
 /**
  * Billing for the user's active org, for the `_community` gate, `/locked` and the banner. `null`
  * for a non-member. No `orgBilling` row = locked `trial_ended` (default-deny).

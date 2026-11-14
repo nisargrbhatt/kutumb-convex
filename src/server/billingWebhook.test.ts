@@ -106,7 +106,18 @@ describe("POST /api/billing/webhook", () => {
 		dodoSubs.sub_a = sub({ subscription_id: "sub_a", has_payment_method: true });
 		const req = signed({ type: "subscription.active", data: dodoSubs.sub_a });
 		req.headers.delete("webhook-signature");
-		expect((await handleBillingWebhook(new Request(req.url, { method: "POST", headers: req.headers, body: await req.clone().text() }), deps)).status).toBe(401);
+		expect(
+			(
+				await handleBillingWebhook(
+					new Request(req.url, {
+						method: "POST",
+						headers: req.headers,
+						body: await req.clone().text(),
+					}),
+					deps
+				)
+			).status
+		).toBe(401);
 
 		const res = await handleBillingWebhook(req, { ...deps, unsafe: true });
 		expect(res.status).toBe(200);
@@ -236,10 +247,7 @@ describe("POST /api/billing/webhook", () => {
 		expect(await row()).toMatchObject({ lockedAt: NOW });
 
 		dodoSubs.sub_a = sub({ subscription_id: "sub_a", status: "active", has_payment_method: true });
-		await handleBillingWebhook(
-			signed({ type: "subscription.active", data: dodoSubs.sub_a }),
-			deps
-		);
+		await handleBillingWebhook(signed({ type: "subscription.active", data: dodoSubs.sub_a }), deps);
 		expect(await row()).toMatchObject({ pastDueEndsAt: null, lockedAt: null });
 	});
 

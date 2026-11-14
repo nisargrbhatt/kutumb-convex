@@ -40,8 +40,7 @@ export const activeOrgBillingQuery = (orgId: string) =>
 		queryKey: billingKeys.access(orgId),
 		queryFn: () => getActiveOrgBillingFn(),
 		staleTime: 30_000,
-		refetchInterval: (q) =>
-			q.state.data?.access.state === "pending" ? PENDING_POLL_MS : false,
+		refetchInterval: (q) => (q.state.data?.access.state === "pending" ? PENDING_POLL_MS : false),
 	});
 
 /** Owner-only: leave for Dodo's customer portal (add / update card). */

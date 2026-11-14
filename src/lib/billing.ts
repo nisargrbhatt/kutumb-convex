@@ -126,7 +126,8 @@ export async function startOrgBilling(
 	);
 	if (!inserted.success) {
 		const undone = await safeAsync(Promise.resolve(org.rollback?.()));
-		if (!undone.success) console.error("org create rollback failed", org.organizationId, undone.error);
+		if (!undone.success)
+			console.error("org create rollback failed", org.organizationId, undone.error);
 		throw inserted.error;
 	}
 	const result = await ensureSubscription(org.organizationId, deps);
